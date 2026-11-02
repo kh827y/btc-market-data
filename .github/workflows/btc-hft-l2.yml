@@ -13,7 +13,7 @@ permissions:
   contents: write
 concurrency:
   group: btc-hft-l2-history
-  cancel-in-progress: true
+  cancel-in-progress: false
 jobs:
   historical-depth:
     runs-on: ubuntu-latest
@@ -41,6 +41,13 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch origin main
           git reset --hard origin/main
+          # The checked-out triggering commit can be older than the current
+          # archive while other collectors are publishing. Re-test exactly
+          # the code used to build and audit the new snapshot.
+          python -m unittest discover -s btc-liquidity/tests -p test_hft_history.py -q
+          python -m unittest discover -s btc-liquidity/tests -p test_bybit_independent.py -q
+          python -m unittest discover -s btc-liquidity/tests -p test_bybit_parallel.py -q
+          export TESTED_COMMIT="$(git rev-parse HEAD)"
           python -u btc-liquidity/hft_history.py
           # Independent source-date audit must match the exact newly built
           # history; do not publish a stale 7d/30d or global coverage audit.
@@ -50,7 +57,7 @@ jobs:
           python - <<'PY'
           import datetime, json, os, pathlib
           status={
-            "tested_commit":os.environ.get("GITHUB_SHA"),
+            "tested_commit":os.environ.get("TESTED_COMMIT"),
             "test_completed_utc":datetime.datetime.now(datetime.timezone.utc).isoformat(),
             "bybit_snapshot_tests_ok":True,
             "bybit_parallel_merge_tests_ok":True,
