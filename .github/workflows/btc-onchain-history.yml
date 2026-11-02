@@ -3,6 +3,7 @@ on:
   push:
     paths:
       - "btc-onchain/collector.py"
+      - "btc-onchain/tests/test_primary_selection.py"
       - ".github/workflows/btc-onchain-history.yml"
   workflow_dispatch:
   schedule:
@@ -21,6 +22,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Verify free daily request cap and LTH bootstrap
+        run: |
+          python -m unittest discover -s btc-onchain/tests -p test_primary_selection.py -v
       - run: python btc-onchain/collector.py
       - name: Save JSON
         run: |
