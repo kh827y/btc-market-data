@@ -44,8 +44,9 @@ jobs:
       - name: Build and safely commit dated historical BTC L2 liquidity
         env:
           # Bounded serial fetches (1.1s minimum pacing) within the script 700s cap.
-          # Doubling the batch accelerates 492-day x 7-market audit without parallel 429 spikes.
-          HFT_MAX_FILES: "180"
+          # Increase the serial batch only after a successful 180-file/6-minute run.
+          # The script still enforces a 700-second cap and >=1.1s pacing.
+          HFT_MAX_FILES: "240"
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
