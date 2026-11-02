@@ -58,5 +58,27 @@ class BybitIndependentTests(unittest.TestCase):
         self.assertIsNotNone(ret["bybit_independent_spot"]["comparisons"]["1d"])
         self.assertNotIn("1.0",ret["bybit_independent_spot"]["comparisons"]["1d"]["bands"])
 
+    def test_valid_short_complete_zip_http_range_is_accepted(self):
+        from unittest.mock import patch
+        class Response:
+            status=206
+            headers={"Content-Range":"bytes 0-99/100"}
+            def __enter__(self):return self
+            def __exit__(self,*args):return None
+            def read(self,n):return b"x"*100
+        with patch.object(m.urllib.request,"urlopen",return_value=Response()):
+            self.assertEqual(len(m.range_bytes("https://example.invalid/archive.zip",length=512)),100)
+    def test_partial_http_range_must_have_exact_reported_end(self):
+        from unittest.mock import patch
+        class Response:
+            status=206
+            headers={"Content-Range":"bytes 0-45/100"}
+            def __enter__(self):return self
+            def __exit__(self,*args):return None
+            def read(self,n):return b"x"*46
+        with patch.object(m.urllib.request,"urlopen",return_value=Response()):
+            with self.assertRaisesRegex(ValueError,"invalid range end"):
+                m.range_bytes("https://example.invalid/archive.zip",length=512)
+
 if __name__=="__main__":
     unittest.main()
