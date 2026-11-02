@@ -92,12 +92,18 @@ class LiquidityTests(unittest.TestCase):
                                       "quanto_multiplier":"0.0001"})
     def test_gate_futures_orderbook_seconds_timestamp(self):
         bids,asks,t=m.normalize_book("gate_usdt_perp",{
+            "id":120009001,
             "current":1793600000.125,
             "bids":[{"p":"77000","s":"100"},{"p":"76999","s":"200"}],
             "asks":[{"p":"77001","s":"150"},{"p":"77002","s":"200"}]})
         self.assertEqual(t,1793600000125)
         self.assertEqual(bids[0],["77000","100"])
         self.assertEqual(asks[0],["77001","150"])
+        self.assertIn("limit=300",m.VENUES["gate_usdt_perp"][2])
+        self.assertIn("with_id=true",m.VENUES["gate_usdt_perp"][2])
+        with self.assertRaisesRegex(ValueError,"update ID"):
+            m.normalize_book("gate_usdt_perp",{"current":1793600000.125,
+                "bids":[{"p":"77000","s":"1"}],"asks":[{"p":"77001","s":"1"}]})
     def test_restricted_source_403_not_retried(self):
         from unittest.mock import patch
         from urllib.error import HTTPError
