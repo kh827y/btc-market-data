@@ -54,6 +54,22 @@ class LiquidityTests(unittest.TestCase):
     def test_frozen_ask_archive_quarantined(self):
         with self.assertRaises(ValueError):
             m.parse_archive(archive(frozen=True), dt.date(2026, 9, 3))
+    def test_okx_contract_multiplier_from_instrument(self):
+        data = {"code": "0", "data": [{"instId": "BTC-USDT-SWAP", "ctValCcy": "BTC",
+                "settleCcy": "USDT", "ctVal": "0.01", "ctMult": "1"}]}
+        self.assertAlmostEqual(m.okx_swap_contract_size(data), 0.01)
+        data["data"][0]["ctValCcy"] = "USD"
+        with self.assertRaises(ValueError):
+            m.okx_swap_contract_size(data)
+    def test_old_samples_do_not_break_new_band_comparisons(self):
+        now = dt.datetime(2026, 11, 2, 6, 0, tzinfo=m.UTC)
+        old = {"time": (now - dt.timedelta(days=1)).isoformat(), "venues": {
+            "okx_spot": {"bands": {"0.2": {"bid_usd": None, "ask_usd": None, "imbalance_bid_share": None}}}}}
+        fresh = {"time": now.isoformat(), "venues": {"okx_spot": {"bands": {
+            "0.05": {"bid_usd": 100, "ask_usd": 100, "imbalance_bid_share": .5},
+            "0.2": {"bid_usd": None, "ask_usd": None, "imbalance_bid_share": None},
+            "1.0": {"bid_usd": None, "ask_usd": None, "imbalance_bid_share": None}}}}}
+        self.assertEqual(m.compare_lookback([old, fresh], now)["1d"], {})
     def test_comparisons_require_matching_observation(self):
         now = dt.datetime(2026, 11, 2, 6, 0, tzinfo=m.UTC)
         s = {"time": now.isoformat(), "venues": {"coinbase_spot": {
