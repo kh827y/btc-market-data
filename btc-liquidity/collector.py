@@ -15,7 +15,7 @@ from collections import defaultdict
 
 UTC = dt.timezone.utc
 ROOT = pathlib.Path("btc-liquidity/data")
-BANDS = (0.05, 0.2, 1.0)
+BANDS = (0.01, 0.05, 0.2, 1.0)  # shallow books require separately labeled inner 0.01% band
 ARCHIVE_START = dt.date(2026, 6, 1)
 ARCHIVE_LAST_SAFE = dt.date(2026, 9, 2)  # Binance exporter corruption since Sep 3, 2026
 VENUES = {
