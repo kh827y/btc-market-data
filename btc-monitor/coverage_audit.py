@@ -111,6 +111,7 @@ def build(brief,source,original_onchain,hft,bybit,deep):
            "bitget_max_1000":"https://www.bitget.com/docs/catalog/market/market-data",
            "okx_books_max_400":"https://www.okx.com/docs-v5/en/",
            "okx_full_books_max_5000":"https://www.okx.com/docs-v5/en/",
+           "gate_spot_5000":"https://www.gate.com/docs/developers/apiv4/en/spot/",
            "gate_futures":"https://www.gate.com/docs/developers/apiv4/en/futures/",
            "gate_ws_v2_public_400":"https://www.gate.com/docs/developers/futures/ws/en/#order-book-v2-api"},
         "official_deeper_snapshot_probe":{
@@ -118,6 +119,12 @@ def build(brief,source,original_onchain,hft,bybit,deep):
           "bybit_spot_full_http_code":(deep.get("markets") or {}).get("bybit_spot_full",{}).get("http_error_code"),
           "bybit_perpetual_full_http_code":(deep.get("markets") or {}).get("bybit_usdt_perp_full",{}).get("http_error_code"),
           "gate_300_result":(deep.get("markets") or {}).get("gate_usdt_perp_300",{}).get("status"),
+          "gate_spot_5000_actual_live":(
+              markets["gate_spot"].get("native_depth_levels_requested")==5000
+              and (markets["gate_spot"].get("levels") or {}).get("bid")>=5000
+              and (markets["gate_spot"].get("levels") or {}).get("ask")>=5000
+              and isinstance(markets["gate_spot"].get("source_id"),int)
+              and bool(markets["gate_spot"].get("source_timestamp"))),
           "okx_spot_5000_actual_live":(
               markets["okx_spot"].get("native_depth_levels_requested")==5000
               and (markets["okx_spot"].get("levels") or {}).get("bid")>=5000
