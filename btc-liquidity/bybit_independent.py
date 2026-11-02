@@ -135,13 +135,16 @@ def write(path,obj):
     path.write_text(json.dumps(obj,ensure_ascii=False,indent=2,sort_keys=True)+"\n",encoding="utf8")
 
 def candidates(asof,records,failures,now):
-    # Ensure frequent comparisons first; then fill most recent backwards.
+    # Interleave source markets BY DATE. Never spend the whole historical
+    # backfill budget on perpetuals while starving the spot series.
     offsets=(0,1,7,30,90,180,365,730,1095,2,3,4,5,6,8,14,21,60)
-    for venue,(category,start) in VENUES.items():
-        days=list(dict.fromkeys([asof-dt.timedelta(days=n) for n in
-                                  list(offsets)+list(range((asof-start).days+1))
-                                  if start<=asof-dt.timedelta(days=n)<=asof]))
-        for day in days:
+    earliest=min(start for category,start in VENUES.values())
+    days=list(dict.fromkeys([asof-dt.timedelta(days=n) for n in
+                              list(offsets)+list(range((asof-earliest).days+1))
+                              if earliest<=asof-dt.timedelta(days=n)<=asof]))
+    for day in days:
+        for venue,(category,start) in VENUES.items():
+            if day<start:continue
             key=day.isoformat()
             if key in records.get(venue,{}):continue
             failure=failures.get(f"{venue}:{key}",{})
