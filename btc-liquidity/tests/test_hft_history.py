@@ -6,6 +6,7 @@ import unittest
 
 import pyarrow as pa
 import pyarrow.parquet as pq
+import zstandard as zstd
 
 spec=importlib.util.spec_from_file_location("hft_history",Path(__file__).resolve().parents[1]/"hft_history.py")
 m=importlib.util.module_from_spec(spec)
@@ -33,6 +34,11 @@ class HistoricL2Tests(unittest.TestCase):
         self.assertEqual(a["levels"],{"bid":12,"ask":12})
         self.assertIsNotNone(a["bands"]["0.05"]["bid_share"])
         self.assertIsNone(a["bands"]["1.0"]["bid_share"])
+    def test_zstd_outer_frame_recovered(self):
+        raw=fixture()
+        packed=zstd.ZstdCompressor().compress(raw)
+        record=m.parse_checkpoint(packed,"binance_spot","BTCUSDT","spot",1.0,"USDT",dt.date(2026,10,31))
+        self.assertEqual(record["snapshot_rows"],24)
     def test_no_snapshot_rejected(self):
         with self.assertRaisesRegex(ValueError,"missing hour-start checkpoint"):
             m.parse_checkpoint(fixture(True),"binance_spot","BTCUSDT","spot",1.0,"USDT",dt.date(2026,10,31))
