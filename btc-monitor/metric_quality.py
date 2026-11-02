@@ -209,7 +209,10 @@ def gate_derivatives(g,raw,metrics):
         last=item.get("last")
         recent=interval_age(g.now,last,20)
         n=amount(item.get("latest_rate_8h"))
-        entry=(item.get("symbol")=="BTCUSDT" and n is not None and
+        expected_symbol={"Binance":"BTCUSDT","Bybit":"BTCUSDT",
+                         "OKX":"BTC-USDT-SWAP"}.get(venue)
+        entry=(expected_symbol is not None and item.get("symbol")==expected_symbol
+               and n is not None and
                abs(n)<=0.05 and item.get("count",0)>=2 and
                amount(item.get("max_gap_hours")) is not None and
                item["max_gap_hours"]<=48)
