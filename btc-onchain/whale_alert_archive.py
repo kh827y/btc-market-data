@@ -85,3 +85,45 @@ def aggregate(alerts, today):
     if selected<1000:
         raise ValueError("Too few selected labelled BTC transfers; source/schema changed")
     return days,raw_btc,selected
+
+def main():
+    now=dt.datetime.now(dt.timezone.utc)
+    alerts=load_alerts()
+    daily,btc_count,selected=aggregate(alerts,now.date())
+    dates=sorted(daily)
+    if not dates or dates[-1] < (now.date()-dt.timedelta(days=10)).isoformat():
+        raise ValueError("Historical whale-alert source is unexpectedly stale")
+    yearly={}
+    for day,row in daily.items():
+        year=day[:4]
+        totals=yearly.setdefault(year,{"observed_alerts_to_exchanges":0,"btc":0})
+        totals["observed_alerts_to_exchanges"]+=row["observed_alert_count"]
+        totals["btc"]+=row["observed_btc_volume"]
+    for year in yearly:
+        yearly[year]["btc"]=round(yearly[year]["btc"],8)
+    report={
+        "generated_utc":now.isoformat(),
+        "source":ARCHIVE,
+        "source_attribution":"Whale Alert, freely downloadable historical SOCIAL alerts",
+        "method":"BTC-only transfer alerts from non-exchange/unknown label to listed exchange; de-duplicated by tx hash + destination + BTC amount",
+        "scope":"Non-exhaustive public alert subset. NOT entity-wide whale holdings classification. Exchange tags and alert thresholds can change over time.",
+        "not_equivalent_to":"CoinGlass Whale Exchange Deposit Count/Volume; Glassnode >=1000 BTC-holding entities; CryptoKeyhole >=1000 BTC single-deposit flows",
+        "data_complete_as_total_cryptocurrency_market":False,
+        "fully_comparable_year_to_year":False,
+        "zero_missing_days_are_undefined":True,
+        "all_archive_alerts":len(alerts),
+        "btc_transfer_alerts":btc_count,
+        "labelled_to_exchange_alerts":selected,
+        "observed_days":len(dates),
+        "first_observed_day":dates[0],
+        "last_observed_day":dates[-1],
+        "annual_observed":yearly,
+        "last_observed_day_data":daily[dates[-1]],
+        "missing_day_note":"Only days with observed public alerts are included; missing dates must not be interpreted as zero true transfers.",
+    }
+    OUTPUT.mkdir(parents=True,exist_ok=True)
+    (OUTPUT/"whale_alert_daily.json").write_text(json.dumps(daily,sort_keys=True,separators=(",",":"))+"\\n")
+    (OUTPUT/"whale_alert_latest.json").write_text(json.dumps(report,indent=2)+"\\n")
+    print(json.dumps(report,ensure_ascii=False))
+if __name__=="__main__":
+    main()
