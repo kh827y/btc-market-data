@@ -80,4 +80,38 @@ class BridgeTests(unittest.TestCase):
   self.assertNotIn("spot_cvd",m.make_brief(out))
   self.assertFalse(out["audit"]["family_readiness"]["spot_execution"])
 
+ def test_actual_cme_recent_observed_basis_is_visible(self):
+  source={"generated_utc":"2026-11-02T07:15:00Z","results":{
+   "cme_basis":{"status":"recent_observed",
+     "front_recent_contract":{"date":"2026-10-30","contract":"BTCZ26.CME","annualized_basis_pct":2.99}}}}
+  out=m.build({"derivatives":source},NOW)
+  front=out["metrics"]["derivatives"]["cme_front_basis"]
+  self.assertEqual(front["contract"],"BTCZ26.CME")
+  self.assertEqual(m.make_brief(out)["derivatives"]["cme_front_basis"]["annualized_basis_pct"],2.99)
+  self.assertNotIn("derivatives:cme_front_basis_unavailable",out["audit"]["coverage_gaps"])
+
+ def test_coverage_gaps_report_incomplete_cvd_and_failed_venues(self):
+  src={"spot_cvd":{"generated_utc":"2026-11-02T07:15:00Z",
+             "last_complete_hour":"2026-11-02T06:00:00Z",
+             "windows":{"24h":{"complete":False,"net":None}}},
+       "live_depth":{"generated_at":"2026-11-02T07:20:00Z",
+                     "status":"ok","errors":["venue1 failed","venue2 failed"],
+                     "current":{"venues":{}}},
+       "onchain":{"generated_utc":"2026-11-02T07:15:00Z",
+                  "components":{}}}
+  out=m.build(src,NOW)
+  gaps=out["audit"]["coverage_gaps"]
+  self.assertIn("spot_cvd:24h_five_venue_incomplete",gaps)
+  self.assertIn("live_depth:failed_venues=2",gaps)
+  self.assertTrue(any(x.startswith("onchain:missing_or_delayed_metrics=") for x in gaps))
+  brief=m.make_brief(out)
+  self.assertEqual(brief["sources"]["live_depth"]["source_errors"],2)
+  self.assertEqual(brief["sources"]["spot_cvd"]["measurement_age_h"],1.5)
+  self.assertEqual(brief["coverage_gaps"],gaps)
+
+ def test_zero_bid_share_is_retained(self):
+  got=m.guard_bands({"0.05":{"bid_coverage_complete":True,"ask_coverage_complete":True,
+                           "bid_share":0.0,"imbalance_bid_share":0.7}})
+  self.assertEqual(got["0.05"]["bid_share"],0.0)
+
 if __name__=="__main__":unittest.main()
