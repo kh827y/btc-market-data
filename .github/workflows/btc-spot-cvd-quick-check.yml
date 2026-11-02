@@ -58,7 +58,12 @@ jobs:
           for attempt in 1 2 3 4; do
             git fetch origin main
             git reset --hard origin/main
-            BTC_CVD_TEST_STATUS="$cvd_status" BTC_BRIDGE_TEST_STATUS="$bridge_status" BTC_BITGET_SMOKE_STATUS="$bitget_status" python - <<'PY'
+            # Short REAL collection, not just mocks: save compact verified
+            # spot trades and progress even if Coinbase deep history is incomplete.
+            BTC_CVD_ARCHIVE_BATCH=3 BTC_CVD_COINBASE_RECENT_PAGES=12 BTC_CVD_COINBASE_DEEP_PAGES=12 python -u btc-spot-cvd/collector.py > /tmp/cvd-live.log 2>&1
+            collect_status=$?
+            tail -25 /tmp/cvd-live.log
+            BTC_CVD_TEST_STATUS="$cvd_status" BTC_BRIDGE_TEST_STATUS="$bridge_status" BTC_BITGET_SMOKE_STATUS="$bitget_status" BTC_COLLECT_STATUS="$collect_status" python - <<'PY'
           import datetime
           import json
           import os
@@ -69,6 +74,8 @@ jobs:
              "collector_tests_ok":os.getenv("BTC_CVD_TEST_STATUS") == "0",
              "bridge_tests_ok":os.getenv("BTC_BRIDGE_TEST_STATUS") == "0",
              "bitget_actual_hour_smoke_ok":os.getenv("BTC_BITGET_SMOKE_STATUS") == "0",
+             "short_actual_collector_ok":os.getenv("BTC_COLLECT_STATUS") == "0",
+             "short_actual_collector_scope":"3 new hours per non-Coinbase venue plus 24 Coinbase REST pages",
              "bitget_smoke_hour_utc":"2026-11-01T12:00:00Z",
              "scope":"unit tests only; does NOT prove successful new trade data download or full 24h/7d/30d CVD",
           }
@@ -76,11 +83,11 @@ jobs:
           path.parent.mkdir(parents=True,exist_ok=True)
           path.write_text(json.dumps(row,indent=2)+"\n")
           PY
-            git add btc-spot-cvd/data/quick_check.json
+            git add btc-spot-cvd/data/quick_check.json btc-spot-cvd/data/latest.json btc-spot-cvd/data/state.json
             if git diff --cached --quiet; then break; fi
             git commit -m "test: BTC CVD and bridge unit check result"
             if git push origin HEAD:main; then break; fi
             if [ "$attempt" -eq 4 ]; then exit 1; fi
             sleep 2
           done
-          if [ "$cvd_status" -ne 0 ] || [ "$bridge_status" -ne 0 ] || [ "$bitget_status" -ne 0 ]; then exit 1; fi
+          if [ "$cvd_status" -ne 0 ] || [ "$bridge_status" -ne 0 ] || [ "$bitget_status" -ne 0 ] || [ "$collect_status" -ne 0 ]; then exit 1; fi
