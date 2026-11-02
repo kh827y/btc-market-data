@@ -34,7 +34,8 @@ def brief():
         "sources":{name:{"status":"fresh"} for name in set(FAMILIES.values())},
         "metric_quality":{"critical_issues":[],
             "checks":{metric:{"status":"usable","source":source,
-                "observed_at":STAMP} for metric,source in FAMILIES.items()}}}
+                "observed_at":STAMP,"unit":"source native unit","scope":"native BTC market"}
+                for metric,source in FAMILIES.items()}}}
 
 def ev(metric,direction="down",t=STAMP,material=True):
     return {"metric_key":metric,"direction":direction,"observed_at":t,
@@ -99,6 +100,26 @@ class SignalDecisionTests(unittest.TestCase):
         for label,c in cases:
             with self.subTest(label=label):
                 self.assertGreaterEqual(len(self.assert_review(c)["verified_groups"]),2)
+
+    def test_real_compact_brief_without_metric_source_field_still_works(self):
+        b=brief()
+        for proof in b["metric_quality"]["checks"].values():
+            proof.pop("source")
+        self.assert_review(candidate(P,OI),b)
+
+    def test_falsified_metric_parent_mismatch_is_rejected(self):
+        b=brief()
+        b["metric_quality"]["checks"][OI]["source"]="price_technical"
+        result=self.assert_silent(candidate(P,OI),b)
+        self.assertEqual(result["excluded"][0]["reason"],"unverifiable_metric_origin")
+
+    def test_native_scope_or_observation_proof_cannot_be_omitted(self):
+        b=brief()
+        b["metric_quality"]["checks"][OI].pop("unit")
+        self.assert_silent(candidate(P,OI),b)
+        b=brief()
+        b["metric_quality"]["checks"][OI]["observed_at"]=None
+        self.assert_silent(candidate(P,OI),b)
 
     def test_stale_oi_never_confirms_current_price_break(self):
         b=brief();b["sources"]["derivatives"]["status"]="stale"
@@ -183,7 +204,6 @@ class SignalDecisionTests(unittest.TestCase):
     def test_duplicate_preempts_false_news_reprint(self):
         c=dict(candidate(P),kind="factcheck",primary_source_checked=True,
                widely_circulated=True,material_to_btc=True)
-        self.assert_silent(c,reason="fewer_than_two_independent_verified_groups") if False else None
         x=g.evaluate(brief(),c,NOW,{"test-event-1":{"sent_at":STAMP}})
         self.assertEqual(x["reason"],"event_already_alerted")
 
