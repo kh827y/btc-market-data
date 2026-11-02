@@ -281,7 +281,7 @@ def make_brief(report):
     "perpetual_venues":j["perp_usable_venues"],
     "venues":{venue:{"market":item["market"],"captured_at":item["captured_at"],
                      "bands":{k:v for k,v in item["bands"].items()
-                              if k in ("0.05","0.2") and v["complete"]}}
+                              if k in ("0.01","0.05","0.2") and v["complete"]}}
               for venue,item in j["venues"].items()}}
  hist={}
  for src,key,names in (("hft_depth","hft_12utc",("binance_spot","okx_spot","binance_futures","bybit","bybit_spot")),
