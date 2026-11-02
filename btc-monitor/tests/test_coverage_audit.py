@@ -96,4 +96,22 @@ class CoverageLedgerTests(unittest.TestCase):
         self.assertFalse(out["historical_L2"]["hft_11_13_utc"]["continuous_level2_reconstruction_claimed"])
         self.assertTrue(out["historical_L2"]["hft_11_13_utc"]["backfill_owned_by_separate_existing_automation"])
 
+
+    def test_gate_400_receipt_requires_native_exchange_id(self):
+        data=list(fixture())
+        gate=data[1]["current"]["venues"]["gate_usdt_perp"]
+        gate.update({"transport":"gate_official_ws_v2_full_snapshot",
+                     "levels":{"bid":400,"ask":400},
+                     "native_depth_levels_requested":400,
+                     "exchange_update_id":129812445922,
+                     "source_timestamp":"2026-11-02T21:22:47Z"})
+        verified=m.build(*data)
+        details=verified["live_orderbook"]["market_details"]["gate_usdt_perp"]
+        self.assertEqual(details["source_id"],129812445922)
+        self.assertEqual(details["native_depth_levels_requested"],400)
+        self.assertTrue(verified["live_orderbook"]["official_deeper_snapshot_probe"]["gate_live_400_verified"])
+        del gate["exchange_update_id"]
+        unknown=m.build(*data)
+        self.assertFalse(unknown["live_orderbook"]["official_deeper_snapshot_probe"]["gate_live_400_verified"])
+
 if __name__=="__main__":unittest.main()
