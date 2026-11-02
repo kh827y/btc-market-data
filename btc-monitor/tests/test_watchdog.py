@@ -16,7 +16,8 @@ NOW = dt.datetime(2026, 11, 2, 19, 45, tzinfo=UTC)
 def cvd_data(generated="2026-11-02T19:35:00Z",
              observed_hour="2026-11-02T17:00:00Z"):
     return {"generated_utc": generated, "last_complete_hour": observed_hour,
-            "windows": {"24h": {"complete": False},
+            "windows": {"1h": {"complete": True},
+                        "24h": {"complete": False},
                         "168h": {"complete": False},
                         "720h": {"complete": False}}}
 
@@ -27,6 +28,14 @@ class WatchdogTests(unittest.TestCase):
         self.assertEqual(v["status"], "healthy")
         self.assertFalse(v["needs_recovery"])
         self.assertIn("five_venue_cvd_24h_incomplete", v["coverage_gaps"])
+
+    def test_new_source_file_with_missing_latest_spot_hour_triggers_recovery(self):
+        sample=cvd_data()
+        sample["windows"]["1h"]={"complete":False,"net":None}
+        result=m.assess("spot_cvd",sample,NOW)
+        self.assertTrue(result["needs_recovery"])
+        self.assertEqual(result["reason"],"newest_spot_cvd_hour_missing_executed_trades")
+        self.assertIn("five_venue_cvd_1h_incomplete",result["coverage_gaps"])
 
     def test_old_complete_hour_even_with_fresh_json_is_outage(self):
         v = m.assess("spot_cvd", cvd_data(observed_hour="2026-11-02T10:00:00Z"), NOW)
