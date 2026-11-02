@@ -200,7 +200,7 @@ def etf_history(data,now):
     rows=None
     if isinstance(data,list):rows=data
     elif isinstance(data,dict):
-        for key in ("sessions","daily","data","rows","history","dailyFlows"):
+        for key in ("days","sessions","daily","data","rows","history","dailyFlows"):
             if isinstance(data.get(key),list):
                 rows=data[key];break
     if rows is None:raise ValueError("unsupported full ETF history schema")
