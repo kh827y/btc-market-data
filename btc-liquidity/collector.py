@@ -163,7 +163,16 @@ def collect_live(now, errors):
     venues = {}
     for name, (market, symbol, url) in VENUES.items():
         try:
-            if name in ("bybit_spot","bybit_usdt_perp","binance_usdm_perp"):
+            if name == "gate_usdt_perp":
+                # Prefer native Gate V2 400-level full snapshot from the SAME venue.
+                # Never interpret delta-only updates as a complete book.
+                from official_ws import read_gate_v2_book
+                try:
+                    raw = read_gate_v2_book()
+                except Exception as ws_exc:
+                    errors.append("gate_v2_400_unavailable; native REST 300 fallback: " + str(ws_exc)[:120])
+                    raw = fetch(url)
+            elif name in ("bybit_spot","bybit_usdt_perp","binance_usdm_perp"):
                 # REST returns 403/451 from GitHub runners; official native
                 # public WS returns timestamped FULL snapshots of identical
                 # venue/instrument. No proxies or different exchanges.
@@ -194,6 +203,11 @@ def collect_live(now, errors):
                 record["quantity_conversion"] = ("Gate contracts times quanto_multiplier into BTC"
                                                 if name == "gate_usdt_perp" else
                                                 "OKX contracts times ctVal times ctMult into BTC")
+            if name == "gate_usdt_perp":
+                record["exchange_update_id"] = raw["id"]
+                record["native_depth_levels_requested"] = (
+                    400 if raw.get("_transport") == "gate_official_ws_v2_full_snapshot" else 300
+                )
             record.update({"market": market, "symbol": symbol, "quote": "USD" if name == "coinbase_spot" else "USDT",
                            "captured_at": dt.datetime.now(UTC).isoformat().replace("+00:00", "Z"), "source_timestamp": dt.datetime.fromtimestamp(source_ms / 1000, UTC).isoformat()
                            if source_ms is not None else None,
