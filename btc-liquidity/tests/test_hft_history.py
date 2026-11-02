@@ -166,5 +166,41 @@ class HistoricL2Tests(unittest.TestCase):
         self.assertEqual(cov["30d"]["bybit_spot"]["verified_days"],0)
         self.assertEqual(cov["30d"]["bybit_spot"]["coverage_pct"],0)
 
+    def test_calendar_audit_separates_native_gaps_from_retryable_http_errors(self):
+        start=m.ARCHIVE_START
+        days=[(start+dt.timedelta(days=i)).isoformat() for i in range(4)]
+        observed={v:{d:{} for d in days} for v in m.MARKETS}
+        # One market: verified on first day, missing native snapshot on second,
+        # three transient 429s on third, one untested hour on fourth.
+        observed["binance_spot"]={days[0]:{}}
+        failures={}
+        for hour in m.SEARCH_HOURS:
+            failures[f"binance_spot:{days[1]}:{hour:02d}"]={
+                "last_error":"ValueError: no verified checkpoint snapshot found anywhere in the requested UTC hour",
+                "retry_after":"2026-11-09T00:00:00+00:00"}
+            failures[f"binance_spot:{days[2]}:{hour:02d}"]={
+                "last_error":"HTTPError: HTTP Error 429: Too Many Requests",
+                "retry_after":"2026-11-03T00:00:00+00:00"}
+        for hour in m.SEARCH_HOURS[:2]:
+            failures[f"binance_spot:{days[3]}:{hour:02d}"]={
+                "last_error":"HTTPError: HTTP Error 429",
+                "retry_after":"2026-11-03T00:00:00+00:00"}
+        result=m.audit_source_dates(observed,failures,start+dt.timedelta(days=3))
+        row=result["binance_spot"]
+        self.assertEqual(row["eligible_days"],4)
+        self.assertEqual(row["verified_days"],1)
+        self.assertEqual(row["explicit_error_days"],2)
+        self.assertEqual(row["not_fully_checked_days"],1)
+        self.assertFalse(row["all_source_dates_accounted_for"])
+        self.assertEqual(row["error_reason_counts"],{
+            "no_native_snapshot_in_sampled_hours":1,"transient_or_other_error":1})
+        self.assertEqual(row["transient_or_other_error_days"],1)
+        self.assertEqual(row["error_date_details"][0]["day"],days[1])
+        self.assertEqual(row["error_date_details"][1]["classification"],"transient_or_other_error")
+        self.assertEqual(result["bybit"]["verified_days"],4)
+        self.assertTrue(result["bybit"]["all_source_dates_accounted_for"])
+        self.assertEqual(sum([row["verified_days"],row["explicit_error_days"],
+                              row["not_fully_checked_days"]]),row["eligible_days"])
+
 if __name__=="__main__":
     unittest.main()
