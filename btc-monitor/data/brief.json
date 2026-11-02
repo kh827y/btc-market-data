@@ -1,5 +1,5 @@
 {
-  "as_of_utc": "2026-11-02T09:59:15.929940+00:00",
+  "as_of_utc": "2026-11-02T10:05:14.656859+00:00",
   "btc_technicals": {
     "breakout20": "within_prev20_range",
     "closed_candles_only": true,
@@ -60,6 +60,7 @@
     "weekly_ma200_rising": true
   },
   "coverage_gaps": [
+    "macro_etf:unavailable_or_stale",
     "spot_cvd:24h_five_venue_incomplete",
     "spot_cvd:168h_five_venue_incomplete",
     "spot_cvd:720h_five_venue_incomplete",
@@ -69,6 +70,11 @@
   "family_readiness": {
     "current_orderbook": false,
     "holder_behavior": true,
+    "macro_exact_ice_dxy": false,
+    "macro_fed_rates": false,
+    "macro_liquidity": false,
+    "macro_treasury_yields": false,
+    "macro_usd_broad_not_dxy": false,
     "onchain_independent_cost_basis": true,
     "options": false,
     "orderbook": true,
@@ -81,9 +87,11 @@
     "spot_cvd_24h_covered_subset": true,
     "spot_cvd_24h_fixed_five_ex_coinbase": true,
     "spot_cvd_720h_fixed_five_ex_coinbase": true,
-    "spot_execution": true
+    "spot_execution": true,
+    "us_spot_btc_etf_flows": false
   },
   "issues": [
+    "macro_etf:invalid_schema:compact_macro_etf() missing 1 required positional argument: 'now'",
     "derivatives:stale",
     "options:stale",
     "live_depth:stale"
@@ -667,57 +675,64 @@
   "schema": 1,
   "sources": {
     "bybit_depth": {
-      "age_h": 0.07,
+      "age_h": 0.17,
       "measurement_age_h": null,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-liquidity/data/bybit_independent_latest.json",
       "source_errors": 0,
       "status": "fresh"
     },
     "derivatives": {
-      "age_h": 3.74,
+      "age_h": 3.84,
       "measurement_age_h": null,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-derivatives/data/latest.json",
       "source_errors": 0,
       "status": "stale"
     },
     "hft_depth": {
-      "age_h": 0.28,
+      "age_h": 0.38,
       "measurement_age_h": null,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-liquidity/data/hft_latest.json",
       "source_errors": 20,
       "status": "fresh"
     },
     "live_depth": {
-      "age_h": 3.17,
-      "measurement_age_h": 3.17,
+      "age_h": 3.27,
+      "measurement_age_h": 3.27,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-liquidity/data/latest.json",
       "source_errors": 3,
       "status": "stale"
     },
+    "macro_etf": {
+      "age_h": 0.02,
+      "measurement_age_h": null,
+      "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-macro/data/latest.json",
+      "source_errors": 0,
+      "status": "invalid_schema"
+    },
     "onchain": {
-      "age_h": 4.19,
+      "age_h": 4.29,
       "measurement_age_h": null,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-onchain/data/monitor_latest.json",
       "source_errors": 0,
       "status": "fresh"
     },
     "options": {
-      "age_h": 3.5,
+      "age_h": 3.6,
       "measurement_age_h": null,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-options/data/latest.json",
       "source_errors": 0,
       "status": "stale"
     },
     "price_technical": {
-      "age_h": 0.04,
-      "measurement_age_h": 33.99,
+      "age_h": 0.14,
+      "measurement_age_h": 34.09,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-price/data/latest.json",
       "source_errors": 0,
       "status": "fresh"
     },
     "spot_cvd": {
-      "age_h": 0.01,
-      "measurement_age_h": 2.99,
+      "age_h": 0.09,
+      "measurement_age_h": 3.09,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-spot-cvd/data/latest.json",
       "source_errors": 0,
       "status": "fresh"
