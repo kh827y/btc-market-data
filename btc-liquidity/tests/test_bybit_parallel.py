@@ -85,6 +85,35 @@ class ParallelBybitTests(unittest.TestCase):
             self.assertEqual(audit["unaccounted_days"],[])
             self.assertEqual(audit["unverified_dates"][0]["day"],missing)
 
+    def test_merge_accepts_real_snapshot_three_ms_before_midnight(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=pathlib.Path(d)
+            self.mock_blocks(root/"artifacts")
+            p=root/"artifacts"/"linear-1"/"result.json"
+            blob=json.loads(p.read_text())
+            day=next(iter(blob["records"]))
+            stamp=dt.datetime.combine(dt.date.fromisoformat(day),dt.time(),UTC)-dt.timedelta(milliseconds=3)
+            blob["records"][day]["time"]=stamp.isoformat()
+            p.write_text(json.dumps(blob))
+            with patch.dict(bp.bi.VENUES,self.venue_starts,clear=True):
+                bp.merge(root/"artifacts",root/"repo",self.now)
+            state=json.loads((root/"repo"/"btc-liquidity/data"/"bybit_full_backfill_status.json").read_text())
+            self.assertEqual(state["day_audit"]["bybit_independent_linear"]["verified_days"],23)
+
+    def test_merge_rejects_source_snapshot_too_far_before_midnight(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=pathlib.Path(d)
+            self.mock_blocks(root/"artifacts")
+            p=root/"artifacts"/"linear-1"/"result.json"
+            blob=json.loads(p.read_text())
+            day=next(iter(blob["records"]))
+            stamp=dt.datetime.combine(dt.date.fromisoformat(day),dt.time(),UTC)-dt.timedelta(milliseconds=11)
+            blob["records"][day]["time"]=stamp.isoformat()
+            p.write_text(json.dumps(blob))
+            with patch.dict(bp.bi.VENUES,self.venue_starts,clear=True):
+                with self.assertRaisesRegex(ValueError,"provenance"):
+                    bp.merge(root/"artifacts",root/"repo",self.now)
+
     def test_inconsistent_shard_through_rejected(self):
         with tempfile.TemporaryDirectory() as d:
             root=pathlib.Path(d)
