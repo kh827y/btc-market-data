@@ -25,3 +25,31 @@ def extract_coinglass(markup):
     if value < 0:
         raise ValueError("invalid negative whale deposit")
     return day, value
+
+def extract_swiss(markup):
+    value = re.search(r'Latest complete day</th><td>([\d.]+)</td>', markup)
+    date = re.search(r'Data as of</th><td>(20\d\d-\d\d-\d\d)</td>', markup)
+    if not value or not date:
+        raise ValueError("Swiss whale-only ratio unavailable")
+    v = float(value.group(1))
+    if not 0 <= v <= 1:
+        raise ValueError("ratio outside range")
+    dt.date.fromisoformat(date.group(1))
+    return date.group(1), v
+
+def main():
+    ROOT.mkdir(parents=True, exist_ok=True)
+    previous = ROOT / "whale_history.json"
+    history = json.loads(previous.read_text()) if previous.exists() else {}
+    now = dt.datetime.now(dt.timezone.utc)
+    errors = []
+    latest = {}
+    sources = {name:"CoinGlass: entity-labelled large-holder deposits" for name in PAGES}
+    for name, slug in PAGES.items():
+        try:
+            markup = download("https://www.coinglass.com/pro/onchain/" + slug)
+            day, value = extract_coinglass(markup)
+            history.setdefault(name, {})[day] = value
+            latest[name] = {"date":day,"value":value,"lag_days":(now.date()-dt.date.fromisoformat(day)).days}
+        except Exception as exc:
+            errors.append({"metric":name,"reason":str(exc)[:180]})
