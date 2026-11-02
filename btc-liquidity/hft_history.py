@@ -157,13 +157,32 @@ def write(path,content):
     path.parent.mkdir(parents=True,exist_ok=True)
     path.write_text(json.dumps(content,ensure_ascii=False,indent=2,sort_keys=True)+"\n",encoding="utf8")
 
-def targets(through, existing):
-    # Prioritize meaningful same-hour baselines before filling consecutive 90-day history.
+def targets(through, existing, failures=None, now=None):
+    """Search real 12:00, 11:00, 13:00 UTC anchors; retry gaps after source updates.
+
+    Failed candidate *hours* are tracked separately so an unanchored 12:00 file
+    cannot poison the whole calendar day. Never mark a day completed until a
+    verified checkpoint has been measured.
+    """
+    failures=failures or {}
+    now=now or dt.datetime.now(UTC)
     priority=(0,1,7,30,90,365,180,2,3,4,5,6,8,14,21,60)
     days=list(dict.fromkeys([through-dt.timedelta(days=n) for n in
-                             list(priority)+list(range(DAYS+1)) if n<=DAYS]))
-    return [(venue,day) for day in days for venue in MARKETS
-            if day.isoformat() not in existing.get(venue,{})]
+                             list(priority)+list(range((through-ARCHIVE_START).days+1))
+                             if ARCHIVE_START<=through-dt.timedelta(days=n)<=through]))
+    for day in days:
+        for venue in MARKETS:
+            day_key=day.isoformat()
+            if day_key in existing.get(venue,{}):continue
+            for hour in SEARCH_HOURS:
+                key=f"{venue}:{day_key}:{hour:02d}"
+                failure=failures.get(key,{})
+                retry_after=failure.get("retry_after")
+                if retry_after:
+                    try:
+                        if dt.datetime.fromisoformat(retry_after)>now:continue
+                    except ValueError:pass
+                yield (venue,day,hour)
 
 def make_comparisons(records):
     comparisons={}
@@ -177,7 +196,13 @@ def make_comparisons(records):
         for lag in (1,7,30,90,365):
             base=(dt.date.fromisoformat(newest)-dt.timedelta(days=lag)).isoformat()
             item=by_day.get(base,{}).get("data")
-            if item is None:
+            if item is not None:
+                current_time=dt.datetime.fromisoformat(latest["time"])
+                previous_time=dt.datetime.fromisoformat(item["time"])
+                hour_offset=abs(((current_time-previous_time)-dt.timedelta(days=lag)).total_seconds())/3600
+            else:
+                hour_offset=None
+            if item is None or hour_offset>2:
                 comparisons[venue]["previous_days"][str(lag)+"d"]=None
                 continue
             deltas={}
@@ -188,7 +213,9 @@ def make_comparisons(records):
                 deltas[k]={"bid_change_pct":round(100*(a["bid_usd"]/b["bid_usd"]-1),2) if b["bid_usd"] else None,
                            "ask_change_pct":round(100*(a["ask_usd"]/b["ask_usd"]-1),2) if b["ask_usd"] else None,
                            "bid_share_change_pp":round(100*(a["bid_share"]-b["bid_share"]),3)}
-            comparisons[venue]["previous_days"][str(lag)+"d"]={"baseline_day":base,"bands":deltas} if deltas else None
+            comparisons[venue]["previous_days"][str(lag)+"d"]={"baseline_day":base,"baseline_time":item["time"],"latest_time":latest["time"],
+                                                                     "clock_offset_hours":round(hour_offset,3),
+                                                                     "bands":deltas} if deltas else None
         for period,minimum in ((7,5),(30,20),(90,60),(365,240)):
             sub=[by_day[day]["data"] for day in dates
                  if 0<=(dt.date.fromisoformat(newest)-dt.date.fromisoformat(day)).days<period]
@@ -207,58 +234,96 @@ def make_comparisons(records):
 
 def main():
     now=dt.datetime.now(UTC)
-    # Hour 12 data is published after that hour closes, so the latest guaranteed date is yesterday.
+    # The daily anchor is for *yesterday*, once all 11/12/13 UTC files have closed.
     through=(now-dt.timedelta(days=1)).date()
-    history=read(ROOT/"hft_history.json",{"schema_version":1,"markets":{},"failures":{}})
+    history=read(ROOT/"hft_history.json",{"schema_version":2,"markets":{},"failures":{}})
     markets=history.setdefault("markets",{})
     for market in MARKETS:
         markets.setdefault(market,{})
+    if history.get("schema_version",1)<2:
+        # Legacy errors were keyed by day, permanently excluded valid alternate
+        # hours, and predated support for mid-file checkpoints and zstd wrapping.
+        history["failures"]={}
+        history["schema_version"]=2
     failures=history.setdefault("failures",{})
-    files=0;good=0;errors=[]
+    files=0;good=0;errors=[];exclusions=0
     start=time.monotonic()
     limit=int(os.getenv("HFT_MAX_FILES","70"))
-    for venue,day in targets(through,markets):
+    for venue,day,hour in targets(through,markets,failures,now):
         if files>=limit or time.monotonic()-start>430:break
         key=day.isoformat()
-        if failures.get(venue+":"+key,{}).get("attempts",0)>=3:continue
+        if key in markets[venue]:continue  # a fallback hour already succeeded
         symbol,kind,mul,quote=MARKETS[venue]
-        name=f"{venue}/{key}/12/{symbol}_orderbook.parquet"
+        name=f"{venue}/{key}/{hour:02d}/{symbol}_orderbook.parquet"
         url=API+"?"+urllib.parse.urlencode({"file":name})
         files+=1
         try:
-            record=parse_checkpoint(download(url),venue,symbol,kind,mul,quote,day)
+            record=parse_checkpoint(download(url),venue,symbol,kind,mul,quote,day,hour=hour)
             markets[venue][key]={"status":"ok","data":record}
-            failures.pop(venue+":"+key,None)
+            for h in SEARCH_HOURS:
+                failures.pop(f"{venue}:{key}:{h:02d}",None)
             good+=1
         except Exception as e:
-            reason=f"{type(e).__name__}: {str(e)[:160]}"
-            item=failures.setdefault(venue+":"+key,{"attempts":0})
-            item["attempts"]+=1
-            item["last_error"]=reason
-            errors.append(venue+" "+key+" "+reason)
-        if files%10==0:print("Processed",files,"historical L2 hours, valid",good,flush=True)
-    # Retain the entire supported source history from 2025-06-28, but only verified daily snapshots.
-    floor=ARCHIVE_START.isoformat()
-    for venue in markets:
-        markets[venue]={day:x for day,x in sorted(markets[venue].items()) if day>=floor}
+            reason=f"{type(e).__name__}: {str(e)[:155]}"
+            failure_key=f"{venue}:{key}:{hour:02d}"
+            failure=failures.setdefault(failure_key,{"attempts":0})
+            failure["attempts"]+=1
+            failure["checked_at"]=now.isoformat()
+            no_snapshot=("no verified checkpoint" in reason)
+            # Source may revise old archives. Re-test once per week after a
+            # negative completeness check, rather than permanently blacklisting.
+            failure["retry_after"]=(now+dt.timedelta(days=SOURCE_RECHECK_DAYS if no_snapshot else 1)).isoformat()
+            failure["last_error"]=reason
+            errors.append(venue+" "+key+f" {hour:02d}h "+reason)
+            exclusions+=1
+        if files%10==0:
+            print("Checked",files,"historical L2 files; verified",good,
+                  "unverifiable",exclusions,flush=True)
+    # Bound the failures record to published archive dates (do not lose findings).
     history["updated_at"]=now.isoformat()
+    history["schema_version"]=2
     comparisons,baselines=make_comparisons(markets)
-    latest={"generated_at":now.isoformat(),"status":"ok" if sum(bool(markets[v].get(through.isoformat())) for v in MARKETS if MARKETS[v][1]=="spot")>=2 and sum(bool(markets[v].get(through.isoformat())) for v in MARKETS if MARKETS[v][1]=="perpetual")>=1 else "partial" if any(markets[k] for k in markets) else "unavailable",
-            "source":"CryptoHFTData free historical L2, actual 12:00 UTC orderbook checkpoint",
-            "archive_start":ARCHIVE_START.isoformat(),"coverage_days":{v:len(x) for v,x in markets.items()},
-            "latest_by_venue":{v:max(x,default=None) for v,x in markets.items()},
-            "comparison":comparisons,"baseline":baselines,
-            "errors_recent_run":errors[-20:],
-            "caveats":["Historical hourly file snapshot is a point-in-time book, NOT daily median or full 24h book.",
-                       "Missing checkpoint or insufficient band coverage is null; do not infer zero liquidity.",
-                       "Venue and spot/perpetual observations are not pooled or presented as whole market.",
-                       "OKX perpetual book uses 0.01 BTC/contract; historical denomination assumed constant.",
-                       "CryptoHFTData archive has documented gaps and retroactive corrections."] }
+    source_days=(through-ARCHIVE_START).days+1
+    coverage={}
+    for venue,rows in markets.items():
+        coverage[venue]={"verified_days":len(rows),
+                         "eligible_days_since_global_start":source_days,
+                         "coverage_pct_of_global_window":round(len(rows)/source_days*100,2),
+                         "first_verified_day":min(rows,default=None),
+                         "latest_verified_day":max(rows,default=None)}
+    anchor_keys={v:bool(markets[v].get(through.isoformat())) for v in MARKETS}
+    enough_spot=sum(anchor_keys[v] for v in MARKETS if MARKETS[v][1]=="spot")>=2
+    enough_perp=sum(anchor_keys[v] for v in MARKETS if MARKETS[v][1]=="perpetual")>=1
+    latest={
+        "schema_version":2,"generated_at":now.isoformat(),
+        "status":"ok" if enough_spot and enough_perp else "partial" if any(markets.values()) else "unavailable",
+        "source":"CryptoHFTData historical L2 /download; real observed vendor checkpoint",
+        "archive_start":ARCHIVE_START.isoformat(),
+        "target_anchor_date":through.isoformat(),
+        "searched_utc_hours":list(SEARCH_HOURS),
+        "coverage_days":{v:len(rows) for v,rows in markets.items()},
+        "coverage":coverage,
+        "latest_by_venue":{v:max(rows,default=None) for v,rows in markets.items()},
+        "unverifiable_hour_files_total":len(failures),
+        "files_attempted_this_run":files,
+        "verified_this_run":good,
+        "comparison":comparisons,
+        "baseline":baselines,
+        "errors_recent_run":errors[-20:],
+        "caveats":[
+            "One real checkpoint per date, typically around 12:00 UTC; not a daily median nor 24h continuous depth.",
+            "Daily observations used in comparisons are required to be within 2 hours of the same UTC clock time.",
+            "Missing checkpoint or insufficient coverage is NOT interpreted as no liquidity; null values are intentional.",
+            "Market is venue/instrument specific; spot and perpetuals are never pooled or called global.",
+            "OKX perpetual 0.01 BTC/contract is assumed historically constant; contract-value history remains unverified.",
+            "Provider's archives may have gaps and revisions; negative checks retried after 7 days."
+        ]
+    }
     write(ROOT/"hft_history.json",history)
     write(ROOT/"hft_latest.json",latest)
-    print(json.dumps({"files_attempted":files,"valid":good,"coverage":latest["coverage_days"],
-                      "comparisons":{k:list(v.get("previous_days",{})) for k,v in comparisons.items()},
-                      "errors":errors[:6]},ensure_ascii=False),flush=True)
+    print(json.dumps({"status":latest["status"],"files_attempted":files,"verified":good,
+                      "unverifiable":exclusions,"coverage":latest["coverage_days"],
+                      "errors":errors[:4]},ensure_ascii=False),flush=True)
 
 if __name__=="__main__":
     main()
