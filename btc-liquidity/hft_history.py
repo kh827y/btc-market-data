@@ -272,12 +272,14 @@ def targets(through, existing, failures=None, now=None):
                 # not permanently suppress a later, more comparable 12 UTC file.
                 if noon_comparable_entry(previous_entry,day_key):
                     continue
-                if previous_entry["data"]["sample_utc_hour"]==12 or hour!=12:
+                if previous_entry["data"]["sample_utc_hour"]==12:
                     continue
             # Legacy "hour-start checkpoint" rows may be inferred from
             # unanchored updates. Retain for audit but do NOT treat as verified.
             for hour in SEARCH_HOURS:
                 if verified and hour in FALLBACK_SEARCH_HOURS:continue
+                if (verified and previous_entry["data"]["sample_utc_hour"] in PRIMARY_SEARCH_HOURS
+                    and hour!=12):continue
                 key=f"{venue}:{day_key}:{hour:02d}"
                 failure=failures.get(key,{})
                 retry_after=failure.get("retry_after")
