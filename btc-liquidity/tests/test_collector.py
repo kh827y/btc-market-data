@@ -188,5 +188,55 @@ class LiquidityTests(unittest.TestCase):
         self.assertEqual(fallback["venues"]["okx_spot"]["source_url"],"https://www.okx.com/api/v5/market/books")
         self.assertTrue(any("truncated sides" in e for e in errs))
 
+
+    def test_gate_spot_native_5000_source_timestamp_and_update_id(self):
+        self.assertIn("limit=5000",m.VENUES["gate_spot"][2])
+        self.assertIn("with_id=true",m.VENUES["gate_spot"][2])
+        now=dt.datetime.now(m.UTC)
+        def raw(n=5000):
+            return {"id":40770001,"current":int(now.timestamp()*1000),
+                    "bids":[[str(77000-i*.25),"2"] for i in range(n)],
+                    "asks":[[str(77000.1+i*.25),"3"] for i in range(n)]}
+        bids,asks,ts=m.normalize_book("gate_spot",raw())
+        self.assertEqual(ts,int(now.timestamp()*1000))
+        self.assertEqual(len(bids),5000)
+        for key in ("id","current"):
+            bad=raw()
+            bad.pop(key)
+            with self.assertRaises((KeyError,TypeError,ValueError)):
+                m.normalize_book("gate_spot",bad)
+        bad=raw()
+        bad["current"]=int(now.timestamp())
+        with self.assertRaisesRegex(ValueError,"milliseconds"):
+            m.normalize_book("gate_spot",bad)
+
+    def test_gate_spot_5000_verified_and_1000_fallback(self):
+        from unittest.mock import patch
+        now=dt.datetime.now(m.UTC)
+        def book(n):
+            return {"id":40819000,"current":int(now.timestamp()*1000),
+                    "bids":[[str(77000-i*.2),"2"] for i in range(n)],
+                    "asks":[[str(77000.1+i*.2),"3"] for i in range(n)]}
+        only={"gate_spot":m.VENUES["gate_spot"]}
+        with patch.object(m,"VENUES",only),patch.object(m,"fetch",return_value=book(5000)):
+            errors=[]
+            full=m.collect_live(now,errors)
+        self.assertEqual(errors,[])
+        self.assertEqual(full["venues"]["gate_spot"]["native_depth_levels_requested"],5000)
+        self.assertEqual(full["venues"]["gate_spot"]["exchange_update_id"],40819000)
+        self.assertEqual(full["venues"]["gate_spot"]["levels"]["bid"],5000)
+        self.assertIsNotNone(full["venues"]["gate_spot"]["bands"]["1.0"]["imbalance_bid_share"])
+        urls=[]
+        def fetcher(url):
+            urls.append(url)
+            return book(30 if "limit=5000" in url else 1000)
+        with patch.object(m,"VENUES",only),patch.object(m,"fetch",side_effect=fetcher):
+            errors=[]
+            smaller=m.collect_live(now,errors)
+        self.assertEqual(smaller["venues"]["gate_spot"]["native_depth_levels_requested"],1000)
+        self.assertEqual(smaller["venues"]["gate_spot"]["transport"],"gate_official_rest_1000_fallback")
+        self.assertTrue(any("gate_spot_5000_unavailable" in e for e in errors))
+        self.assertTrue(any("limit=1000" in u for u in urls))
+
 if __name__ == "__main__":
     unittest.main()
