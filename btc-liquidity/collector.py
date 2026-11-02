@@ -30,7 +30,7 @@ VENUES = {
     "bitget_spot": ("spot", "BTCUSDT", "https://api.bitget.com/api/v3/market/orderbook?category=SPOT&symbol=BTCUSDT&limit=1000"),
     "bitget_usdt_perp": ("perpetual", "BTCUSDT", "https://api.bitget.com/api/v3/market/orderbook?category=USDT-FUTURES&symbol=BTCUSDT&limit=1000"),
     "gate_spot": ("spot", "BTCUSDT", "https://api.gateio.ws/api/v4/spot/order_book?currency_pair=BTC_USDT&limit=1000"),
-    "gate_usdt_perp": ("perpetual", "BTCUSDT", "https://api.gateio.ws/api/v4/futures/usdt/order_book?contract=BTC_USDT&limit=1000"),
+    "gate_usdt_perp": ("perpetual", "BTCUSDT", "https://api.gateio.ws/api/v4/futures/usdt/order_book?contract=BTC_USDT&limit=100"),
 }
 
 def fetch(url, binary=False):
