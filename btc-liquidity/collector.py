@@ -26,6 +26,11 @@ VENUES = {
     "binance_usdm_perp": ("perpetual", "BTCUSDT", "https://fapi.binance.com/fapi/v1/depth?symbol=BTCUSDT&limit=1000"),
     "bybit_usdt_perp": ("perpetual", "BTCUSDT", "https://api.bybit.com/v5/market/orderbook?category=linear&symbol=BTCUSDT&limit=1000"),
     "okx_usdt_perp": ("perpetual", "BTCUSDT", "https://www.okx.com/api/v5/market/books?instId=BTC-USDT-SWAP&sz=400"),
+    # Distinct real exchanges, NOT substitutes presented as Bybit/Binance.
+    "bitget_spot": ("spot", "BTCUSDT", "https://api.bitget.com/api/v3/market/orderbook?category=SPOT&symbol=BTCUSDT&limit=1000"),
+    "bitget_usdt_perp": ("perpetual", "BTCUSDT", "https://api.bitget.com/api/v3/market/orderbook?category=USDT-FUTURES&symbol=BTCUSDT&limit=1000"),
+    "gate_spot": ("spot", "BTCUSDT", "https://api.gateio.ws/api/v4/spot/order_book?currency_pair=BTC_USDT&limit=1000"),
+    "gate_usdt_perp": ("perpetual", "BTCUSDT", "https://api.gateio.ws/api/v4/futures/usdt/order_book?contract=BTC_USDT&limit=1000"),
 }
 
 def fetch(url, binary=False):
@@ -40,7 +45,8 @@ def fetch(url, binary=False):
                 return raw if binary else json.loads(raw)
         except (OSError, ValueError, urllib.error.HTTPError) as exc:
             last = exc
-            if isinstance(exc, urllib.error.HTTPError) and exc.code == 404:
+            if isinstance(exc, urllib.error.HTTPError) and exc.code in (400,401,403,404,451):
+                # These are not transient. Do not retry a geo/auth denied host.
                 break
             if attempt < 2:
                 time.sleep(1 + attempt)
@@ -59,6 +65,20 @@ def normalize_book(venue, raw):
         item = raw["result"]
         bids, asks = item["b"], item["a"]
         source_ms = int(item["ts"])
+    elif venue.startswith("bitget"):
+        if raw.get("code") != "00000":
+            raise ValueError("Bitget non-success response")
+        item = raw["data"]
+        bids, asks = item["b"], item["a"]
+        source_ms = int(item["ts"])
+    elif venue == "gate_spot":
+        bids, asks = raw["bids"], raw["asks"]
+        source_ms = None
+    elif venue == "gate_usdt_perp":
+        bids = [[item["p"], item["s"]] for item in raw["bids"]]
+        asks = [[item["p"], item["s"]] for item in raw["asks"]]
+        # Gate's current/update timestamps are expressed in SECONDS.
+        source_ms = int(float(raw["current"]) * 1000)
     elif venue.startswith("okx"):
         if raw.get("code") != "0":
             raise ValueError("OKX nonzero code")
@@ -122,6 +142,15 @@ def okx_swap_contract_size(record):
         raise ValueError("OKX swap contract denomination changed; do not interpret contracts as BTC")
     return finite_positive(item["ctVal"]) * finite_positive(item["ctMult"])
 
+def gate_btc_contract_size(record):
+    # Gate USD-margined direct contract; book "s" is number of contracts,
+    # not base BTC. Reject any change of type or missing multiplier.
+    if not isinstance(record,dict) or record.get("name") != "BTC_USDT":
+        raise ValueError("Gate contract metadata missing/wrong symbol")
+    if record.get("type") not in ("direct","direct_contract"):
+        raise ValueError("Gate futures contract type not verified as direct")
+    return finite_positive(record["quanto_multiplier"])
+
 def collect_live(now, errors):
     captured = now.isoformat().replace("+00:00", "Z")
     venues = {}
@@ -130,6 +159,11 @@ def collect_live(now, errors):
             raw = fetch(url)
             bids, asks, source_ms = normalize_book(name, raw)
             contract_size = None
+            if name == "gate_usdt_perp":
+                spec = fetch("https://api.gateio.ws/api/v4/futures/usdt/contracts/BTC_USDT")
+                contract_size = gate_btc_contract_size(spec)
+                bids = [[row[0], str(float(row[1]) * contract_size)] for row in bids]
+                asks = [[row[0], str(float(row[1]) * contract_size)] for row in asks]
             if name == "okx_usdt_perp":
                 spec = fetch("https://www.okx.com/api/v5/public/instruments?instType=SWAP&instId=BTC-USDT-SWAP")
                 contract_size = okx_swap_contract_size(spec)
@@ -141,7 +175,9 @@ def collect_live(now, errors):
             record = summarize_orderbook(bids, asks)
             if contract_size is not None:
                 record["contract_size_btc"] = contract_size
-                record["quantity_conversion"] = "OKX contracts times ctVal times ctMult into BTC"
+                record["quantity_conversion"] = ("Gate contracts times quanto_multiplier into BTC"
+                                                if name == "gate_usdt_perp" else
+                                                "OKX contracts times ctVal times ctMult into BTC")
             record.update({"market": market, "symbol": symbol, "quote": "USD" if name == "coinbase_spot" else "USDT",
                            "captured_at": captured, "source_timestamp": dt.datetime.fromtimestamp(source_ms / 1000, UTC).isoformat()
                            if source_ms is not None else None, "source_url": url.split("?")[0]})
