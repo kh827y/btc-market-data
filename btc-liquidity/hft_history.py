@@ -25,7 +25,9 @@ API="https://api.cryptohftdata.com/v1/download"
 ARCHIVE_START=dt.date(2025,6,28)
 DAYS=(dt.datetime.now(UTC).date()-ARCHIVE_START).days
 BANDS=(0.01,0.05,0.2,1.0)
-SEARCH_HOURS=(12,11,13)  # Keep comparable daily observations within the 11-14 UTC window.
+PRIMARY_SEARCH_HOURS=(12,11,13)  # Preferred, strictly comparable 12:00 UTC sampling.
+FALLBACK_SEARCH_HOURS=(0,)  # Native 00 UTC book only if primary hours lack snapshots.
+SEARCH_HOURS=PRIMARY_SEARCH_HOURS+FALLBACK_SEARCH_HOURS  # Never mix clock hours in comparisons.
 SOURCE_RECHECK_DAYS=7
 # Historical BTCUSDT futures archives may exceed the previous 45 MB cap.
 MAX_COMPRESSED_BYTES=128_000_000
@@ -252,12 +254,16 @@ def targets(through, existing, failures=None, now=None):
             if day<MARKET_START[venue]:continue  # No archive before this market launch.
             day_key=day.isoformat()
             previous_entry=existing.get(venue,{}).get(day_key,{})
-            if (verified_entry(previous_entry,venue,day_key)
-                and "0.01" in previous_entry["data"]["bands"]):
-                continue  # Native snapshot and all modern bands already present.
+            verified=verified_entry(previous_entry,venue,day_key) and "0.01" in previous_entry["data"]["bands"]
+            # 00 UTC is a verified but NON-comparable fallback. Recheck
+            # 12/11/13 UTC after their source-specific retry timers expire,
+            # allowing later native snapshots to upgrade the date to 12 UTC.
+            if verified and previous_entry["data"]["sample_utc_hour"] in PRIMARY_SEARCH_HOURS:
+                continue
             # Legacy "hour-start checkpoint" rows may be inferred from
             # unanchored updates. Retain for audit but do NOT treat as verified.
             for hour in SEARCH_HOURS:
+                if verified and hour in FALLBACK_SEARCH_HOURS:continue
                 key=f"{venue}:{day_key}:{hour:02d}"
                 failure=failures.get(key,{})
                 retry_after=failure.get("retry_after")
@@ -343,13 +349,15 @@ def compact_date_intervals(days):
             intervals.append({"start":day.isoformat(),"end":day.isoformat(),"days":1})
     return intervals
 
-def audit_source_dates(verified_markets, failures, through):
+def audit_source_dates(verified_markets, failures, through, search_hours=None):
     """Classify every source calendar date without treating retries as genuine books.
 
     The archive is probed only in 11/12/13 UTC. Exhausting these hours does
     NOT prove the source lacks all other hours, and HTTP failures are not
     equivalent to a confirmed absence of native snapshots.
     """
+    # Historical audits of older published files must remain reproducible.
+    hours=tuple(search_hours if search_hours is not None else SEARCH_HOURS)
     audit={}
     for venue in MARKETS:
         start=MARKET_START[venue]
@@ -359,7 +367,7 @@ def audit_source_dates(verified_markets, failures, through):
         bad=[];pending=[];reason_counts=defaultdict(int);reason_days=defaultdict(list);details=[];retryable=0
         for day in dates:
             if day in observed:continue
-            attempts=[failures.get(f"{venue}:{day}:{hour:02d}") for hour in SEARCH_HOURS]
+            attempts=[failures.get(f"{venue}:{day}:{hour:02d}") for hour in hours]
             if any(x is None for x in attempts):
                 pending.append(day)
                 continue
@@ -375,15 +383,15 @@ def audit_source_dates(verified_markets, failures, through):
             if classification=="transient_or_other_error":retryable+=1
             if len(details)<12:
                 details.append({"day":day,"classification":classification,
-                    "hours_utc":list(SEARCH_HOURS),
-                    "reasons":dict(zip((str(h) for h in SEARCH_HOURS),reasons)),
+                    "hours_utc":list(hours),
+                    "reasons":dict(zip((str(h) for h in hours),reasons)),
                     "retry_after":max((str(x.get("retry_after","")) for x in attempts),default="")})
         audit[venue]={
             "source_market_start":start.isoformat(),
             "eligible_days":len(dates),"verified_days":len(set(observed)&set(dates)),
             "explicit_error_days":len(bad),
-            "error_scope":"no usable verified checkpoint in sampled 11/12/13 UTC hours; NOT proof entire day has no native snapshot",
-            "attempted_hours_utc":list(SEARCH_HOURS),
+            "error_scope":"no usable verified checkpoint in sampled UTC hours; NOT proof entire day has no native snapshot",
+            "attempted_hours_utc":list(hours),
             "not_fully_checked_days":len(pending),
             "all_source_dates_accounted_for":not pending,
             "error_date_examples":bad[:8],"error_date_details":details,
@@ -477,8 +485,10 @@ def main():
         key=day.isoformat()
         existing_entry=markets[venue].get(key,{})
         if (verified_entry(existing_entry,venue,key)
-            and "0.01" in existing_entry["data"]["bands"]):
-            continue  # Genuine snapshot already verified with modern bands.
+            and "0.01" in existing_entry["data"]["bands"]
+            and (existing_entry["data"]["sample_utc_hour"] in PRIMARY_SEARCH_HOURS
+                 or hour in FALLBACK_SEARCH_HOURS)):
+            continue  # Do not overwrite 12 UTC with an incompatible 00 UTC book.
         symbol,kind,mul,quote=MARKETS[venue]
         name=f"{venue}/{key}/{hour:02d}/{symbol}_orderbook.parquet"
         url=API+"?"+urllib.parse.urlencode({"file":name})
@@ -486,7 +496,9 @@ def main():
         try:
             record=parse_checkpoint(download(url),venue,symbol,kind,mul,quote,day,hour=hour)
             markets[venue][key]={"status":"ok","data":record}
-            for h in SEARCH_HOURS:
+            # Preserve failed primary-hour probes when 00 UTC fallback succeeds.
+            # After their retry timers expire, seek a better 12 UTC checkpoint.
+            for h in (SEARCH_HOURS if hour in PRIMARY_SEARCH_HOURS else FALLBACK_SEARCH_HOURS):
                 failures.pop(f"{venue}:{key}:{h:02d}",None)
             good+=1
         except Exception as e:
@@ -516,6 +528,14 @@ def main():
     comparisons,baselines=make_comparisons(verified_markets)
     source_days=(through-ARCHIVE_START).days+1
     recent_windows=recent_coverage(verified_markets,through)
+    fallback_00_coverage={}
+    for width in (7,30,90,365):
+        dates={(through-dt.timedelta(days=d)).isoformat() for d in range(width)}
+        fallback_00_coverage[str(width)+"d"]={
+            venue:sum(day in dates and row["data"]["sample_utc_hour"]==0
+                      for day,row in records.items())
+            for venue,records in verified_markets.items()
+        }
     coverage={}
     for venue,rows in verified_markets.items():
         eligible=(through-MARKET_START[venue]).days+1
@@ -542,6 +562,8 @@ def main():
         "archive_start":ARCHIVE_START.isoformat(),
         "target_anchor_date":through.isoformat(),
         "searched_utc_hours":list(SEARCH_HOURS),
+        "primary_comparable_utc_hours":list(PRIMARY_SEARCH_HOURS),
+        "alternate_00utc_verified_days_by_window":fallback_00_coverage,
         "coverage_days":{v:len(rows) for v,rows in verified_markets.items()},
         "legacy_unverified_records":legacy_unverified,
         "source_date_audit":audit,
@@ -558,7 +580,8 @@ def main():
         "baseline":baselines,
         "errors_recent_run":errors[-20:],
         "caveats":[
-            "One real checkpoint per date, typically around 12:00 UTC; not a daily median nor 24h continuous depth.",
+            "One real checkpoint per date, preferably around 12:00 UTC; 00 UTC fallback is separately labelled, never a daily median or 24h continuous depth.",
+            "Fallback 00 UTC checkpoints are genuine books but NEVER compared with 12 UTC snapshots; 12 UTC same-clock coverage remains separate.",
             "Daily observations used in comparisons and baseline medians must be within 30 minutes of the same UTC clock time.",
             "Missing checkpoint or insufficient coverage is NOT interpreted as no liquidity; null values are intentional.",
             "Bybit 50-level snapshots are usually too shallow for 0.05%: 0.01% is separately measured and only same-band metrics are comparable.",
