@@ -43,6 +43,24 @@ class HistoricL2Tests(unittest.TestCase):
             "perpetual",1.0,"USDT",dt.date(2026,10,31))
         self.assertIsNotNone(r["bands"]["0.01"]["bid_share"])
         self.assertIsNone(r["bands"]["0.05"]["bid_share"])
+    def test_binance_native_split_snapshot_in_two_received_times(self):
+        start=int(dt.datetime(2026,10,31,12,tzinfo=dt.timezone.utc).timestamp()*1e9)
+        rows=[]
+        for side in ("bid","ask"):
+            for i in range(16):
+                price=100-.01*i if side=="bid" else 100.01+.01*i
+                rows.append({"received_time":start+(1000000000 if side=="ask" else 0),
+                   "event_time":start,"last_update_id":500,"final_update_id":500,
+                   "event_type":"snapshot","side":side,"price":str(price),"quantity":"2"})
+        rows.append({"received_time":start+2000000000,"event_time":start+2000000000,
+                     "last_update_id":501,"final_update_id":501,
+                     "event_type":"update","side":"ask","price":"101","quantity":"3"})
+        stream=io.BytesIO()
+        pq.write_table(pa.Table.from_pylist(rows),stream)
+        measured=m.parse_checkpoint(stream.getvalue(),"binance_spot","BTCUSDT",
+                                      "spot",1.0,"USDT",dt.date(2026,10,31))
+        self.assertEqual(measured["snapshot_rows"],32)
+        self.assertEqual(measured["levels"],{"bid":16,"ask":16})
     def test_later_verified_checkpoint_is_accepted(self):
         r=m.parse_checkpoint(fixture(delayed_checkpoint=True),"binance_spot",
             "BTCUSDT","spot",1.0,"USDT",dt.date(2026,10,31))
