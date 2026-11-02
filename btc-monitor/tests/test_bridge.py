@@ -1,4 +1,6 @@
 import datetime as dt
+import json
+from unittest import mock
 import importlib.util
 import pathlib
 import unittest
@@ -10,6 +12,43 @@ UTC=dt.timezone.utc
 NOW=dt.datetime(2026,11,2,7,30,tzinfo=UTC)
 
 class BridgeTests(unittest.TestCase):
+ def test_watchdog_recovery_is_visible_to_brief_but_not_market_factor(self):
+  source={"checked_utc":"2026-11-02T07:25:00Z","status":"degraded",
+          "workflow_api_reachable":True,"unavailable_or_stale":["spot_cvd"],
+          "auto_recovery":{"dispatched":["spot_cvd"]},
+          "sources":{"spot_cvd":{"status":"stale_observation",
+              "reason":"no_new_verified_taker_hour",
+              "recovery":{"action":"dispatched"},
+              "file_age_h":6.1,
+              "coverage_gaps":["five_venue_cvd_24h_incomplete"]}}}
+  with mock.patch.object(m.Path,"read_text",return_value=json.dumps(source)):
+   health=m.read_collector_watchdog(NOW)
+  self.assertEqual(health["status"],"degraded")
+  self.assertEqual(health["sources"]["spot_cvd"]["recovery"],"dispatched")
+  self.assertEqual(health["unavailable_or_stale"],["spot_cvd"])
+  bridge=m.build({},NOW)
+  bridge["collector_watchdog"]=health
+  brief=m.make_brief(bridge)
+  self.assertEqual(brief["collector_watchdog"]["sources"]["spot_cvd"]["reason"],
+                   "no_new_verified_taker_hour")
+  self.assertFalse(bridge["audit"]["family_readiness"].get("spot_execution",False))
+  self.assertNotIn("spot_cvd",brief)
+
+ def test_old_watchdog_is_not_laundered_by_fresh_bridge(self):
+  source={"checked_utc":"2026-11-01T07:25:00Z",
+          "status":"healthy","workflow_api_reachable":True}
+  with mock.patch.object(m.Path,"read_text",return_value=json.dumps(source)):
+   health=m.read_collector_watchdog(NOW)
+  self.assertEqual(health["status"],"stale")
+  self.assertFalse(health["workflow_api_reachable"])
+
+ def test_watchdog_api_failure_cannot_report_healthy(self):
+  source={"checked_utc":"2026-11-02T07:25:00Z",
+          "status":"healthy","workflow_api_reachable":False}
+  with mock.patch.object(m.Path,"read_text",return_value=json.dumps(source)):
+   health=m.read_collector_watchdog(NOW)
+  self.assertEqual(health["status"],"monitoring_blind")
+
  def test_stale_not_laundered_by_new_bridge(self):
   o=m.build({"spot_cvd":{"generated_utc":"2026-11-01T07:00:00Z","windows":{"1h":{"complete":True,"net":1}}}},NOW)
   self.assertEqual(o["feeds"]["spot_cvd"]["status"],"stale")
