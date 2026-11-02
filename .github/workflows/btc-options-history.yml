@@ -26,15 +26,29 @@ jobs:
         run: |
           python -m py_compile btc-options/collector.py
           cd btc-options && python -m unittest discover -s tests -v
-      - name: Collect independent Deribit chain and Derivasys comparison
-        run: python btc-options/collector.py
-      - name: Save derived options risk data
+      - name: Collect latest option measurements and persist with bounded race-safe retry
         run: |
+          set -eu
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add btc-options/data/latest.json btc-options/data/derived_history.json
-          if ! git diff --cached --quiet; then
+          for attempt in 1 2 3 4 5 6 7 8; do
+            git fetch origin main
+            git reset --hard origin/main
+            # A commit race requires recalculating on the newest real state;
+            # rebasing a stale derived-history file could corrupt chronology.
+            python -u btc-options/collector.py
+            git add btc-options/data/latest.json btc-options/data/derived_history.json
+            if git diff --cached --quiet; then
+              echo "Canonical options history unchanged"
+              exit 0
+            fi
             git commit -m "data: verified BTC ATM IV and RR25"
-            git pull --rebase origin main
-            git push origin HEAD:main
-          fi
+            if git push origin HEAD:main; then
+              echo "Verified option measurements persisted"
+              exit 0
+            fi
+            echo "Concurrent GitHub push ($attempt); retry from latest canonical history"
+            sleep 3
+          done
+          echo "Could not persist fresh options observations after bounded retries" >&2
+          exit 1
