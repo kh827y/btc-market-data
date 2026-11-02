@@ -52,7 +52,8 @@ def build(brief,source,original_onchain,hft,bybit,deep):
         detail={"market":kind,"symbol":raw.get("symbol"),
            "transport":raw.get("transport"),"source_url":raw.get("source_url"),
            "captured_at":raw.get("captured_at"),"source_timestamp":raw.get("source_timestamp"),
-           "source_id":raw.get("source_book_id") or raw.get("lastUpdateId"),
+           "source_id":raw.get("exchange_update_id") or raw.get("source_book_id") or raw.get("lastUpdateId"),
+           "native_depth_levels_requested":raw.get("native_depth_levels_requested"),
            "levels":raw.get("levels"),
            "actual_reach_pct":raw.get("reach_pct"),
            "at_least_one_complete_bid_and_ask_band":trusted,
@@ -109,12 +110,19 @@ def build(brief,source,original_onchain,hft,bybit,deep):
            "binance_usdm_max_1000":"https://developers.binance.com/en/docs/derivatives/usds-margined-futures/market-data/websocket-api",
            "bitget_max_1000":"https://www.bitget.com/docs/catalog/market/market-data",
            "okx_books_max_400":"https://www.okx.com/docs-v5/en/",
-           "gate_futures":"https://www.gate.com/docs/developers/apiv4/en/futures/"},
+           "gate_futures":"https://www.gate.com/docs/developers/apiv4/en/futures/",
+           "gate_ws_v2_public_400":"https://www.gate.com/docs/developers/futures/ws/en/#order-book-v2-api"},
         "official_deeper_snapshot_probe":{
           "probe_utc":deep.get("probe_at_utc"),
           "bybit_spot_full_http_code":(deep.get("markets") or {}).get("bybit_spot_full",{}).get("http_error_code"),
           "bybit_perpetual_full_http_code":(deep.get("markets") or {}).get("bybit_usdt_perp_full",{}).get("http_error_code"),
           "gate_300_result":(deep.get("markets") or {}).get("gate_usdt_perp_300",{}).get("status"),
+          "gate_live_400_verified":(
+              markets["gate_usdt_perp"].get("transport")=="gate_official_ws_v2_full_snapshot"
+              and (markets["gate_usdt_perp"].get("levels") or {}).get("bid")>=400
+              and (markets["gate_usdt_perp"].get("levels") or {}).get("ask")>=400
+              and isinstance(markets["gate_usdt_perp"].get("source_id"),int)
+              and bool(markets["gate_usdt_perp"].get("source_timestamp"))),
           "gate_300_levels_each_side":(
               (deep.get("markets") or {}).get("gate_usdt_perp_300",{}).get("bid_count"),
               (deep.get("markets") or {}).get("gate_usdt_perp_300",{}).get("ask_count")),
