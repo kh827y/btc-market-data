@@ -28,6 +28,9 @@ report("limit_100",{"limit":100})
 head=out["cases"].get("limit_1000",{})
 if head.get("cb_after"):
     report("after_head",{"limit":1000,"after":head["cb_after"]})
+# Verify Coinbase accepts random historical trade IDs without sequential scrolling.
+for probe_id in (1112000000, 1107000000, 1098000000):
+    report("random_after_"+str(probe_id),{"limit":1,"after":str(probe_id)})
 out["interpretation"]={"trade_direction":"Coinbase side denotes maker side, not taker",
                        "what_was_measured":"Actual REST page size and cursor continuity; not aggregate CVD"}
 dst=Path("btc-spot-cvd/data/coinbase_api_probe.json")
