@@ -1,11 +1,8 @@
 name: BTC Coinbase verified full 720h parallel trade backfill
 on:
+  # One-time 12-runner historical rebuild. Keep it manual to avoid
+  # rereading 12m+ verified trades on unrelated code/test changes.
   workflow_dispatch:
-  push:
-    paths:
-      - "btc-spot-cvd/coinbase_parallel_backfill.py"
-      - "btc-spot-cvd/tests/test_coinbase_parallel.py"
-      - ".github/workflows/btc-coinbase-parallel-backfill.yml"
 permissions:
   contents: write
 concurrency:
