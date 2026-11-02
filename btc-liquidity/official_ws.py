@@ -109,3 +109,65 @@ def read_official_book(venue,connection_factory=None):
     finally:
         if connection is not None:
             connection.close()
+
+# Gate's public V2 "futures.obu" channel provides native 400-level
+# initial FULL snapshots (unlike Bybit full-depth delta-only channel).
+# This is the same genuine Gate BTC_USDT perpetual, not another venue.
+GATE_V2_URL="wss://fx-ws.gateio.ws/v4/ws/usdt"
+GATE_V2_TOPIC="ob.BTC_USDT.400"
+
+def gate_v2_snapshot(msg):
+    if not isinstance(msg,dict) or msg.get("channel")!="futures.obu":
+        return None
+    if msg.get("error"):
+        raise UnverifiedBook("Gate V2 subscription error")
+    if msg.get("event")=="subscribe":
+        if msg.get("result",{}).get("status")!="success":
+            raise UnverifiedBook("Gate V2 subscription denied")
+        return None
+    if msg.get("event")!="update":
+        return None
+    row=msg.get("result")
+    if not isinstance(row,dict) or row.get("s")!=GATE_V2_TOPIC:
+        raise UnverifiedBook("Gate V2 wrong BTC_USDT instrument")
+    if row.get("full") is not True:
+        return None  # A delta cannot initialize an unknown 400-level book.
+    if not isinstance(row.get("u"),int) or isinstance(row.get("u"),bool) or row["u"]<1:
+        raise UnverifiedBook("Gate V2 full snapshot has no native update ID")
+    stamp=valid_source_ms(row.get("t"))
+    bids,asks=payload_sides(row.get("b"),row.get("a"))
+    try:
+        bid_rows=[{"p":str(p),"s":str(s)} for p,s in bids]
+        ask_rows=[{"p":str(p),"s":str(s)} for p,s in asks]
+    except (TypeError,ValueError) as exc:
+        raise UnverifiedBook("Gate V2 malformed full depth levels") from exc
+    bid_rows.sort(key=lambda x:float(x["p"]),reverse=True)
+    ask_rows.sort(key=lambda x:float(x["p"]))
+    return {"id":row["u"],"current":stamp/1000,
+            "bids":bid_rows,"asks":ask_rows,
+            "_transport":"gate_official_ws_v2_full_snapshot",
+            "_source_url":GATE_V2_URL,
+            "_snapshot_type":"native_full_400_snapshot"}
+
+def read_gate_v2_book(connection_factory=None):
+    if connection_factory is None:
+        from websocket import create_connection
+        connection_factory=create_connection
+    connection=None
+    try:
+        connection=connection_factory(GATE_V2_URL,timeout=RESPONSE_TIMEOUT_S)
+        connection.send(json.dumps({"time":int(time.time()),"channel":"futures.obu",
+                                    "event":"subscribe","payload":[GATE_V2_TOPIC]}))
+        # The server sends an initial full=true 400-level snapshot.
+        # Never build it from deltas, never reuse an expired book.
+        for _ in range(MAX_FRAMES):
+            try: msg=json.loads(connection.recv())
+            except (ValueError,TypeError) as exc:
+                raise UnverifiedBook("Malformed Gate V2 WebSocket frame") from exc
+            result=gate_v2_snapshot(msg)
+            if result is not None:
+                return result
+        raise UnverifiedBook("Gate V2 returned no verified full snapshot")
+    finally:
+        if connection is not None:
+            connection.close()
