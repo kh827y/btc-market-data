@@ -570,6 +570,9 @@ def main():
         "searched_utc_hours":list(SEARCH_HOURS),
         "primary_comparable_utc_hours":list(PRIMARY_SEARCH_HOURS),
         "alternate_00utc_verified_days_by_window":fallback_00_coverage,
+        "alternate_00utc_verified_days_total":{
+            venue:len(records) for venue,records in alternate_00_records.items()
+        },
         "coverage_days":{v:len(rows) for v,rows in verified_markets.items()},
         "legacy_unverified_records":legacy_unverified,
         "source_date_audit":audit,
