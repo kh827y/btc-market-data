@@ -265,7 +265,7 @@ def compact_macro_etf(j,now):
   limit=18 if series in ("DTWEXBGS","WALCL") else 7
   ok=(row.get("series_id")==series and row.get("status")=="usable"
        and lag is not None and 0<=lag<=limit and v is not None
-       and 0<=v<1_000_000)
+       and 0<=v<(100_000_000 if series=="WALCL" else 1_000_000))
   results[key]={"date":date.date().isoformat() if date else None,
      "status":"usable" if ok else "missing_or_delayed","value":v if ok else None,
      "unit":"index Jan 2006=100" if series=="DTWEXBGS" else
@@ -296,7 +296,9 @@ def compact_macro_etf(j,now):
          exact is not None and exact>0 and age is not None and 0<=age<=7)
  dxy={"value":exact if dxy_ok else None,"date":raw.get("date") if dxy_ok else None,
       "status":"usable" if dxy_ok else "unavailable_or_delayed",
-      "source":raw.get("source"),"exact_ice_index":True}
+      "source":raw.get("source"),"exact_ice_index":True,
+      "observation_kind":raw.get("observation_kind") if dxy_ok else None,
+      "not_finalized_eod":raw.get("observation_kind")=="unfinished_current_session" if dxy_ok else None}
  raw=val(j,"etf") or {}
  date=timeparse(raw.get("date"));age=(now.date()-date.date()).days if date else None
  total=num(raw.get("latest_net_flow_usd"))
