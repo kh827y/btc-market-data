@@ -231,6 +231,20 @@ def targets(through, existing, failures=None, now=None):
                     except ValueError:pass
                 yield (venue,day,hour)
 
+def recent_coverage(markets,through,windows=(7,30,90,365)):
+    """Actual observed date coverage, not percentage of entire vendor history."""
+    result={}
+    for width in windows:
+        dates={(through-dt.timedelta(days=d)).isoformat()
+               for d in range(width) if through-dt.timedelta(days=d)>=ARCHIVE_START}
+        result[str(width)+"d"]={}
+        for venue,rows in markets.items():
+            observed=len(dates.intersection(rows))
+            result[str(width)+"d"][venue]={"verified_days":observed,
+                  "eligible_days":len(dates),
+                  "coverage_pct":round(100*observed/len(dates),2) if dates else 0}
+    return result
+
 def make_comparisons(records):
     comparisons={}
     baselines={}
@@ -336,16 +350,7 @@ def main():
     history["schema_version"]=2
     comparisons,baselines=make_comparisons(markets)
     source_days=(through-ARCHIVE_START).days+1
-    recent_windows={}
-    for width in (7,30,90,365):
-        recent_windows[str(width)+"d"]={}
-        dates={(through-dt.timedelta(days=d)).isoformat()
-               for d in range(width) if through-dt.timedelta(days=d)>=ARCHIVE_START}
-        for venue,rows in markets.items():
-            observed=len(dates.intersection(rows))
-            recent_windows[str(width)+"d"][venue]={"verified_days":observed,
-                  "eligible_days":len(dates),
-                  "coverage_pct":round(100*observed/len(dates),2) if dates else 0}
+    recent_windows=recent_coverage(markets,through)
     coverage={}
     for venue,rows in markets.items():
         coverage[venue]={"verified_days":len(rows),
