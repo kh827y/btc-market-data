@@ -1,0 +1,41 @@
+name: BTC native deep orderbook one-shot source verification
+on:
+  push:
+    paths:
+      - "btc-liquidity/deep_book_probe.py"
+      - ".github/workflows/btc-deep-book-probe.yml"
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: btc-native-deep-book-probe
+  cancel-in-progress: false
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify source-time and book depth on same official markets
+        run: |
+          python -m py_compile btc-liquidity/deep_book_probe.py
+          python -u btc-liquidity/deep_book_probe.py
+      - name: Publish truthfully classified probe findings
+        run: |
+          set -eu
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in 1 2 3 4; do
+            git fetch origin main
+            git reset --hard origin/main
+            python -u btc-liquidity/deep_book_probe.py
+            git add btc-liquidity/data/deep_book_probe.json
+            git commit -m "data: verified official deeper BTC book capabilities"
+            if git push origin HEAD:main; then exit 0; fi
+            echo "Concurrent push; retry from canonical main"
+            sleep 3
+          done
+          exit 1
