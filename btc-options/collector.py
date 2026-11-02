@@ -302,3 +302,5 @@ def main():
     print("QUALITY",json.dumps(report["coverage"]), "errors",len(errors))
 if __name__=="__main__":
     main()
+
+# Source-observation quality gate is evaluated downstream in btc-monitor/metric_quality.py.
