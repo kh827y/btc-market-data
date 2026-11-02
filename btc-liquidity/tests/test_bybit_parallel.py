@@ -30,7 +30,10 @@ class ParallelBybitTests(unittest.TestCase):
                     rows[s]={"time":f"{s}T00:00:01+00:00",
                              "venue":venue,"market":"spot" if cat=="spot" else "perpetual",
                              "source_type":"independent Bybit daily native snapshot",
-                             "bands":{"0.01":{"bid_share":0.6,"bid_usd":500.0,"ask_usd":333.0}}}
+                             "bands":{x:{"bid_share":0.6 if x=="0.01" else None,
+                                         "bid_usd":500.0 if x=="0.01" else None,
+                                         "ask_usd":333.0 if x=="0.01" else None}
+                                      for x in ("0.01","0.05","0.2","1.0")}}
                 path=pathlib.Path(dir)/f"{cat}-{shard}"/"result.json"
                 path.parent.mkdir(parents=True,exist_ok=True)
                 path.write_text(json.dumps({"status":"done","category":cat,"venue":venue,
@@ -46,7 +49,10 @@ class ParallelBybitTests(unittest.TestCase):
             old={"records":{"bybit_independent_linear":{
                 k:{"time":"2026-11-01T00:00:02+00:00","venue":"bybit_independent_linear",
                    "market":"perpetual","source_type":"independent Bybit daily native snapshot",
-                   "bands":{"0.01":{"bid_share":0.5,"bid_usd":200,"ask_usd":200}}}}},
+                   "bands":{x:{"bid_share":0.5 if x=="0.01" else None,
+                               "bid_usd":200 if x=="0.01" else None,
+                               "ask_usd":200 if x=="0.01" else None}
+                            for x in ("0.01","0.05","0.2","1.0")}}}},
                  "failures":{}}
             (original/"bybit_independent_history.json").write_text(json.dumps(old))
             with patch.dict(bp.bi.VENUES,self.venue_starts,clear=True):
