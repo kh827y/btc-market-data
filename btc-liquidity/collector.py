@@ -25,6 +25,7 @@ VENUES = {
     "okx_spot": ("spot", "BTCUSDT", "https://www.okx.com/api/v5/market/books?instId=BTC-USDT&sz=400"),
     "binance_usdm_perp": ("perpetual", "BTCUSDT", "https://fapi.binance.com/fapi/v1/depth?symbol=BTCUSDT&limit=1000"),
     "bybit_usdt_perp": ("perpetual", "BTCUSDT", "https://api.bybit.com/v5/market/orderbook?category=linear&symbol=BTCUSDT&limit=1000"),
+    "okx_usdt_perp": ("perpetual", "BTCUSDT", "https://www.okx.com/api/v5/market/books?instId=BTC-USDT-SWAP&sz=400"),
 }
 
 def fetch(url, binary=False):
