@@ -215,9 +215,14 @@ def main():
     path=Path("btc-spot-cvd/data/state.json")
     state=json.loads(path.read_text()) if path.exists() else {}
     errors=[]
-    archives(state,now,errors)
-    coinbase_recent(state,now,errors)
-    coinbase(state,now,errors)
+    # Production defaults grow the archive; env caps allow short real
+    # integration runs that still commit verified market observations.
+    batch=max(0,min(120,int(os.getenv("BTC_CVD_ARCHIVE_BATCH","36"))))
+    recent_pages=max(0,min(250,int(os.getenv("BTC_CVD_COINBASE_RECENT_PAGES","65"))))
+    deep_pages=max(0,min(500,int(os.getenv("BTC_CVD_COINBASE_DEEP_PAGES","120"))))
+    archives(state,now,errors,batch=batch)
+    if recent_pages: coinbase_recent(state,now,errors,pages=recent_pages)
+    if deep_pages: coinbase(state,now,errors,pages=deep_pages)
     cutoff=now-dt.timedelta(days=31)
     for failures in state.get("archive_retry_after",{}).values():
         for k in list(failures):
