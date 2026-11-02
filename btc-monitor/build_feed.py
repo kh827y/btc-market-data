@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 
 SOURCES={
- "macro_etf":("btc-macro/data/latest.json",2.5,"macro_liquidity"),
+ "macro_etf":("btc-macro/data/latest.json",26.0,"macro_liquidity"),
  "price_technical":("btc-price/data/latest.json",26.0,"price_trend"),
  "spot_cvd":("btc-spot-cvd/data/latest.json",2.5,"spot_execution"),
  "derivatives":("btc-derivatives/data/latest.json",3.0,"positioning"),
@@ -290,14 +290,21 @@ def compact_macro_etf(j,now):
  date=timeparse(raw.get("date"))
  age=(now.date()-date.date()).days if date else None
  exact=num(raw.get("value"))
+ source_stamp=timeparse(raw.get("fetched_utc")) or timeparse(j.get("generated_utc"))
+ intraday_age=dt_age(now,source_stamp)
+ intraday_ok=(raw.get("observation_kind")!="unfinished_current_session" or
+              (intraday_age is not None and -.2<=intraday_age<=2.5))
  dxy_ok=(raw.get("status")=="usable" and
          raw.get("not_fred_broad_usd") is True and
          raw.get("instrument")=="ICE DXY six-currency index" and
-         exact is not None and exact>0 and age is not None and 0<=age<=7)
+         exact is not None and exact>0 and age is not None and 0<=age<=7
+         and intraday_ok)
  dxy={"value":exact if dxy_ok else None,"date":raw.get("date") if dxy_ok else None,
       "status":"usable" if dxy_ok else "unavailable_or_delayed",
       "source":raw.get("source"),"exact_ice_index":True,
       "observation_kind":raw.get("observation_kind") if dxy_ok else None,
+      "fetched_utc":source_stamp.isoformat() if source_stamp else None,
+      "intraday_quote_age_h":intraday_age if raw.get("observation_kind")=="unfinished_current_session" else None,
       "not_finalized_eod":raw.get("observation_kind")=="unfinished_current_session" if dxy_ok else None}
  raw=val(j,"etf") or {}
  date=timeparse(raw.get("date"));age=(now.date()-date.date()).days if date else None
@@ -357,7 +364,11 @@ def build(source,now):
   stamp=timeparse(j.get("generated_utc") or j.get("generated_at"))
   age=dt_age(now,stamp)
   status="invalid_timestamp" if age is None else "future_timestamp" if age<-.2 else "stale" if age>max_age else "fresh"
-  if status=="fresh" and j.get("status") not in (None,"ok"):status="partial"
+  # Independently dated FRED and ETF rows stay usable when other
+  # components fail; never infer missing data from one bad source.
+  if status=="fresh" and j.get("status") not in (None,"ok"):
+   if not (key=="macro_etf" and j.get("status")=="partial"):
+    status="partial"
   # A freshly rebuilt file is NOT proof that its underlying hour is new:
   # CVD trades are published ~2 hours late by design; reject stalled data.
   sampled_at=(timeparse(j.get("last_complete_hour")) if key=="spot_cvd"
@@ -410,6 +421,8 @@ def build(source,now):
  if feeds.get("macro_etf",{}).get("status")!="fresh":
   coverage_gaps.append("macro_etf:unavailable_or_stale")
  elif "macro_etf" in metrics:
+  if feeds["macro_etf"].get("source_status")=="partial":
+   coverage_gaps.append("macro_etf:partial_source")
   for component in ("fed_rates","treasury_yields","usd_broad_index","ice_dxy_exact","spot_etf_flow"):
    if val(metrics,"macro_etf","quality",component) is not True:
     coverage_gaps.append("macro_etf:"+component+"_unavailable")
