@@ -366,7 +366,11 @@ def gate_onchain(g,raw,metrics):
                   date_age(g.now,value.get("date"),3)=="usable")
             # The source's explicit upstream unusable status always wins.
             origin=nested(raw,"components",group,"latest",key) or {}
-            upstream_good=origin.get("status") in ("usable","ok","fresh")
+            # Some independent upstreams (Bitview, labelled whale archives)
+            # publish dated numeric rows without an explicit status field.
+            # Permit those ONLY when their own feed age, date and units pass;
+            # an explicit delayed/error/stale status always blocks them.
+            upstream_good=origin.get("status") in ("usable","ok","fresh",None)
             if origin.get("status") in ("missing","delayed","error","stale"):
                 upstream_good=False
             feed_age=nested(raw,"components",group,"feed_age_hours")
