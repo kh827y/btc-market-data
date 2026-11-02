@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-11-02T10:04:13.550674+00:00",
+  "generated_utc": "2026-11-02T10:06:02.780453+00:00",
   "status": "ok",
   "macro": {
-    "as_of_utc": "2026-11-02T10:04:13.550674+00:00",
+    "as_of_utc": "2026-11-02T10:06:02.780453+00:00",
     "metrics": {
       "treasury_2y_pct": {
         "series_id": "DGS2",
@@ -79,9 +79,15 @@
       },
       "fed_balance_sheet_millions": {
         "series_id": "WALCL",
-        "date": null,
-        "status": "unavailable",
-        "value": null
+        "source_url": "https://fred.stlouisfed.org/series/WALCL",
+        "date": "2026-10-28",
+        "lag_days": 5,
+        "status": "usable",
+        "value": 6745635.0,
+        "latest_reported_even_if_stale": 6745635.0,
+        "change_prior_obs": -7969.0,
+        "change_5_obs": -2069.0,
+        "observations": 104
       }
     },
     "yield_curve_10y_minus_2y": {
@@ -95,17 +101,16 @@
     "fed_target_source": "FRED DFEDTARL/DFEDTARU; NOT a prediction of next FOMC decision",
     "usd_broad_not_dxy": true,
     "usd_broad_description": "Federal Reserve nominal broad TRADE-WEIGHTED USD, not ICE six-currency DXY",
-    "errors": [
-      "fed_balance_sheet_millions: insufficient numerical observations WALCL"
-    ],
+    "errors": [],
     "ice_dxy": {
-      "source": "Yahoo Finance, DX-Y.NYB (ICE US Dollar Index delayed daily)",
+      "source": "Yahoo Finance, DX-Y.NYB (ICE US Dollar Index indicative public bars)",
       "date": "2026-11-02",
       "lag_days": 0,
-      "value": 101.576,
+      "value": 101.585,
       "status": "usable",
       "instrument": "ICE DXY six-currency index",
-      "not_fred_broad_usd": true
+      "not_fred_broad_usd": true,
+      "observation_kind": "unfinished_current_session"
     }
   },
   "etf": {
@@ -163,11 +168,59 @@
     "note": "creation/redemption flows after US trading session; revisions possible; not intraday trading volume",
     "historical": {
       "status": "unavailable",
-      "error": "unsupported full ETF history schema"
+      "error": "unsupported full ETF history schema",
+      "schema_top_level_keys": [
+        "name",
+        "description",
+        "url",
+        "license",
+        "trackerName",
+        "sponsor",
+        "attribution",
+        "sources",
+        "units",
+        "methodologyUrl",
+        "dataUrl",
+        "latestUrl",
+        "updatedThrough",
+        "dateModified",
+        "days"
+      ],
+      "schema_top_level_types": {
+        "name": "str",
+        "description": "str",
+        "url": "str",
+        "license": "str",
+        "trackerName": "str",
+        "sponsor": "str",
+        "attribution": "str",
+        "sources": "str",
+        "units": "str",
+        "methodologyUrl": "str",
+        "dataUrl": "str",
+        "latestUrl": "str",
+        "updatedThrough": "str",
+        "dateModified": "str",
+        "days": "list"
+      },
+      "schema_first_entry_keys": {
+        "name": [],
+        "description": [],
+        "url": [],
+        "license": [],
+        "trackerName": [],
+        "sponsor": [],
+        "attribution": [],
+        "sources": [],
+        "units": [],
+        "methodologyUrl": [],
+        "dataUrl": [],
+        "latestUrl": []
+      }
     }
   },
   "quality": {
-    "macro_fred_usable_count": 6,
+    "macro_fred_usable_count": 7,
     "exact_dxy_status": "usable",
     "etf_status": "usable",
     "macro_and_etf_separately_gated": true
