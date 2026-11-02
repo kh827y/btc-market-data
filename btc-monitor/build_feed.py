@@ -7,7 +7,7 @@ from pathlib import Path
 
 SOURCES={
  "macro_etf":("btc-macro/data/latest.json",2.5,"macro_liquidity"),
- "price_technical":("btc-price/data/latest.json",2.5,"price_trend"),
+ "price_technical":("btc-price/data/latest.json",26.0,"price_trend"),
  "spot_cvd":("btc-spot-cvd/data/latest.json",2.5,"spot_execution"),
  "derivatives":("btc-derivatives/data/latest.json",3.0,"positioning"),
  "options":("btc-options/data/latest.json",3.0,"options"),
@@ -362,19 +362,46 @@ def build(source,now):
   # CVD trades are published ~2 hours late by design; reject stalled data.
   sampled_at=(timeparse(j.get("last_complete_hour")) if key=="spot_cvd"
               else timeparse(val(j,"current","time")) if key=="live_depth"
-              else timeparse(j.get("last_closed_day_utc")) if key=="price_technical"
+              else (timeparse(j.get("last_closed_day_utc"))+dt.timedelta(days=1)
+                    if timeparse(j.get("last_closed_day_utc")) else None) if key=="price_technical"
               else None)
   sample_age=dt_age(now,sampled_at)
   if status=="fresh" and sample_age is not None:
-   if (key=="spot_cvd" and sample_age>5.0) or (key=="live_depth" and sample_age>3.0) or (key=="price_technical" and sample_age>48):
+   if (key=="spot_cvd" and sample_age>5.0) or (key=="live_depth" and sample_age>3.0):
     status="stale_observation"
+  # A candle is dated by its OPEN. Validate the actual UTC CLOSE separately.
+  # BTC trades every day; a completed day's indicators are usable throughout
+  # the following UTC day, even if the hourly GitHub cron was delayed.
+  if key=="price_technical" and status=="fresh":
+   day=timeparse(j.get("last_closed_day_utc"))
+   week=timeparse(j.get("last_closed_week_monday_utc"))
+   expected_day=now.date()-dt.timedelta(days=1)
+   expected_week=now.date()-dt.timedelta(days=now.weekday()+7)
+   if (day is None or day.date()!=expected_day or
+       week is None or week.date()!=expected_week or
+       sample_age is None or sample_age<-.2 or sample_age>24.2):
+    status="stale_observation"
+  quote_at=timeparse(val(j,"spot_quote","observed_utc")) if key=="price_technical" else None
+  quote_age=dt_age(now,quote_at)
+  quote_value=num(val(j,"spot_quote","price_usdt")) if key=="price_technical" else None
+  quote_ok=(key=="price_technical" and status=="fresh" and
+            quote_value is not None and quote_value>0 and
+            quote_age is not None and -.2<=quote_age<=2.5)
   feeds[key]={"status":status,"source":url,"generated_at":stamp.isoformat() if stamp else None,
               "measurement_at":sampled_at.isoformat() if sampled_at else None,
               "measurement_age_h":sample_age,
+              "spot_quote_status":("fresh" if quote_ok else "unavailable_or_stale") if key=="price_technical" else None,
+              "spot_quote_age_h":quote_age if key=="price_technical" else None,
               "age_h":age,"max_age_h":max_age,"family":family,
               "source_status":j.get("status"),
               "source_errors":len(j.get("errors") or j.get("errors_recent_run") or [])}
-  try:metrics[key]=compact_onchain(j,now) if key=="onchain" else compact_macro_etf(j,now) if key=="macro_etf" else TRANSFORM[key](j)
+  try:
+   metrics[key]=compact_onchain(j,now) if key=="onchain" else compact_macro_etf(j,now) if key=="macro_etf" else TRANSFORM[key](j)
+   if key=="price_technical":
+    if not quote_ok:
+     metrics[key]["latest_spot_price_usdt"]=None
+     metrics[key]["latest_spot_observed_utc"]=None
+    metrics[key]["spot_quote_status"]="fresh" if quote_ok else "unavailable_or_stale"
   except (ValueError,KeyError,TypeError) as exc:
    feeds[key]["status"]="invalid_schema"
    issues.append(key+":invalid_schema:"+str(exc)[:100]);continue
@@ -388,6 +415,8 @@ def build(source,now):
     coverage_gaps.append("macro_etf:"+component+"_unavailable")
  if feeds.get("price_technical",{}).get("status")!="fresh":
   coverage_gaps.append("btc_technicals:unavailable_or_stale")
+ elif feeds.get("price_technical",{}).get("spot_quote_status")!="fresh":
+  coverage_gaps.append("btc_spot_quote:unavailable_or_stale")
  if "spot_cvd" in metrics:
   for window in ("24h","168h","720h"):
    if val(metrics,"spot_cvd","windows",window,"complete") is not True:
@@ -408,6 +437,7 @@ def build(source,now):
  usable["macro_exact_ice_dxy"]=feeds.get("macro_etf",{}).get("status")=="fresh" and val(metrics,"macro_etf","quality","ice_dxy_exact") is True
  usable["us_spot_btc_etf_flows"]=feeds.get("macro_etf",{}).get("status")=="fresh" and val(metrics,"macro_etf","quality","spot_etf_flow") is True
  usable["price_technical_verified"]=feeds.get("price_technical",{}).get("status")=="fresh"
+ usable["price_live_spot_quote"]=usable["price_technical_verified"] and feeds.get("price_technical",{}).get("spot_quote_status")=="fresh"
  usable["price_technical_cross_venue"]=usable["price_technical_verified"] and val(metrics,"price_technical","confidence")=="cross_venue_verified"
  usable["onchain_independent_cost_basis"]=feeds.get("onchain",{}).get("status")=="fresh" and val(metrics,"onchain","cost_basis_all_three_usable") is True
  usable["spot_cvd_24h_complete"]=feeds.get("spot_cvd",{}).get("status")=="fresh" and val(metrics,"spot_cvd","windows","24h","complete") is True
@@ -439,7 +469,9 @@ def make_brief(report):
  good=lambda k:feeds.get(k,{}).get("status")=="fresh"
  summary={"schema":1,"as_of_utc":report["as_of_utc"],
           "sources":{k:{"status":v["status"],"age_h":v.get("age_h"),
-                         "original":v.get("source"),"measurement_age_h":v.get("measurement_age_h"),"source_errors":v.get("source_errors",0)} for k,v in feeds.items()},
+                         "original":v.get("source"),"measurement_age_h":v.get("measurement_age_h"),
+                         "spot_quote_status":v.get("spot_quote_status"),"spot_quote_age_h":v.get("spot_quote_age_h"),
+                         "source_errors":v.get("source_errors",0)} for k,v in feeds.items()},
           "family_readiness":report["audit"]["family_readiness"],
           "issues":report["audit"]["issues"],"coverage_gaps":report["audit"].get("coverage_gaps",[]),
           "rules":["Only fresh source + complete original window/band can support current risk",
