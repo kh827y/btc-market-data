@@ -1,0 +1,45 @@
+name: BTC spot CVD official Kraken missing-hour recovery
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "btc-spot-cvd/recover_kraken_official.py"
+      - "btc-spot-cvd/verify_coverage.py"
+      - ".github/workflows/btc-spot-cvd-kraken-recovery.yml"
+permissions:
+  contents: write
+concurrency:
+  group: btc-spot-cvd-kraken-official-recovery
+  cancel-in-progress: false
+jobs:
+  recover-and-validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install existing verified spot trade dependencies
+        run: pip install -r btc-spot-cvd/requirements.txt
+      - name: Recover ONLY exact missing Kraken BTC/USD hours using official REST pagination
+        run: |
+          python -u btc-spot-cvd/recover_kraken_official.py --out /tmp/kraken_recovery.json
+      - name: Merge into freshest state and validate source plus bridge
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in 1 2 3 4; do
+            git fetch origin main
+            git reset --hard origin/main
+            python -u btc-spot-cvd/recover_kraken_official.py --merge /tmp/kraken_recovery.json
+            python -u btc-monitor/build_feed.py
+            python -u btc-spot-cvd/verify_coverage.py
+            git add btc-spot-cvd/data/state.json btc-spot-cvd/data/latest.json btc-spot-cvd/data/full_backfill_status.json btc-spot-cvd/data/verification.json btc-monitor/data/latest.json btc-monitor/data/brief.json
+            if git diff --cached --quiet; then exit 0; fi
+            git commit -m "data: restore verified Kraken spot BTC taker history and cross-check 30d bridge"
+            if git push origin HEAD:main; then exit 0; fi
+            sleep 3
+          done
+          exit 1
