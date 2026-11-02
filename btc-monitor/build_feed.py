@@ -499,6 +499,17 @@ def build(source,now):
       for n in expected_spot|expected_perp))
  if "live_depth" in metrics and not usable["current_all_11_selected_orderbooks"]:
   coverage_gaps.append("live_depth:original_11_selected_markets_not_all_verified")
+ # An available exchange is not proof of full 0.2% or 1% both-sided depth.
+ names=expected_spot|expected_perp
+ for band,key in (("0.01","001"),("0.05","005"),("0.2","02"),("1.0","1")):
+  count=sum(metric_quality["checks"].get("live_depth."+n+"."+band,{}).get("status")=="usable"
+            for n in names)
+  usable["current_orderbook_band_"+key+"pct_verified_markets"]=count
+  if feeds.get("live_depth",{}).get("status")=="fresh" and count<len(names):
+   coverage_gaps.append("live_depth:"+band+"pct_complete="+str(count)+"/11_selected_markets")
+ usable["current_all_11_orderbooks_complete_1pct"]=(
+  usable["current_all_11_selected_orderbooks"] and
+  usable["current_orderbook_band_1pct_verified_markets"]==len(names))
  usable["macro_fed_rates"]=feeds.get("macro_etf",{}).get("status")=="fresh" and val(metrics,"macro_etf","quality","fed_rates") is True
  usable["macro_treasury_yields"]=feeds.get("macro_etf",{}).get("status")=="fresh" and val(metrics,"macro_etf","quality","treasury_yields") is True
  usable["macro_usd_broad_not_dxy"]=feeds.get("macro_etf",{}).get("status")=="fresh" and val(metrics,"macro_etf","quality","usd_broad_index") is True
@@ -655,6 +666,9 @@ def make_brief(report):
     "perpetual_venues":j["perp_usable_venues"],
     "expected_selected_markets":11,
     "all_selected_markets_verified":report["audit"]["family_readiness"].get("current_all_11_selected_orderbooks",False),
+    "all_11_markets_complete_1pct":report["audit"]["family_readiness"].get("current_all_11_orderbooks_complete_1pct",False),
+    "complete_markets_by_band":{band:report["audit"]["family_readiness"].get("current_orderbook_band_"+key+"pct_verified_markets",0)
+       for band,key in (("0.01","001"),("0.05","005"),("0.2","02"),("1.0","1"))},
     "venues":{venue:{"market":item["market"],"captured_at":item["captured_at"],
                      "source_timestamp":item.get("source_timestamp"),
                      "transport":item.get("transport"),"source_url":item.get("source_url"),
