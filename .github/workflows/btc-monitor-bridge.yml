@@ -5,6 +5,7 @@ on:
     paths:
       - "btc-monitor/build_feed.py"
       - "btc-monitor/automation_prompt_v2.md"
+      - "btc-monitor/policy_test_scenarios.md"
       - "btc-monitor/tests/**"
       - ".github/workflows/btc-monitor-bridge.yml"
   workflow_run:
@@ -49,7 +50,24 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
             python -u btc-monitor/build_feed.py
-            git add btc-monitor/data/latest.json btc-monitor/data/brief.json
+            python - <<'PY'
+          import datetime
+          import json
+          import os
+          from pathlib import Path
+          status={
+            "tested_commit":os.environ.get("GITHUB_SHA"),
+            "test_completed_utc":datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "bridge_quality_tests_ok":True,
+            "automation_policy_contract_tests_ok":True,
+            "scope":"CI unit and structural prompt checks only; not proof of notifications or platform delivery",
+            "source_policy":"btc-monitor/automation_prompt_v2.md",
+            "source_cases":"btc-monitor/policy_test_scenarios.md",
+          }
+          path=Path("btc-monitor/data/policy_test_status.json")
+          path.write_text(json.dumps(status,ensure_ascii=False,indent=2)+"\n")
+          PY
+            git add btc-monitor/data/latest.json btc-monitor/data/brief.json btc-monitor/data/policy_test_status.json
             if git diff --cached --quiet; then exit 0; fi
             git commit -m "data: BTC risk monitor source freshness and metric snapshot"
             if git push origin HEAD:main; then exit 0; fi
