@@ -407,6 +407,30 @@ def audit_source_dates(verified_markets, failures, through, search_hours=None):
         }
     return audit
 
+def clock_matched_records(records, anchor_hour):
+    """Only native snapshots within 30m of the named UTC anchor are comparable.
+
+    A genuine 00 UTC fallback remains verified for source-date coverage, but
+    must never enter the primary noon baseline or its trend comparisons.
+    Likewise, 11/13 UTC source files may contain valid snapshots far from
+    noon; those remain counted as observed days, not noon comparators.
+    """
+    selected={}
+    for venue, rows in records.items():
+        matched={}
+        for day, row in rows.items():
+            data=row.get("data",{})
+            try:
+                stamp=dt.datetime.fromisoformat(data["time"]).astimezone(UTC)
+                anchor=dt.datetime.combine(dt.date.fromisoformat(day),
+                                           dt.time(anchor_hour),tzinfo=UTC)
+                if abs((stamp-anchor).total_seconds())<=1800:
+                    matched[day]=row
+            except (KeyError,ValueError,TypeError):
+                continue
+        selected[venue]=matched
+    return selected
+
 def make_comparisons(records):
     comparisons={}
     baselines={}
@@ -525,13 +549,16 @@ def main():
     verified_markets={v:{day:row for day,row in markets[v].items()
                          if verified_entry(row,v,day)} for v in MARKETS}
     legacy_unverified={v:len(markets[v])-len(verified_markets[v]) for v in MARKETS}
-    comparisons,baselines=make_comparisons(verified_markets)
-    # 00 UTC fallback and 12 UTC snapshots must remain disjoint series.
-    # make_comparisons itself enforces same venue/band and ±30m clock.
+    # Separate the verified source-date count from strictly clock-matched
+    # comparisons. A day observed at 00 UTC or at 13:15 UTC must not
+    # silently become a 12 UTC median/baseline.
+    primary_12_records=clock_matched_records(verified_markets,12)
+    comparisons,baselines=make_comparisons(primary_12_records)
     alternate_00_records={venue:{day:row for day,row in rows.items()
                         if row["data"]["sample_utc_hour"]==0}
                         for venue,rows in verified_markets.items()}
-    alternate_00_comparisons,alternate_00_baselines=make_comparisons(alternate_00_records)
+    alternate_00_comparisons,alternate_00_baselines=make_comparisons(
+        clock_matched_records(alternate_00_records,0))
     source_days=(through-ARCHIVE_START).days+1
     recent_windows=recent_coverage(verified_markets,through)
     fallback_00_coverage={}
