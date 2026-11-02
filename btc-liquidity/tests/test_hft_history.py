@@ -12,7 +12,7 @@ spec=importlib.util.spec_from_file_location("hft_history",Path(__file__).resolve
 m=importlib.util.module_from_spec(spec)
 spec.loader.exec_module(m)
 
-def fixture(missing_checkpoint=False, delayed_checkpoint=False):
+def fixture(missing_checkpoint=False, delayed_checkpoint=False, tick=0.01):
     hour=int(dt.datetime(2026,10,31,12,tzinfo=dt.timezone.utc).timestamp()*1e9)
     data=[]
     if delayed_checkpoint:
@@ -21,7 +21,7 @@ def fixture(missing_checkpoint=False, delayed_checkpoint=False):
         hour+=int(20*60*1e9)
     for side in ("bid","ask"):
         for n in range(12):
-            price=(100-0.01*n if side=="bid" else 100.01+0.01*n)
+            price=(100-tick*n if side=="bid" else 100+tick+tick*n)
             data.append({"received_time":hour,"event_type":"update" if missing_checkpoint else "snapshot",
                          "side":side,"price":str(price),"quantity":"2",
                          "final_update_id":111})
@@ -38,6 +38,11 @@ class HistoricL2Tests(unittest.TestCase):
         self.assertEqual(a["levels"],{"bid":12,"ask":12})
         self.assertIsNotNone(a["bands"]["0.05"]["bid_share"])
         self.assertIsNone(a["bands"]["1.0"]["bid_share"])
+    def test_very_shallow_bybit_book_has_real_tight_band_not_fake_wide_depth(self):
+        r=m.parse_checkpoint(fixture(tick=0.001),"bybit","BTCUSDT",
+            "perpetual",1.0,"USDT",dt.date(2026,10,31))
+        self.assertIsNotNone(r["bands"]["0.01"]["bid_share"])
+        self.assertIsNone(r["bands"]["0.05"]["bid_share"])
     def test_later_verified_checkpoint_is_accepted(self):
         r=m.parse_checkpoint(fixture(delayed_checkpoint=True),"binance_spot",
             "BTCUSDT","spot",1.0,"USDT",dt.date(2026,10,31))
