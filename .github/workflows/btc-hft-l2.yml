@@ -116,7 +116,7 @@ jobs:
             "independent_historical_integrity_ok":True,
             "scope":"source parser/unit tests and published-source-date integrity; not full historical completeness or delivery proof",
           }
-          pathlib.Path("btc-liquidity/data/historical_test_status.json").write_text(json.dumps(status,indent=2)+"\\n")
+          pathlib.Path("btc-liquidity/data/historical_test_status.json").write_text(json.dumps(status,indent=2)+chr(10))
           PY
             git add btc-liquidity/data/historical_integrity_status.json btc-liquidity/data/historical_test_status.json
             if ! git diff --cached --quiet; then git commit --amend --no-edit; fi
