@@ -52,6 +52,7 @@ def verify(root="."):
                 or not all(numeric(rec.get(n)) for n in ("buy","sell","net"))
                 or rec["buy"]<0 or rec["sell"]<0
                 or not close(rec["net"],rec["buy"]-rec["sell"],0.045)
+                or rec.get("source") not in ("CryptoHFTData","Kraken official public REST Trades")
                 or (rec.get("source")=="Kraken official public REST Trades" and
                     (venue!="kraken" or rec.get("hour_basis")!="trade_time"))):
                 report["invalid_records"].append(venue+":"+hour)
@@ -76,11 +77,17 @@ def verify(root="."):
         alt=source.get("windows",{}).get(label,{}).get("fixed_five_ex_coinbase",{})
         if alt.get("complete") is not full or alt.get("venues")!=VENUES or (full and not close(alt.get("net"),total)):
             report["source_issues"].append(label+":fixed five aggregate mismatch")
+        recovered=sum(state.get("hourly",{}).get("kraken",{}).get(k,{}).get("source")
+                      =="Kraken official public REST Trades" for k in times)
+        if alt.get("kraken_official_rest_hours")!=recovered or alt.get("kraken_hour_basis_mixed") is not (recovered>0):
+            report["source_issues"].append(label+":Kraken source provenance count mismatch")
         brow=bridge.get("spot_cvd",{}).get("windows",{}).get(label,{})
         balt=brow.get("fixed_five_ex_coinbase",{})
         if (balt.get("complete") is not full or
             (full and (balt.get("venues")!=VENUES or not close(balt.get("net_usd_approx"),total)))):
             report["bridge_issues"].append(label+":bridge fixed five mismatch")
+        if balt.get("kraken_official_rest_hours")!=recovered or balt.get("kraken_hour_basis_mixed") is not (recovered>0):
+            report["bridge_issues"].append(label+":bridge Kraken source provenance mismatch")
         for venue in VENUES:
             v=brow.get("venue_coverage_hours",{}).get(venue,{})
             if v.get("complete") is not per[venue]["complete"] or v.get("hours")!=per[venue]["hours"]:
