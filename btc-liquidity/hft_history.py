@@ -315,7 +315,7 @@ def main():
     start=time.monotonic()
     limit=int(os.getenv("HFT_MAX_FILES","70"))
     for venue,day,hour in targets(through,markets,failures,now):
-        if files>=limit or time.monotonic()-start>430:break
+        if files>=limit or time.monotonic()-start>700:break
         key=day.isoformat()
         if key in markets[venue]:
             prev=markets[venue][key].get("data",{})
