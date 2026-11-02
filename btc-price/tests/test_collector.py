@@ -2,6 +2,7 @@ import datetime as dt
 import importlib.util
 from pathlib import Path
 import unittest
+from unittest import mock
 
 spec=importlib.util.spec_from_file_location("btc_price",Path(__file__).resolve().parents[1]/"collector.py")
 m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
@@ -29,6 +30,20 @@ def fixture():
     return days[-800:]+[incomplete.copy()],weeks+[incomplete.copy()],now
 
 class TechnicalTests(unittest.TestCase):
+ def test_binance_official_fallback_uses_only_spot_api_hosts(self):
+    seen=[]
+    def fake(url):
+        seen.append(url)
+        if url.startswith("https://data-api.binance.vision/"):
+            raise RuntimeError("primary host unavailable")
+        return {"price":"78000"}
+    with mock.patch.object(m,"request_json",side_effect=fake):
+        result=m.binance_request("/api/v3/ticker/price?symbol=BTCUSDT")
+    self.assertEqual(result["price"],"78000")
+    self.assertEqual(len(seen),2)
+    self.assertTrue(seen[0].startswith("https://data-api.binance.vision/api/v3/"))
+    self.assertTrue(seen[1].startswith("https://api.binance.com/api/v3/"))
+
  def test_all_technical_indicators_use_completed_candles(self):
     d,w,now=fixture()
     j=m.calculate(d,w,now)
