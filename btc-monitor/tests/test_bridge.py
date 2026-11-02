@@ -147,4 +147,18 @@ class BridgeTests(unittest.TestCase):
              "last_complete_hour":"2026-11-02T06:00:00Z","windows":{"24h":row}}},NOW)
   self.assertFalse(result["metrics"]["spot_cvd"]["windows"]["24h"]["fixed_five_ex_coinbase"]["complete"])
 
+ def test_hft_recent_30d_coverage_survives_bridge_without_global_mix(self):
+  src={"generated_at":"2026-11-02T07:20:00Z","status":"ok",
+       "comparison":{"binance_spot":{"latest_day":"2026-11-01","previous_days":{}}},
+       "coverage":{"binance_spot":{"verified_days":26}},
+       "recent_window_coverage":{"30d":{"binance_spot":{"verified_days":25,
+                              "eligible_days":30,"coverage_pct":83.33}}}}
+  report=m.build({"hft_depth":src},NOW)
+  metric=report["metrics"]["hft_depth"]["markets"]["binance_spot"]
+  self.assertEqual(metric["verified_days"],26)
+  self.assertEqual(metric["recent_coverage"]["30d"]["coverage_pct"],83.33)
+  brief=m.make_brief(report)
+  self.assertEqual(brief["orderbook_history"]["hft_12utc"]["binance_spot"]["coverage_30d"]["eligible_days"],30)
+  self.assertFalse(report["audit"]["family_readiness"]["current_orderbook"])
+
 if __name__=="__main__":unittest.main()
