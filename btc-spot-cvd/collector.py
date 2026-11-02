@@ -74,8 +74,10 @@ def archives(state, now, errors, batch=24):
             sym=state.setdefault("symbols",{}).get(name) or symbol(ex,preferred)
             state["symbols"][name]=sym
             known=state.setdefault("hourly",{}).setdefault(name,{})
-            candidates=[end-dt.timedelta(hours=i) for i in range(3)]
-            candidates += [first+dt.timedelta(hours=i) for i in range(720)]
+            # Fill the freshest 24h FIRST. Earlier forward walk from ~30
+            # days ago left current 24h CVD permanently incomplete despite
+            # many valid historical hours being downloaded.
+            candidates=[end-dt.timedelta(hours=i) for i in range(720)]
             done=0
             for hour in dict.fromkeys(candidates):
                 k=key(hour)
@@ -151,7 +153,18 @@ def summarise(state,now,errors):
             full=len(rows)==h
             per[name]={"hours":len(rows),"required":h,"complete":full,"net":round(sum(x["net"] for x in rows),2) if full else None}
         full=all(v["complete"] for v in per.values())
-        out["windows"][str(h)+"h"]={"complete":full,"net":round(sum(v["net"] for v in per.values()),2) if full else None,"by_venue":per}
+        complete_names=[name for name in ALL if per[name]["complete"]]
+        # Strict published 5/5 window still requires all venues. Also expose
+        # a separately labeled fixed-venue subset so missing Coinbase history
+        # does not erase genuine Binance/OKX/Bybit/Kraken observations.
+        subset_usable=len(complete_names)>=3
+        subset={"available":subset_usable,
+                "venue_count":len(complete_names),
+                "venues":complete_names,
+                "net":round(sum(per[n]["net"] for n in complete_names),2) if subset_usable else None,
+                "scope":"observed, selected complete venues ONLY; not 5-venue/worldwide BTC CVD"}
+        out["windows"][str(h)+"h"]={"complete":full,"net":round(sum(v["net"] for v in per.values()),2) if full else None,
+                                      "by_venue":per,"complete_venue_subset":subset}
     return out
 
 
