@@ -1,0 +1,37 @@
+name: BTC historical whale alerts (free official archive)
+on:
+  push:
+    paths:
+      - "btc-onchain/whale_alert_archive.py"
+      - ".github/workflows/btc-whale-alert-archive.yml"
+  workflow_dispatch:
+  schedule:
+    - cron: "43 6 * * *"
+permissions:
+  contents: write
+concurrency:
+  group: btc-whale-alert-archive
+  cancel-in-progress: false
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify collector syntax
+        run: python -m py_compile btc-onchain/whale_alert_archive.py
+      - name: Download official public archive and aggregate BTC to exchanges
+        run: python btc-onchain/whale_alert_archive.py
+      - name: Publish derived historical daily series
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add btc-onchain/data/whale_alert_daily.json btc-onchain/data/whale_alert_latest.json
+          if ! git diff --cached --quiet; then
+            git commit -m "data: update observed Whale Alert historical BTC-to-exchange transfers"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
