@@ -1,0 +1,35 @@
+name: BTC public whale deposit snapshots
+on:
+  push:
+    paths:
+      - "btc-onchain/whale_collector.py"
+      - ".github/workflows/btc-whale-history.yml"
+  workflow_dispatch:
+  schedule:
+    - cron: "37 6 * * *"
+permissions:
+  contents: write
+concurrency:
+  group: btc-whale-history
+  cancel-in-progress: false
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m py_compile btc-onchain/whale_collector.py
+      - run: python btc-onchain/whale_collector.py
+      - name: Save snapshots
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add btc-onchain/data/whale_history.json btc-onchain/data/whale_latest.json
+          if ! git diff --cached --quiet; then
+            git commit -m "data: update whale exchange deposits"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
