@@ -239,4 +239,66 @@ class BridgeTests(unittest.TestCase):
   self.assertEqual(result["feeds"]["price_technical"]["status"],"stale_observation")
   self.assertNotIn("btc_technicals",m.make_brief(result))
 
+ def test_macro_etf_fed_rates_curve_exact_dxy_and_us_spot_flows(self):
+  j={"schema_version":1,"generated_utc":"2026-11-02T07:15:00Z","status":"ok",
+     "macro":{"metrics":{
+        "treasury_2y_pct":{"series_id":"DGS2","status":"usable","date":"2026-10-29","value":4.61},
+        "treasury_10y_pct":{"series_id":"DGS10","status":"usable","date":"2026-10-29","value":4.98},
+        "fed_funds_effective_pct":{"series_id":"DFF","status":"usable","date":"2026-10-29","value":3.88},
+        "fed_target_lower_pct":{"series_id":"DFEDTARL","status":"usable","date":"2026-11-01","value":3.75},
+        "fed_target_upper_pct":{"series_id":"DFEDTARU","status":"usable","date":"2026-11-01","value":4.0},
+        "usd_broad_trade_weighted":{"series_id":"DTWEXBGS","status":"usable","date":"2026-10-23","value":121.32},
+        "fed_balance_sheet_millions":{"series_id":"WALCL","status":"usable","date":"2026-10-28","value":6745635}},
+        "yield_curve_10y_minus_2y":{"date":"2026-10-29","status":"usable",
+                       "spread_pct_points":0.37,"same_day_2y_pct":4.61,"same_day_10y_pct":4.98},
+        "ice_dxy":{"status":"usable","date":"2026-11-02","value":101.5,
+                   "instrument":"ICE DXY six-currency index","not_fred_broad_usd":True,
+                   "observation_kind":"unfinished_current_session"}},
+     "etf":{"status":"usable","license":"CC BY 4.0","market":"US-listed spot BTC ETFs only",
+             "date":"2026-10-30","latest_net_flow_usd":-643330345.88,
+             "five_sessions_net_flow_usd":-202590627.48,
+             "last_five_sessions":[{"date":"2026-10-30","net_flow_usd":-643330345.88},
+                {"date":"2026-10-29","net_flow_usd":17071922.45},
+                {"date":"2026-10-28","net_flow_usd":137330298.95},
+                {"date":"2026-10-27","net_flow_usd":175993377},
+                {"date":"2026-10-26","net_flow_usd":110344120}],
+             "historical":{"observations":720,"end_date":"2026-10-30",
+               "last_21_reported_sessions_net_usd":-617697202.31},
+             "per_fund_verified":False}}
+  report=m.build({"macro_etf":j},NOW)
+  self.assertEqual(report["feeds"]["macro_etf"]["status"],"fresh")
+  readiness=report["audit"]["family_readiness"]
+  self.assertTrue(all(readiness[k] for k in ("macro_fed_rates",
+               "macro_treasury_yields","macro_usd_broad_not_dxy",
+               "macro_exact_ice_dxy","us_spot_btc_etf_flows")))
+  brief=m.make_brief(report)
+  self.assertEqual(brief["macro"]["fred"]["fed_balance_sheet_millions"]["value"],6745635)
+  self.assertTrue(brief["macro"]["dxy_exact"]["not_finalized_eod"])
+  self.assertTrue(brief["macro"]["usd_broad_index_is_NOT_dxy"])
+  self.assertEqual(brief["us_spot_bitcoin_etf"]["latest_session_date"],"2026-10-30")
+  self.assertEqual(brief["us_spot_bitcoin_etf"]["last_21_reported_sessions_net_flow_usd"],-617697202.31)
+
+ def test_fed_broad_usd_not_mislabeled_as_dxy_and_missing_etf_is_null(self):
+  j={"schema_version":1,"generated_utc":"2026-11-02T07:15:00Z","status":"ok",
+     "macro":{"metrics":{"usd_broad_trade_weighted":{"series_id":"DTWEXBGS",
+                    "status":"usable","date":"2026-10-23","value":121.3}},
+             "ice_dxy":{"status":"unavailable","value":None}}}
+  report=m.build({"macro_etf":j},NOW)
+  q=report["audit"]["family_readiness"]
+  self.assertTrue(q["macro_usd_broad_not_dxy"])
+  self.assertFalse(q["macro_exact_ice_dxy"])
+  self.assertFalse(q["us_spot_btc_etf_flows"])
+  brief=m.make_brief(report)
+  self.assertIsNone(brief["macro"]["dxy_exact"]["value"])
+  self.assertIsNone(brief["us_spot_bitcoin_etf"]["net_flow_usd"])
+ def test_stale_etf_row_fresh_json_not_laundered(self):
+  j={"schema_version":1,"generated_utc":"2026-11-02T07:15:00Z","status":"ok",
+     "etf":{"status":"usable","date":"2026-10-15","license":"CC BY 4.0",
+            "market":"US-listed spot BTC ETFs only",
+            "latest_net_flow_usd":-999999,"five_sessions_net_flow_usd":-999999,
+            "last_five_sessions":[{"date":"2026-10-15","net_flow_usd":-999999}]*5}}
+  out=m.build({"macro_etf":j},NOW)
+  self.assertFalse(out["audit"]["family_readiness"]["us_spot_btc_etf_flows"])
+  self.assertIsNone(m.make_brief(out)["us_spot_bitcoin_etf"]["net_flow_usd"])
+
 if __name__=="__main__":unittest.main()
