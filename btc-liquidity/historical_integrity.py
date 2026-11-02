@@ -147,10 +147,12 @@ def run(root=DATA):
     b=audit_bybit(load("bybit_independent_history.json",root),
                   load("bybit_full_backfill_status.json",root),
                   load("bybit_independent_latest.json",root))
-    h=audit_hft(load("hft_history.json",root),load("hft_latest.json",root))
+    hft_latest=load("hft_latest.json",root)
+    h=audit_hft(load("hft_history.json",root),hft_latest)
+    hft_hours="/".join(str(hour) for hour in hft_latest.get("searched_utc_hours",hft.PRIMARY_SEARCH_HOURS))
     return {"verified_at_utc":dt.datetime.now(UTC).isoformat(),
             "status":"verified_source_date_counts_consistent",
-            "scope":"source date snapshots only, Bybit partial ZIP, HFT sampled 11/12/13 UTC; not continuous orderbook",
+            "scope":f"source date snapshots only, Bybit partial ZIP, HFT sampled {hft_hours} UTC (00 fallback not noon comparable); not continuous orderbook",
             "bybit":b,"cryptohftdata":h,
             "all_source_dates_accounted_for":
                 all(x["all_source_dates_accounted_for"] for x in [*b.values(),*h.values()])}
