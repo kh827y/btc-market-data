@@ -521,6 +521,12 @@ def build(source,now):
   usable["spot_cvd_"+h+"_fixed_five_ex_coinbase"]=(feeds.get("spot_cvd",{}).get("status")=="fresh"
    and val(metrics,"spot_cvd","windows",h,"fixed_five_ex_coinbase","complete") is True
    and metric_quality["checks"].get("spot_cvd.fixed_ex_coinbase."+h,{}).get("status")=="usable")
+ # A fresh wrapper is never an independently verified signal.
+ usable["spot_execution"]=usable["spot_cvd_1h_complete"]
+ usable["price_trend"]=usable["price_technical_verified"]
+ usable["macro_liquidity"]=(feeds.get("macro_etf",{}).get("status")=="fresh" and
+       any(usable.get(x) is True for x in ("macro_fed_rates","macro_treasury_yields",
+       "macro_exact_ice_dxy","macro_usd_broad_not_dxy","us_spot_btc_etf_flows")))
  # A family is eligible only if at least one independently validated metric
  # actually exists, not merely because an upstream collector ran.
  check=metric_quality["checks"]
