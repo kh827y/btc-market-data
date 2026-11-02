@@ -12,7 +12,11 @@ def run():
     checks={}
     for name,(market,symbol,url) in VENUES.items():
         try:
-            raw=fetch(url)
+            if name in ("bybit_spot","bybit_usdt_perp","binance_usdm_perp"):
+                from official_ws import read_official_book
+                raw=read_official_book(name)
+            else:
+                raw=fetch(url)
             bids,asks,source_ms=normalize_book(name,raw)
             multiplier=1.0
             if name=="gate_usdt_perp":
@@ -33,7 +37,10 @@ def run():
                           "complete_bands":complete_bands,
                           "captured_at_utc":dt.datetime.now(UTC).isoformat(),
                           "contract_size_btc":multiplier if multiplier!=1 else None,
-                          "source_time_utc":dt.datetime.fromtimestamp(source_ms/1000,UTC).isoformat() if source_ms else None}
+                          "source_time_utc":dt.datetime.fromtimestamp(source_ms/1000,UTC).isoformat() if source_ms else None,
+                          "transport":raw.get("_transport","official_public_rest") if isinstance(raw,dict) else "official_public_rest",
+                          "snapshot_type":raw.get("_snapshot_type","rest_snapshot") if isinstance(raw,dict) else "rest_snapshot",
+                          "source_url":raw.get("_source_url",url.split("?")[0]) if isinstance(raw,dict) else url.split("?")[0]}
         except Exception as exc:
             checks[name]={"status":"error","market":market,
                           "error":str(exc)[:250]}
