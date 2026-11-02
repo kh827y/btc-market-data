@@ -30,21 +30,35 @@ def source_url(category,day):
     depth=500 if category=="linear" and day<=LINEAR_500_LAST else 200
     return f"{BASE}/{category}/BTCUSDT/{day.isoformat()}_BTCUSDT_ob{depth}.data.zip",depth
 
+_LAST_ACCESS=0.0
 def range_bytes(url,length=524288):
+    """Bound source load; explicit transient 429/5xx backoff, never fabricate a ZIP."""
+    global _LAST_ACCESS
     req=urllib.request.Request(url,headers={
         "User-Agent":"BTC-independent-archive-research/1.0",
         "Range":f"bytes=0-{length-1}"})
-    with urllib.request.urlopen(req,timeout=40) as resp:
-        if resp.status!=206:raise ValueError("source did not honor byte-range request")
-        rng=resp.headers.get("Content-Range","")
-        match=re.fullmatch(r"bytes 0-(\d+)/(\d+)",rng)
-        if not match:raise ValueError("invalid Content-Range: "+rng)
-        final,total=map(int,match.groups())
-        expected=min(length,total)
-        if final+1!=expected:raise ValueError("invalid range end")
-        body=resp.read(length+1)
-        if len(body)!=expected:raise ValueError("short or oversized HTTP range")
-    return body
+    for attempt in range(4):
+        wait=0.35-(time.monotonic()-_LAST_ACCESS)
+        if wait>0:time.sleep(wait)
+        _LAST_ACCESS=time.monotonic()
+        try:
+            with urllib.request.urlopen(req,timeout=40) as resp:
+                if resp.status!=206:raise ValueError("source did not honor byte-range request")
+                rng=resp.headers.get("Content-Range","")
+                match=re.fullmatch(r"bytes 0-(\d+)/(\d+)",rng)
+                if not match:raise ValueError("invalid Content-Range: "+rng)
+                final,total=map(int,match.groups())
+                expected=min(length,total)
+                if final+1!=expected:raise ValueError("invalid range end")
+                body=resp.read(length+1)
+                if len(body)!=expected:raise ValueError("short or oversized HTTP range")
+                return body
+        except urllib.error.HTTPError as exc:
+            if exc.code not in (429,500,502,503,504) or attempt==3:raise
+            value=exc.headers.get("Retry-After","") if exc.headers else ""
+            seconds=float(value) if value.replace(".","",1).isdigit() else 2**(attempt+1)
+            time.sleep(max(1,min(seconds,30)))
+    raise RuntimeError("unreachable retry state")
 
 def first_zip_snapshot(prefix,expected_symbol="BTCUSDT"):
     if len(prefix)<30 or prefix[:4]!=b"PK\x03\x04":
