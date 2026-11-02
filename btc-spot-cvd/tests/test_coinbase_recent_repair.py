@@ -1,5 +1,8 @@
 """Recent Coinbase fixed-five CVD maintenance must not silently lose hours."""
 import datetime as dt
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from unittest import mock
 import unittest
 from coinbase_recent_repair import missing_groups,scan_group,repair
