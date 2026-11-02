@@ -15,6 +15,7 @@ import urllib.request
 from collections import defaultdict
 
 import pyarrow.parquet as pq
+import pyarrow.compute as pc
 import zstandard as zstd
 
 UTC=dt.timezone.utc
@@ -78,6 +79,16 @@ def parse_checkpoint(blob,venue,symbol,kind,multiplier,quote,day,hour=12):
         columns=("received_time","event_type","side","price","quantity","final_update_id")
         if not set(columns).issubset(set(f.schema.names)):
             raise ValueError("schema mismatch")
+        # Most legacy hours contain NO verified checkpoint at all. Scan only
+        # the small event_type column first, avoiding conversion of millions of
+        # unrelated full-depth update rows to Python objects.
+        found=False
+        for flags in f.iter_batches(batch_size=131072,columns=["event_type"]):
+            if pc.any(pc.equal(flags.column(0),"snapshot")).as_py():
+                found=True
+                break
+        if not found:
+            raise ValueError("no verified checkpoint snapshot found anywhere in the requested UTC hour")
         bids={};asks={}
         checkpoint=None
         rows=0
