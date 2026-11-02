@@ -113,5 +113,54 @@ class LiquidityTests(unittest.TestCase):
                 m.fetch("https://example.com/api")
             self.assertEqual(f.call_count,1)
 
+
+    def test_gate_v2_400_invalid_payload_falls_back_to_verified_rest_300(self):
+        from unittest.mock import patch
+        import official_ws
+        now=dt.datetime.now(m.UTC)
+        bid=[{"p":str(77000-i),"s":"100"} for i in range(20)]
+        ask=[{"p":str(77001+i),"s":"100"} for i in range(20)]
+        rest={"id":123457,"current":now.timestamp(),"bids":bid,"asks":ask}
+        bad_ws=dict(rest)
+        bad_ws["bids"]=[{"p":"77000","s":"100"}]  # invalid initial full book
+        spec={"name":"BTC_USDT","type":"direct","quanto_multiplier":"0.0001"}
+        urls={"gate_usdt_perp":m.VENUES["gate_usdt_perp"]}
+        errors=[]
+        def fake_fetch(url):
+            return spec if "/contracts/" in url else rest
+        with patch.object(m,"VENUES",urls), patch.object(m,"fetch",side_effect=fake_fetch), patch.object(official_ws,"read_gate_v2_book",return_value=bad_ws):
+            result=m.collect_live(now,errors)
+        value=result["venues"]["gate_usdt_perp"]
+        self.assertEqual(value["levels"]["bid"],20)
+        self.assertEqual(value["native_depth_levels_requested"],300)
+        self.assertEqual(value["exchange_update_id"],123457)
+        self.assertTrue(any("gate_v2_400_unavailable" in x for x in errors))
+        self.assertEqual(value["bands"]["1.0"]["bid_usd"],None)
+
+    def test_gate_v2_400_valid_snapshot_preferred_over_rest(self):
+        from unittest.mock import patch
+        import official_ws
+        now=dt.datetime.now(m.UTC)
+        raw={"id":123458,"current":now.timestamp(),
+             "bids":[{"p":str(77000-i*.2),"s":"100"} for i in range(400)],
+             "asks":[{"p":str(77000.1+i*.2),"s":"100"} for i in range(400)],
+             "_transport":"gate_official_ws_v2_full_snapshot",
+             "_source_url":official_ws.GATE_V2_URL,
+             "_snapshot_type":"native_full_400_snapshot"}
+        spec={"name":"BTC_USDT","type":"direct","quanto_multiplier":"0.0001"}
+        urls={"gate_usdt_perp":m.VENUES["gate_usdt_perp"]}
+        errors=[]
+        def fake_fetch(url):
+            if "/contracts/" in url:return spec
+            raise AssertionError("should not fetch REST 300 when WS 400 is valid")
+        with patch.object(m,"VENUES",urls),patch.object(m,"fetch",side_effect=fake_fetch),patch.object(official_ws,"read_gate_v2_book",return_value=raw):
+            result=m.collect_live(now,errors)
+        value=result["venues"]["gate_usdt_perp"]
+        self.assertEqual(value["levels"]["ask"],400)
+        self.assertEqual(value["native_depth_levels_requested"],400)
+        self.assertEqual(value["exchange_update_id"],123458)
+        self.assertEqual(value["transport"],"gate_official_ws_v2_full_snapshot")
+        self.assertEqual(errors,[])
+
 if __name__ == "__main__":
     unittest.main()
