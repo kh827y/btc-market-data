@@ -23,6 +23,8 @@ API="https://api.cryptohftdata.com/v1/download"
 ARCHIVE_START=dt.date(2025,6,28)
 DAYS=(dt.datetime.now(UTC).date()-ARCHIVE_START).days
 BANDS=(0.05,0.2,1.0)
+SEARCH_HOURS=(12,11,13)  # Keep comparable daily observations within the 11-14 UTC window.
+SOURCE_RECHECK_DAYS=7
 MARKETS={
     "binance_spot":("BTCUSDT","spot",1.0,"USDT"),
     "bybit_spot":("BTCUSDT","spot",1.0,"USDT"),
@@ -64,9 +66,14 @@ def decode_parquet(blob):
         raise ValueError("unsupported historical archive payload (neither Parquet nor Zstandard-wrapped Parquet)")
     return blob
 
-def parse_checkpoint(blob,venue,symbol,kind,multiplier,quote,day):
+def parse_checkpoint(blob,venue,symbol,kind,multiplier,quote,day,hour=12):
+    """Only extract a genuine full vendor snapshot, including one later in the file.
+
+    Order-book updates before the first snapshot cannot establish complete depth.
+    Do NOT infer complete depth by replaying unanchored updates from an empty book.
+    """
     blob=decode_parquet(blob)
-    hour=dt.datetime.combine(day,dt.time(12),tzinfo=UTC)
+    target=dt.datetime.combine(day,dt.time(hour),tzinfo=UTC)
     with pq.ParquetFile(io.BytesIO(blob)) as f:
         columns=("received_time","event_type","side","price","quantity","final_update_id")
         if not set(columns).issubset(set(f.schema.names)):
@@ -74,34 +81,39 @@ def parse_checkpoint(blob,venue,symbol,kind,multiplier,quote,day):
         bids={};asks={}
         checkpoint=None
         rows=0
+        done=False
         for batch in f.iter_batches(batch_size=8192,columns=columns):
             data=batch.to_pydict()
             for i in range(batch.num_rows):
                 typ=data["event_type"][i]
                 if checkpoint is None:
                     if typ!="snapshot":
-                        raise ValueError("missing hour-start checkpoint; cannot reconstruct full book from an arbitrary update")
-                    checkpoint=(data["received_time"][i],data["final_update_id"][i])
-                    stamp=dt.datetime.fromtimestamp(checkpoint[0]/1e9,UTC)
-                    if abs((stamp-hour).total_seconds())>60:
-                        raise ValueError("checkpoint timestamp not at requested hour")
+                        continue
+                    timestamp=int(data["received_time"][i])
+                    stamp=dt.datetime.fromtimestamp(timestamp/1e9,UTC)
+                    if not target<=stamp<target+dt.timedelta(hours=1):
+                        raise ValueError("snapshot timestamp outside requested file hour")
+                    checkpoint=(timestamp,data["final_update_id"][i])
+                    bids={};asks={};rows=0
                 if typ!="snapshot" or (data["received_time"][i],data["final_update_id"][i])!=checkpoint:
+                    done=True
                     break
                 side=data["side"][i]
+                if side=="noop":
+                    raise ValueError("empty initial book snapshot, no verifiable depth")
                 if side not in ("bid","ask"):
                     raise ValueError("unexpected snapshot side")
-                p=float(data["price"][i])
-                q=float(data["quantity"][i])*multiplier
+                p=float(data["price"][i]);q=float(data["quantity"][i])*multiplier
                 if not math.isfinite(p) or not math.isfinite(q) or p<=0 or q<=0:
                     raise ValueError("invalid snapshot price/size")
-                target=bids if side=="bid" else asks
-                if p in target:
+                target_side=bids if side=="bid" else asks
+                if p in target_side:
                     raise ValueError("duplicate price level in initial checkpoint")
-                target[p]=q
+                target_side[p]=q
                 rows+=1
-            else:
-                continue
-            break
+            if done:break
+    if checkpoint is None:
+        raise ValueError("no verified checkpoint snapshot found anywhere in the requested UTC hour")
     if len(bids)<10 or len(asks)<10:
         raise ValueError("snapshot has fewer than 10 levels on a side")
     best_bid=max(bids);best_ask=min(asks)
@@ -124,16 +136,18 @@ def parse_checkpoint(blob,venue,symbol,kind,multiplier,quote,day):
                           "bid_coverage_complete":bid_ok,
                           "ask_coverage_complete":ask_ok,
                           "bid_share":round(b/(a+b),5) if b is not None and a is not None and a+b>0 else None}
-    return {"time":hour.isoformat(),"venue":venue,"symbol":symbol,"market":kind,"quote":quote,
-            "source":"CryptoHFTData historical verified L2 hour-start checkpoint",
-            "file_path":f"{venue}/{day}/12/{symbol}_orderbook.parquet",
-            "method":"first complete checkpoint from 12:00 UTC hourly L2 file, not trades or interpolated quotes",
-            "snapshot_rows":rows,"levels":{"bid":len(bids),"ask":len(asks)},
+    stamp=dt.datetime.fromtimestamp(checkpoint[0]/1e9,UTC)
+    return {"time":stamp.isoformat(),"venue":venue,"symbol":symbol,"market":kind,"quote":quote,
+            "source":"CryptoHFTData historical verified L2 snapshot",
+            "file_path":f"{venue}/{day}/{hour:02d}/{symbol}_orderbook.parquet",
+            "method":"first genuine complete vendor snapshot in UTC file (may follow unanchored updates); not a daily median",
+            "sample_utc_hour":hour,"snapshot_rows":rows,
+            "levels":{"bid":len(bids),"ask":len(asks)},
             "mid":round(mid,3),"spread_bps":round(spread,3),
             "reach_pct":{"bid":round(reach_bid,5),"ask":round(reach_ask,5)},
             "bands":bands,
             "quantity_multiplier_to_btc":multiplier,
-            "contract_multiplier_caveat":"Historical 0.01 BTC/contract assumed; confirm against current OKX ctVal" if venue=="okx_futures" else None}
+            "contract_multiplier_caveat":"Historical 0.01 BTC/contract assumed; confirm historical OKX ctVal" if venue=="okx_futures" else None}
 
 def read(path,default):
     try:return json.loads(path.read_text(encoding="utf8"))
