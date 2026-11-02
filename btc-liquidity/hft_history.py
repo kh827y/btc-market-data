@@ -15,6 +15,7 @@ import urllib.request
 from collections import defaultdict
 
 import pyarrow.parquet as pq
+import zstandard as zstd
 
 UTC=dt.timezone.utc
 ROOT=pathlib.Path("btc-liquidity/data")
@@ -44,9 +45,22 @@ def download(url, limit=45_000_000):
             chunks.append(chunk)
     return b"".join(chunks)
 
-def parse_checkpoint(blob,venue,symbol,kind,multiplier,quote,day):
+def decode_parquet(blob):
+    # Historical vendor archive objects can be a WHOLE .parquet compressed
+    # again as a Zstandard frame (28 B5 2F FD). Recent hours are plain Parquet.
+    if blob.startswith(b"\\x28\\xb5\\x2f\\xfd"):
+        max_output=350_000_000
+        with zstd.ZstdDecompressor().stream_reader(io.BytesIO(blob)) as reader:
+            out=reader.read(max_output+1)
+            if len(out)>max_output:
+                raise ValueError("decompressed Parquet exceeds 350MB safety cap")
+            blob=out
     if not blob.startswith(b"PAR1") or not blob.endswith(b"PAR1"):
-        raise ValueError("response is not a complete Parquet file: "+repr(blob[:100]))
+        raise ValueError("unsupported historical archive payload (neither Parquet nor Zstandard-wrapped Parquet)")
+    return blob
+
+def parse_checkpoint(blob,venue,symbol,kind,multiplier,quote,day):
+    blob=decode_parquet(blob)
     hour=dt.datetime.combine(day,dt.time(12),tzinfo=UTC)
     with pq.ParquetFile(io.BytesIO(blob)) as f:
         columns=("received_time","event_type","side","price","quantity","final_update_id")
