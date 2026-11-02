@@ -24,7 +24,7 @@ increase or decrease with the actual native depth of the exchange's book.
 | Bybit Spot BTCUSDT | Official native WS `orderbook.1000.BTCUSDT` working. Official new full REST `/v5/market/full_orderbook` (up to **10,000** native levels) **403** from GitHub Actions: CloudFront country restriction | Keep official WS 1,000-level snapshot. Its 1% band is `null` until genuinely covered; do not replay blocked REST or use a geo-proxy/another exchange. |
 | Bybit linear BTCUSDT perpetual | Same real native WS 1,000-level depth works; official full REST **403** from GitHub Actions | Same fail-closed policy, separate perpetual instrument |
 | Binance USD-M BTCUSDT perpetual | Official WS depth API request allows **at most 1,000** per side (documented maximum); live 1,000 verified | A band extending beyond the actual 1,000 native levels remains unknown |
-| OKX spot/perpetual BTC-USDT | Public `books`/REST order book supplies up to 400 levels; private faster book-l2-tbt subscription requires VIP/authentication | Keep individually complete native bands, do not invent deep levels |
+| OKX spot/perpetual BTC-USDT | Discovered **official free** `GET /api/v5/market/books-full?instId=...&sz=5000` (5000 levels per bid/ask side), previously omitted by the collector using 400-level `books`. First successful production check on 2026-11-02 21:28 UTC returned 5000 levels each side for BOTH BTC-USDT spot and BTC-USDT-SWAP perpetual, with native timestamps. | Production collector upgraded to same-instrument 5000-depth, with strict validation and fallback to 400-level `books`. At the verified check, **spot ±1% was fully covered** (1.049% bid, 1.4272% ask); perpetual was NOT (0.8411% bid, 0.994% ask). Never extend beyond actual native level-5000 boundary. |
 | Bitget spot/perpetual BTCUSDT | Official public V3 REST 1,000-level maximum | Keep observed native levels; non-RPI data must not silently merge with RPI book |
 | Gate BTC_USDT perpetual | REST documented and probed limit **300**, with native book ID and timestamp. Independently discovered public native WS V2 `futures.obu` initial **400/400** full snapshot, validated live on 2026-11-02 21:22 UTC (book ID 129812445922, bid reach 0.2832%, ask reach 0.2848%). | Production collector now prefers **400-level official Gate WS V2** and strictly falls back to verified REST 300 if unavailable or malformed; no source mixing. The Gate ±0.2% band is verified in that run, ±1% is incomplete. |
 | Binance spot and Coinbase BTCUSD spot | Existing public native snapshots (up to 5,000 and full Coinbase level-2 observations, respectively) | Genuine book coverage only, with venue, currency and freshness shown |
@@ -33,7 +33,7 @@ increase or decrease with the actual native depth of the exchange's book.
 Official source references:
 
 - Bybit new [full REST](https://bybit-exchange.github.io/docs/v5/market/full-ob), [standard public WebSocket](https://bybit-exchange.github.io/docs/v5/websocket/public/orderbook), [full WS synchronization](https://bybit-exchange.github.io/docs/v5/websocket/public/full-ob).
-- [Binance USD-M depth WS API](https://developers.binance.com/en/docs/derivatives/usds-margined-futures/market-data/websocket-api), [Bitget V3 REST](https://www.bitget.com/docs/catalog/market/market-data), [OKX API](https://www.okx.com/docs-v5/en/), [Gate Futures REST API](https://www.gate.com/docs/developers/apiv4/en/futures/), [Gate native 400-level WebSocket V2 orderbook](https://www.gate.com/docs/developers/futures/ws/en/#order-book-v2-api).
+- [Binance USD-M depth WS API](https://developers.binance.com/en/docs/derivatives/usds-margined-futures/market-data/websocket-api), [Bitget V3 REST](https://www.bitget.com/docs/catalog/market/market-data), [OKX full orderbook 5000 API](https://www.okx.com/docs-v5/en/#order-book-trading), [Gate Futures REST API](https://www.gate.com/docs/developers/apiv4/en/futures/), [Gate native 400-level WebSocket V2 orderbook](https://www.gate.com/docs/developers/futures/ws/en/#order-book-v2-api).
 - Real one-time probe, with HTTP codes, native book-id, timestamp, levels and bid/ask reach:
   [`btc-liquidity/data/deep_book_probe.json`](../btc-liquidity/data/deep_book_probe.json).
 - Actual live collector and independent market probe:
@@ -93,9 +93,9 @@ continuous L2 history, and narrow 0.01% snapshots are not complete 1% books.
 6. Hourly ChatGPT risk automation knows that 11 working venues is not complete
    1% depth, and uses the source-capability receipt **only as a quality gate**,
    not a reason to send a routine notification.
+7. Source-discovery is not complete based on narrow REST depths alone: native deeper public endpoints like OKX `books-full` must be checked for every venue. The actual verified 2026-11-02 21:28 UTC snapshot of OKX proves why treating 400 as the highest free limit was incorrect. All counts must be recomputed from continuously published genuine snapshots.
 
 At 2026-11-02 21:22 UTC the real collector published a successful Gate **400/400** native WebSocket V2 snapshot with no collector errors and all **11/11** named markets present. The independently verified fallback is covered by unit tests. Note that 400 levels still do not guarantee 1% completeness.
 
-These conditions allow **closing source capability discovery and safe-integration
-work**, not claiming exhaustive worldwide markets, complete free 1% book depth
+These conditions allow **closing tested source capability and safe-integration work for the current named markets**, not claiming exhaustive worldwide markets, complete free 1% book depth
 or removal of genuine provider publication lag.
