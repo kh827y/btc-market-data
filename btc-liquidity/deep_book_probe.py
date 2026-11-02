@@ -21,8 +21,8 @@ TARGETS={
  "bybit_usdt_perp_full":(
    "https://api.bybit.com/v5/market/full_orderbook?category=linear&symbol=BTCUSDT",
    "bybit_usdt_perp"),
- "gate_usdt_perp_500":(
-   "https://api.gateio.ws/api/v4/futures/usdt/order_book?contract=BTC_USDT&limit=500&with_id=true",
+ "gate_usdt_perp_300":(
+   "https://api.gateio.ws/api/v4/futures/usdt/order_book?contract=BTC_USDT&limit=300&with_id=true",
    "gate_usdt_perp"),
 }
 def validate_sides(bids,asks):
@@ -104,7 +104,7 @@ def main():
        "markets":checks,
        "all_verified":all(v["status"]=="verified_native_full_snapshot" for v in checks.values()),
        "bybit_1pct_verified":all(v.get("can_recover_1pct") is True for k,v in checks.items() if k.startswith("bybit")),
-       "gate_1pct_verified":checks["gate_usdt_perp_500"].get("can_recover_1pct") is True}
+       "gate_1pct_verified":checks["gate_usdt_perp_300"].get("can_recover_1pct") is True}
     dst=Path("btc-liquidity/data/deep_book_probe.json")
     dst.parent.mkdir(parents=True,exist_ok=True)
     dst.write_text(json.dumps(payload,indent=2,ensure_ascii=False,allow_nan=False)+"\n")
