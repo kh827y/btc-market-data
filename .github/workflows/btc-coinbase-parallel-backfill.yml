@@ -1,0 +1,98 @@
+name: BTC Coinbase verified full 720h parallel trade backfill
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "btc-spot-cvd/coinbase_parallel_backfill.py"
+      - "btc-spot-cvd/tests/test_coinbase_parallel.py"
+      - ".github/workflows/btc-coinbase-parallel-backfill.yml"
+permissions:
+  contents: write
+concurrency:
+  group: btc-coinbase-verified-720h-backfill
+  cancel-in-progress: false
+jobs:
+  anchor:
+    runs-on: ubuntu-latest
+    outputs:
+      utc_hour: ${{ steps.anchor.outputs.utc_hour }}
+    steps:
+      - id: anchor
+        shell: bash
+        run: |
+          utc_hour="$(python -c 'import datetime as d; n=d.datetime.now(d.timezone.utc).replace(minute=0,second=0,microsecond=0)-d.timedelta(hours=2);print(n.strftime("%Y-%m-%dT%H:00:00Z"))')"
+          echo "utc_hour=$utc_hour" >> "$GITHUB_OUTPUT"
+          echo "Completing full 720h window ending at $utc_hour"
+  per-shard:
+    needs: [anchor]
+    strategy:
+      fail-fast: false
+      max-parallel: 12
+      matrix:
+        shard: [0,1,2,3,4,5,6,7,8,9,10,11]
+    runs-on: ubuntu-latest
+    timeout-minutes: 115
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install free Coinbase REST client
+        run: pip install requests
+      - name: Offline BTC trade boundary and ID continuity tests
+        run: |
+          python -m py_compile btc-spot-cvd/coinbase_parallel_backfill.py
+          python -m unittest discover -s btc-spot-cvd/tests -p test_coinbase_parallel.py -v
+      - name: Verify all 60 historical BTC-USD UTC hours without gaps
+        env:
+          ANCHOR_HOUR: ${{ needs.anchor.outputs.utc_hour }}
+          SLICE_INDEX: ${{ matrix.shard }}
+        run: |
+          python -u btc-spot-cvd/coinbase_parallel_backfill.py --anchor "$ANCHOR_HOUR" --shard "$SLICE_INDEX" --output out/result.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: shard_${{ matrix.shard }}
+          path: out/result.json
+          if-no-files-found: error
+          retention-days: 3
+  merge:
+    needs: [anchor,per-shard]
+    if: ${{ needs.per-shard.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r btc-spot-cvd/requirements.txt
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: shard_*
+          path: /tmp/coinbase-verified-slices
+      - name: Validate all Coinbase historical shards and atomically merge
+        shell: bash
+        env:
+          ANCHOR_HOUR: ${{ needs.anchor.outputs.utc_hour }}
+        run: |
+          set -eu
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            # Never rebase a changing CVD checkpoint: read latest canonical
+            # source state then re-merge immutable verified artifacts.
+            git fetch origin main
+            git reset --hard origin/main
+            python -u btc-spot-cvd/coinbase_parallel_backfill.py --anchor "$ANCHOR_HOUR" --merge-dir /tmp/coinbase-verified-slices
+            python -m unittest discover -s btc-spot-cvd/tests -p test_coinbase_parallel.py -q
+            python -m unittest discover -s btc-spot-cvd/tests -p test_collector.py -q
+            git add btc-spot-cvd/data/state.json btc-spot-cvd/data/latest.json btc-spot-cvd/data/coinbase_full_backfill_status.json
+            git commit -m "data: complete 720h Coinbase spot BTC-USD verified 1000-trade ID-continuous history"
+            if git push origin HEAD:main; then
+              echo "Published 720 complete Coinbase UTC hours"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Failed to publish Coinbase verified history after ten retries" >&2
+          exit 1
