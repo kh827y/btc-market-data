@@ -75,7 +75,7 @@ def compact_spot(j):
                   "venues":subset.get("venues",[]) if scoped_ok else [],
                   "venue_count":len(subset.get("venues",[])) if scoped_ok else 0,
                   "net_usd_approx":num(subset.get("net")) if scoped_ok else None,
-                  "not_all_venues":True},
+                  "not_all_venues":(len(subset.get("venues",[]))<6) if scoped_ok else True},
               "venues":{v:{"complete":x.get("complete") is True,
                            "hours":x.get("hours"),"required":x.get("required"),
                            "net_usd_approx":num(x.get("net")) if x.get("complete") is True else None}
