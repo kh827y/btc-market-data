@@ -32,15 +32,33 @@ jobs:
           cvd_status=$?
           python -m unittest discover -s btc-monitor/tests -p test_bridge.py -v > /tmp/bridge-check.log 2>&1
           bridge_status=$?
+          # Real free-source smoke test: actual Bitget spot tick archive,
+          # separate from offline unit tests and from the 30-day backfill.
+          python - <<'PY' > /tmp/bitget-smoke.log 2>&1
+          import datetime as dt
+          import json
+          import sys
+          sys.path.insert(0,"btc-spot-cvd")
+          from collector import BASE,UTC,symbol,get,calculate_parquet
+          sym=symbol("bitget_spot",["BTCUSDT"])
+          hour=dt.datetime(2026,11,1,12,tzinfo=UTC)
+          path=f"bitget_spot/{hour:%Y-%m-%d}/{hour:%H}/{sym}_trades.parquet"
+          row=calculate_parquet(get(BASE+"/download",params={"file":path}).content,hour)
+          assert row["trades"]>0 and row["complete"] is True
+          print(json.dumps({"exchange":"bitget_spot","symbol":sym,"hour":hour.isoformat(),
+                            "trades":row["trades"],"net_usd_approx":row["net"]}))
+          PY
+          bitget_status=$?
           set -e
           tail -30 /tmp/cvd-check.log
           tail -30 /tmp/bridge-check.log
+          tail -15 /tmp/bitget-smoke.log
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           for attempt in 1 2 3 4; do
             git fetch origin main
             git reset --hard origin/main
-            BTC_CVD_TEST_STATUS="$cvd_status" BTC_BRIDGE_TEST_STATUS="$bridge_status" python - <<'PY'
+            BTC_CVD_TEST_STATUS="$cvd_status" BTC_BRIDGE_TEST_STATUS="$bridge_status" BTC_BITGET_SMOKE_STATUS="$bitget_status" python - <<'PY'
           import datetime
           import json
           import os
@@ -50,6 +68,8 @@ jobs:
              "completed_utc":datetime.datetime.now(datetime.timezone.utc).isoformat(),
              "collector_tests_ok":os.getenv("BTC_CVD_TEST_STATUS") == "0",
              "bridge_tests_ok":os.getenv("BTC_BRIDGE_TEST_STATUS") == "0",
+             "bitget_actual_hour_smoke_ok":os.getenv("BTC_BITGET_SMOKE_STATUS") == "0",
+             "bitget_smoke_hour_utc":"2026-11-01T12:00:00Z",
              "scope":"unit tests only; does NOT prove successful new trade data download or full 24h/7d/30d CVD",
           }
           path=Path("btc-spot-cvd/data/quick_check.json")
@@ -63,4 +83,4 @@ jobs:
             if [ "$attempt" -eq 4 ]; then exit 1; fi
             sleep 2
           done
-          if [ "$cvd_status" -ne 0 ] || [ "$bridge_status" -ne 0 ]; then exit 1; fi
+          if [ "$cvd_status" -ne 0 ] || [ "$bridge_status" -ne 0 ] || [ "$bitget_status" -ne 0 ]; then exit 1; fi
