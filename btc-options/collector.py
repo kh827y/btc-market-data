@@ -37,3 +37,63 @@ def quote_ok(v):
     try:
         return v is not None and math.isfinite(float(v)) and float(v)>0
     except (ValueError,TypeError): return False
+
+def interpolate(sorted_nodes,target):
+    nodes=sorted((float(d),float(iv)) for d,iv in sorted_nodes if math.isfinite(float(d)) and quote_ok(iv))
+    if len(nodes)<2:return None
+    for (da,va),(db,vb) in zip(nodes,nodes[1:]):
+        if da<=target<=db and db-da>1e-8:
+            if db-da>0.2:return None
+            return va+(vb-va)*(target-da)/(db-da)
+    return None
+
+def expiry_surface(instruments,summaries,now):
+    indexes={item["instrument_name"]:item for item in summaries}
+    groups=defaultdict(lambda:{"C":[],"P":[],"atm":[]})
+    for ins in instruments:
+        record=indexes.get(ins.get("instrument_name"))
+        if not record:continue
+        try:
+            expiry=dt.datetime.fromtimestamp(int(ins["expiration_timestamp"])/1000,UTC)
+            tau=(expiry-now).total_seconds()/86400/365
+            days=tau*365
+            if days<3 or days>400:continue
+            kind="C" if ins["option_type"]=="call" else "P"
+            strike=float(ins["strike"])
+            forward=float(record["underlying_price"])
+            iv=float(record["mark_iv"])
+            if not 5<=iv<=300 or not quote_ok(record.get("ask_price")):
+                continue
+            oi=float(record.get("open_interest") or 0)
+            if oi<=0:continue
+            delta=delta_forward(forward,strike,iv,tau,kind)
+            if kind=="C":
+                if delta>0.7 or delta<0.02:continue
+                coord=delta
+            else:
+                if delta<-0.7 or delta>-0.02:continue
+                coord=-delta
+            key=expiry.isoformat()
+            groups[key][kind].append((coord,iv))
+            if abs(math.log(strike/forward))<0.07:
+                groups[key]["atm"].append((math.log(strike/forward),iv))
+            groups[key]["days"]=days
+            groups[key]["expiry"]=key
+        except (KeyError,ValueError,TypeError,OverflowError):
+            continue
+    surfaces={}
+    for expiry,rows in groups.items():
+        call_iv=interpolate(rows["C"],0.25)
+        put_iv=interpolate(rows["P"],0.25)
+        # At-the-forward IV from local moneyness smile around m=0.
+        atm_iv=interpolate(rows["atm"],0.0)
+        if any(v is None for v in (call_iv,put_iv,atm_iv)):
+            continue
+        days=rows["days"]
+        surfaces[expiry]={"expiration":expiry,"days":round(days,3),
+            "atm_iv_pct":round(atm_iv,4),
+            "call25_iv_pct":round(call_iv,4),"put25_iv_pct":round(put_iv,4),
+            "rr25_call_minus_put_volpts":round(call_iv-put_iv,4),
+            "bf25_wings_minus_atm_volpts":round((call_iv+put_iv)/2-atm_iv,4),
+            "observed_strikes":{"call":len(rows["C"]),"put":len(rows["P"]),"atm":len(rows["atm"])}}
+    return surfaces
