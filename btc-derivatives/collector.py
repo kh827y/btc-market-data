@@ -196,3 +196,45 @@ def fetch_basis(now):
       "cme_basis":{"status":"missing","reason":"Verified CME matched-settlement futures-vs-spot annualized basis not yet available"},
       "dated_basis_latest_by_venue":snap,"daily_by_venue_and_contract":dict(history),
       "source_meta":status("Sharpe basis",(snapshot.get("meta") or {}).get("as_of"),now,3)}
+
+def main():
+    now=dt.datetime.now(UTC)
+    checks=(("open_interest",fetch_oi),("funding",fetch_funding),
+            ("liquidations",fetch_liquidations),("cme_cot",fetch_cme_cot),
+            ("dated_futures_basis",fetch_basis))
+    results={};errors=[]
+    for key,fn in checks:
+        try:
+            results[key]=fn(now)
+            print("SUCCESS",key)
+        except Exception as exc:
+            errors.append({"dataset":key,"error":str(exc)[:250]})
+            print("ERROR",key,str(exc)[:250])
+    last_report=ROOT/"latest.json"
+    report={
+        "generated_utc":now.isoformat(),
+        "source_classes":{
+            "open_interest":"multi-venue USD notional; 5-venue fixed set",
+            "funding":"actually settled contract rates; converted to a common 8h settlement basis",
+            "liquidations":"reported USD forced liquidations from Binance and Bybit only",
+            "cme_cot":"weekly BTC CME standard futures only, positions in 5 BTC contracts",
+            "dated_futures_basis":"expiry-aware non-CME futures/spot basis, not funding; CME basis missing"},
+        "results":results,"errors":errors,
+        "coverage":{"obtained":len(results),"expected":len(checks),
+                    "complete":len(results)==len(checks),
+                    "cme_basis_available":False},
+        "limitations":[
+            "CME price basis is not provided by CFTC positions; do not relabel non-CME basis as CME.",
+            "Binance/Bybit direct REST API were blocked from GitHub; Sharpe verified exchange data is used instead.",
+            "Liquidations from only two exchanges are NOT world totals.",
+            "OI changes compare same five venues, fixed USD definitions; raw linear BTC OI must not be summed with coin-margined contract counts.",
+            "Funding settlement rates are periodic fractions, not APR; compare aligned 8h normalizations.",
+            "Futures contract rolls break a continuous dated basis curve unless expiry is retained.",
+            "CFTC COT weekly reporting lags and is a different scope from perpetual OI."
+        ]
+    }
+    ROOT.mkdir(parents=True,exist_ok=True)
+    last_report.write_text(json.dumps(report,ensure_ascii=False,separators=(",",":"))+"\n")
+    print("COVERAGE",report["coverage"],"ERRORS",len(errors))
+if __name__=="__main__":
+    main()
