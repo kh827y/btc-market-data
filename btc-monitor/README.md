@@ -41,3 +41,20 @@ The BTC price bridge uses the actual daily candle **close** (the calendar day af
 CVD last_complete_hour labels a UTC-hour **start**, so its observation age is measured from the end of that hour. Historical HFT noon and native Bybit midnight L2 observation times are dated snapshots, not live order-book freshness. The live order-book readiness flags now require an actually complete price band, with usable spot and perpetual venue counts separately. Source collector errors remain flagged even when valid venues are available.
 
 The separate scheduled task **«Дозагрузка истории BTC L2»** is intentionally left in place: this feed bridge does not duplicate, halt, or reinterpret that task's running backfill as completed history.
+
+## Autonomous collector watchdog
+
+Implemented in `btc-monitor/watchdog.py`, deployed by `.github/workflows/btc-collector-watchdog.yml`, scheduled at UTC :03, :18, :33, :48 plus a one-way successful monitor-bridge `workflow_run` trigger. It **does not change** the hourly ChatGPT task schedule or the separate active ChatGPT task `Дозагрузка истории BTC L2`.
+
+The watchdog independently checks **14 actual data sources/workflows** (price, spot executed CVD, derivatives, options, macro/ETF, live books, four upstream daily onchain collectors, consolidated onchain, validated monitor bridge, historical CryptoHFTData and Bybit L2 snapshots). It evaluates native `generated_utc` and measurement timestamps, respects daily/weekly bars and official reporting lags, and inspects actual GitHub workflow runs. A `skipped` or `cancelled` GitHub workflow_run is *not* evidence of successful collection; a newly published JSON is *not* proof the underlying observation is new.
+
+On a real missing/stale critical feed, it dispatches the **specific existing GitHub workflow**, avoiding duplicate runs when one is already active. It sends at most two repair dispatches per check, waits at least two hours between attempts on a source, and caps each source at three per 24 hours. Failed or unauthorized dispatches are separately recorded. Historical L2 is observed **without** triggering a competing backfill, because the existing external `Дозагрузка истории BTC L2` task handles that. Data completeness gaps (e.g. Coinbase 24h not complete or vendor-delayed onchain) do *not* cause endless replays of otherwise healthy collectors.
+
+Published receipts:
+- `btc-monitor/data/health_latest.json` — status, checked UTC, workflow API access, actual source statuses, recovery decisions, named missing coverage.
+- `btc-monitor/data/watchdog_state.json` — prior confirmed successes and cooldown/dispatch timestamps.
+- `btc-monitor/data/watchdog_recovery_test.json` — one-shot real recovery-path verification: a **simulated missing observation** successfully triggered an actual `workflow_dispatch` to the existing BTC macro collector, and GitHub ran that collector successfully, without changing live BTC market data to manufacture a failure. Actual test run: https://github.com/kh827y/btc-market-data/actions/runs/41515168535 .
+
+The monitor's `brief.json` embeds a dated compact `collector_watchdog` section. The actual ChatGPT automation independently reads the original `health_latest.json` and **does not trust a stale watchdog**. If the entire GitHub Actions service is disabled, an Actions-based watchdog cannot repair itself; the independent hourly ChatGPT monitor can detect the old heartbeat and use its existing one-time critical-data-warning policy. There is no claim of 100% reliability, permanent API access, or complete global market coverage.
+
+Verification criterion: actual source/date integrity; successful code and real GitHub workflow runs; one authenticated real workflow dispatch and successful downstream run; persisted health receipt; integration in real hourly monitoring prompt. Long-running reliability still requires operational observation over time and retains truthful per-feed status.
