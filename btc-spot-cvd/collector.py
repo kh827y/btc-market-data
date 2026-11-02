@@ -250,6 +250,30 @@ def summarise(state,now,errors):
         out["windows"][str(h)+"h"]={"complete":full,"net":round(sum(per[n]["net"] for n in ALL),2) if full else None,
                                       "by_venue":per,"complete_venue_subset":subset,
                                       "fixed_five_ex_coinbase":alt}
+    # Audit hour-by-hour integrity independently of the older count-only
+    # completeness flags. A complete interval may still have legacy rows
+    # without proof of original Coinbase trade-ID continuity.
+    coinbase=state.get("hourly",{}).get("coinbase",{})
+    audit={}
+    for span in (24,168,720):
+        required=[key(end-dt.timedelta(hours=i)) for i in range(span)]
+        missing=[k for k in required if not coinbase.get(k,{}).get("complete")]
+        unverified=[k for k in required
+                    if coinbase.get(k,{}).get("complete") and
+                    coinbase[k].get("integrity")!="id_continuous_verified"]
+        audit[str(span)+"h"]={
+            "required_hours":span,
+            "complete_hours":span-len(missing),
+            "coinbase_missing_utc_hours":missing[:20],
+            "coinbase_missing_hours_count":len(missing),
+            "id_continuous_proof_hours":span-len(missing)-len(unverified),
+            "legacy_without_id_proof_count":len(unverified),
+            "all_hours_id_continuous_verified":not missing and not unverified}
+    out["coinbase_window_integrity"]=audit
+    out["time_basis_note"]=(
+        "Coinbase official REST is grouped by exchange trade timestamp; "
+        "CryptoHFTData's other spot venues are grouped by received UTC hour. "
+        "Do not assume exact per-hour execution-timestamp equivalence.")
     return out
 
 
