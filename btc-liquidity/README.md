@@ -59,3 +59,13 @@ Quality detail: the collector groups Binance split REST snapshots by their nativ
 An alternative independent vendor, Tardis.dev, exposes whole-day BTC historical L2 samples on **the first day of each month** without API key. Those sparse samples are useful for cross-checking historical methodology, but **not** a substitute for free daily history: https://docs.tardis.dev/downloadable-csv-files .
 
 For later monitoring item 7: choose live latest.json for current liquidity, hft_latest.json for multi-venue 12:00 historical context, and bybit_independent_latest.json for longer 00:00 Bybit spot/perpetual baselines. Never compare different venues, markets, clock times or band widths as identical. Never use resting limit orders as executed buying, guaranteed support, or a sole signal of reversal. The scheduled ChatGPT trend monitor is **not automatically integrated** by creating these collectors; that remains item 7.
+
+## Live REST source recovery — November 2026
+
+The original free GitHub runner observed Bybit Spot/Perpetual HTTP 403 and Binance USD-M Futures HTTP 451. These are **not** treated as available, and a different exchange is never mislabeled as Binance/Bybit.
+
+The live `collector.py` now also attempts independently branded public BTC order books: Bitget BTCUSDT **SPOT**, Bitget BTCUSDT **USDT-FUTURES**, Gate BTC_USDT **SPOT**, and Gate BTC_USDT **USDT perpetual**. Spot and perpetual are kept separate by venue. The new Gate USDT perpetual order-book sizes are in **contracts** and are multiplied by the live BTC_USDT contract's `quanto_multiplier`; missing/changed metadata rejects the observation, never silently counts contracts as BTC. On the Bitget v3 order-book, quantities are treated as BTC base units for BTCUSDT. Its authenticated trading API is not used.
+
+Shallow public books can be informative at the new `0.01%` band even when `0.05%` or `0.2%` are incomplete; complete reach is mandatory for each side and each band, and all incomplete totals stay null rather than zero. No global aggregated depth and no direct comparisons of heterogeneous venues are fabricated.
+
+The independent workflow `.github/workflows/btc-liquidity-live-probe.yml` writes `btc-liquidity/data/live_probe.json` after real venue requests and code tests. **The presence of code or success of offline tests alone does not prove that a new venue was actually reached from GitHub Actions**; verify both the probe and latest.json, including their timestamps and reported errors.
