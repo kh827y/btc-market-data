@@ -1,16 +1,16 @@
 {
-  "as_of_utc": "2026-11-02T10:08:13.847907+00:00",
+  "as_of_utc": "2026-11-02T10:13:04.199339+00:00",
   "audit": {
     "WARNING": "Bridge generation success DOES NOT imply source freshness or all-market coverage",
     "coverage_gaps": [
       "spot_cvd:24h_five_venue_incomplete",
       "spot_cvd:168h_five_venue_incomplete",
       "spot_cvd:720h_five_venue_incomplete",
-      "live_depth:failed_venues=3",
+      "live_depth:failed_venues=4",
       "onchain:missing_or_delayed_metrics=3"
     ],
     "family_readiness": {
-      "current_orderbook": false,
+      "current_orderbook": true,
       "holder_behavior": true,
       "macro_exact_ice_dxy": true,
       "macro_fed_rates": true,
@@ -32,11 +32,10 @@
       "spot_execution": true,
       "us_spot_btc_etf_flows": true
     },
-    "fresh": 6,
+    "fresh": 7,
     "issues": [
       "derivatives:stale",
-      "options:stale",
-      "live_depth:stale"
+      "options:stale"
     ],
     "sources_parsed": 9,
     "sources_total": 9
@@ -44,7 +43,7 @@
   "feed_contract": "Source-level UTC quality bridge; not a standalone reversal signal",
   "feeds": {
     "bybit_depth": {
-      "age_h": 0.22,
+      "age_h": 0.3,
       "family": "orderbook",
       "generated_at": "2026-11-02T09:54:48.158381+00:00",
       "max_age_h": 36.0,
@@ -56,7 +55,7 @@
       "status": "fresh"
     },
     "derivatives": {
-      "age_h": 3.89,
+      "age_h": 3.97,
       "family": "positioning",
       "generated_at": "2026-11-02T06:14:51.807126+00:00",
       "max_age_h": 3.0,
@@ -68,7 +67,7 @@
       "status": "stale"
     },
     "hft_depth": {
-      "age_h": 0.43,
+      "age_h": 0.51,
       "family": "orderbook",
       "generated_at": "2026-11-02T09:42:35.944461+00:00",
       "max_age_h": 36.0,
@@ -80,19 +79,19 @@
       "status": "fresh"
     },
     "live_depth": {
-      "age_h": 3.32,
+      "age_h": 0.01,
       "family": "orderbook",
-      "generated_at": "2026-11-02T06:49:08.159108+00:00",
+      "generated_at": "2026-11-02T10:12:45.320636+00:00",
       "max_age_h": 2.5,
-      "measurement_age_h": 3.32,
-      "measurement_at": "2026-11-02T06:49:08.159108+00:00",
+      "measurement_age_h": 0.01,
+      "measurement_at": "2026-11-02T10:12:45.320636+00:00",
       "source": "https://github.com/kh827y/btc-market-data/blob/main/btc-liquidity/data/latest.json",
-      "source_errors": 3,
+      "source_errors": 4,
       "source_status": "ok",
-      "status": "stale"
+      "status": "fresh"
     },
     "macro_etf": {
-      "age_h": 0.02,
+      "age_h": 0.1,
       "family": "macro_liquidity",
       "generated_at": "2026-11-02T10:07:07.388347+00:00",
       "max_age_h": 2.5,
@@ -104,7 +103,7 @@
       "status": "fresh"
     },
     "onchain": {
-      "age_h": 4.34,
+      "age_h": 4.42,
       "family": "holder_behavior",
       "generated_at": "2026-11-02T05:47:35.197827+00:00",
       "max_age_h": 36.0,
@@ -116,7 +115,7 @@
       "status": "fresh"
     },
     "options": {
-      "age_h": 3.65,
+      "age_h": 3.73,
       "family": "options",
       "generated_at": "2026-11-02T06:29:11.135978+00:00",
       "max_age_h": 3.0,
@@ -128,11 +127,11 @@
       "status": "stale"
     },
     "price_technical": {
-      "age_h": 0.19,
+      "age_h": 0.27,
       "family": "price_trend",
       "generated_at": "2026-11-02T09:57:00.090126+00:00",
       "max_age_h": 2.5,
-      "measurement_age_h": 34.14,
+      "measurement_age_h": 34.22,
       "measurement_at": "2026-11-01T00:00:00+00:00",
       "source": "https://github.com/kh827y/btc-market-data/blob/main/btc-price/data/latest.json",
       "source_errors": 0,
@@ -140,12 +139,12 @@
       "status": "fresh"
     },
     "spot_cvd": {
-      "age_h": 0.14,
+      "age_h": 0.06,
       "family": "spot_execution",
-      "generated_at": "2026-11-02T09:59:57.452092+00:00",
+      "generated_at": "2026-11-02T10:09:18.754130+00:00",
       "max_age_h": 2.5,
-      "measurement_age_h": 3.14,
-      "measurement_at": "2026-11-02T07:00:00+00:00",
+      "measurement_age_h": 2.22,
+      "measurement_at": "2026-11-02T08:00:00+00:00",
       "source": "https://github.com/kh827y/btc-market-data/blob/main/btc-spot-cvd/data/latest.json",
       "source_errors": 0,
       "source_status": null,
@@ -1080,81 +1079,208 @@
       "unverifiable_hour_files_total": 91
     },
     "live_depth": {
-      "perp_usable_venues": 1,
+      "perp_usable_venues": 2,
       "resting_orders_not_executed_trades": true,
       "source_errors": [
         "bybit_spot: data fetch failed: HTTP Error 403: Forbidden",
         "binance_usdm_perp: data fetch failed: HTTP Error 451: ",
-        "bybit_usdt_perp: data fetch failed: HTTP Error 403: Forbidden"
+        "bybit_usdt_perp: data fetch failed: HTTP Error 403: Forbidden",
+        "gate_usdt_perp: data fetch failed: HTTP Error 400: Bad Request"
       ],
-      "spot_usable_venues": 3,
+      "spot_usable_venues": 5,
       "venues": {
         "binance_spot": {
           "bands": {
+            "0.01": {
+              "ask_usd": 1576725.61,
+              "bid_share": 0.01619,
+              "bid_usd": 25948.34,
+              "complete": true
+            },
             "0.05": {
-              "ask_usd": 4086961.74,
-              "bid_share": 0.4373,
-              "bid_usd": 3176186.99,
+              "ask_usd": 5219428.29,
+              "bid_share": 0.38114,
+              "bid_usd": 3214461.05,
               "complete": true
             },
             "0.2": {
-              "ask_usd": 10190399.96,
-              "bid_share": 0.4199,
-              "bid_usd": 7376321.45,
+              "ask_usd": 10798582.89,
+              "bid_share": 0.46903,
+              "bid_usd": 9538965.29,
               "complete": true
             },
             "1.0": {
-              "ask_usd": 15493244.08,
-              "bid_share": 0.50354,
-              "bid_usd": 15714419.75,
+              "ask_usd": 38234309.37,
+              "bid_share": 0.31949,
+              "bid_usd": 17950130.99,
               "complete": true
             }
           },
-          "captured_at": "2026-11-02T06:49:08.159108Z",
+          "captured_at": "2026-11-02T10:12:46.348354Z",
           "market": "spot",
           "reach_pct": {
-            "ask": 1.3316,
-            "bid": 1.0995
+            "ask": 1.3771,
+            "bid": 1.0691
           },
           "spread_bps": 0.001,
           "symbol": "BTCUSDT"
         },
-        "coinbase_spot": {
+        "bitget_spot": {
           "bands": {
+            "0.01": {
+              "ask_usd": 48231.34,
+              "bid_share": 0.39795,
+              "bid_usd": 31880.79,
+              "complete": true
+            },
             "0.05": {
-              "ask_usd": 1754065.83,
-              "bid_share": 0.23213,
-              "bid_usd": 530264.77,
+              "ask_usd": 1599401.82,
+              "bid_share": 0.43001,
+              "bid_usd": 1206597.73,
               "complete": true
             },
             "0.2": {
-              "ask_usd": 3585441.62,
-              "bid_share": 0.51473,
-              "bid_usd": 3803152.31,
+              "ask_usd": 8141427.83,
+              "bid_share": 0.24849,
+              "bid_usd": 2691992.53,
               "complete": true
             },
             "1.0": {
-              "ask_usd": 5175881.39,
-              "bid_share": 0.72377,
-              "bid_usd": 13561651.41,
+              "ask_usd": null,
+              "bid_share": null,
+              "bid_usd": null,
+              "complete": false
+            }
+          },
+          "captured_at": "2026-11-02T10:12:48.346543Z",
+          "market": "spot",
+          "reach_pct": {
+            "ask": 1.0637,
+            "bid": 0.5452
+          },
+          "spread_bps": 0.001,
+          "symbol": "BTCUSDT"
+        },
+        "bitget_usdt_perp": {
+          "bands": {
+            "0.01": {
+              "ask_usd": 1177629.83,
+              "bid_share": 0.54263,
+              "bid_usd": 1397167.79,
+              "complete": true
+            },
+            "0.05": {
+              "ask_usd": 9840451.22,
+              "bid_share": 0.39254,
+              "bid_usd": 6358796.01,
+              "complete": true
+            },
+            "0.2": {
+              "ask_usd": 55714659.88,
+              "bid_share": 0.54938,
+              "bid_usd": 67925043.91,
+              "complete": true
+            },
+            "1.0": {
+              "ask_usd": null,
+              "bid_share": null,
+              "bid_usd": null,
+              "complete": false
+            }
+          },
+          "captured_at": "2026-11-02T10:12:48.556216Z",
+          "market": "perpetual",
+          "reach_pct": {
+            "ask": 0.5598,
+            "bid": 0.2654
+          },
+          "spread_bps": 0.013,
+          "symbol": "BTCUSDT"
+        },
+        "coinbase_spot": {
+          "bands": {
+            "0.01": {
+              "ask_usd": 45967.68,
+              "bid_share": 0.554,
+              "bid_usd": 57098.53,
+              "complete": true
+            },
+            "0.05": {
+              "ask_usd": 436488.98,
+              "bid_share": 0.5614,
+              "bid_usd": 558705.86,
+              "complete": true
+            },
+            "0.2": {
+              "ask_usd": 4793952.62,
+              "bid_share": 0.5549,
+              "bid_usd": 5976553.89,
+              "complete": true
+            },
+            "1.0": {
+              "ask_usd": 13142014.02,
+              "bid_share": 0.52812,
+              "bid_usd": 14708136.1,
               "complete": true
             }
           },
-          "captured_at": "2026-11-02T06:49:08.159108Z",
+          "captured_at": "2026-11-02T10:12:46.585270Z",
           "market": "spot",
           "reach_pct": {
-            "ask": 177891.246,
+            "ask": 178318.8392,
             "bid": 100.0
           },
-          "spread_bps": 0.001,
+          "spread_bps": 0.092,
           "symbol": "BTCUSD"
+        },
+        "gate_spot": {
+          "bands": {
+            "0.01": {
+              "ask_usd": 15597.13,
+              "bid_share": 0.49333,
+              "bid_usd": 15186.33,
+              "complete": true
+            },
+            "0.05": {
+              "ask_usd": 130870.72,
+              "bid_share": 0.3751,
+              "bid_usd": 78557.59,
+              "complete": true
+            },
+            "0.2": {
+              "ask_usd": 1450982.42,
+              "bid_share": 0.30851,
+              "bid_usd": 647358.15,
+              "complete": true
+            },
+            "1.0": {
+              "ask_usd": null,
+              "bid_share": null,
+              "bid_usd": null,
+              "complete": false
+            }
+          },
+          "captured_at": "2026-11-02T10:12:49.529183Z",
+          "market": "spot",
+          "reach_pct": {
+            "ask": 1.2312,
+            "bid": 0.9513
+          },
+          "spread_bps": 0.013,
+          "symbol": "BTCUSDT"
         },
         "okx_spot": {
           "bands": {
+            "0.01": {
+              "ask_usd": 122644.71,
+              "bid_share": 0.59687,
+              "bid_usd": 181585.81,
+              "complete": true
+            },
             "0.05": {
-              "ask_usd": 1172524.44,
-              "bid_share": 0.574,
-              "bid_usd": 1579898.16,
+              "ask_usd": 2964291.25,
+              "bid_share": 0.32751,
+              "bid_usd": 1443628.9,
               "complete": true
             },
             "0.2": {
@@ -1170,21 +1296,27 @@
               "complete": false
             }
           },
-          "captured_at": "2026-11-02T06:49:08.159108Z",
+          "captured_at": "2026-11-02T10:12:47.235878Z",
           "market": "spot",
           "reach_pct": {
-            "ask": 0.2539,
-            "bid": 0.135
+            "ask": 0.2622,
+            "bid": 0.1356
           },
           "spread_bps": 0.013,
           "symbol": "BTCUSDT"
         },
         "okx_usdt_perp": {
           "bands": {
+            "0.01": {
+              "ask_usd": 1491438.34,
+              "bid_share": 0.66744,
+              "bid_usd": 2993286.82,
+              "complete": true
+            },
             "0.05": {
-              "ask_usd": 14237462.5,
-              "bid_share": 0.45179,
-              "bid_usd": 11733140.28,
+              "ask_usd": 10608626.87,
+              "bid_share": 0.56827,
+              "bid_usd": 13963924.65,
               "complete": true
             },
             "0.2": {
@@ -1200,11 +1332,11 @@
               "complete": false
             }
           },
-          "captured_at": "2026-11-02T06:49:08.159108Z",
+          "captured_at": "2026-11-02T10:12:47.944351Z",
           "market": "perpetual",
           "reach_pct": {
-            "ask": 0.0656,
-            "bid": 0.073
+            "ask": 0.0778,
+            "bid": 0.0671
           },
           "spread_bps": 0.013,
           "symbol": "BTCUSDT"
@@ -1778,14 +1910,14 @@
       "weekly_ma200_rising": true
     },
     "spot_cvd": {
-      "last_complete_hour": "2026-11-02T07:00:00Z",
+      "last_complete_hour": "2026-11-02T08:00:00Z",
       "scope": "executed spot-taker flow on observed venues only; NOT global BTC volume",
       "windows": {
         "168h": {
           "complete": false,
           "complete_venue_subset": {
             "available": true,
-            "net_usd_approx": 212128060.11,
+            "net_usd_approx": 226354807.64,
             "not_all_venues": true,
             "venue_count": 5,
             "venues": [
@@ -1801,7 +1933,7 @@
             "kraken_hour_basis_mixed": false,
             "kraken_hour_basis_note": "CryptoHFTData received-time UTC hours",
             "kraken_official_rest_hours": 0,
-            "net_usd_approx": 212128060.11,
+            "net_usd_approx": 226354807.64,
             "scope": "fixed selected five spot venues; does not include Coinbase",
             "venues": [
               "binance",
@@ -1816,51 +1948,50 @@
             "binance": {
               "complete": true,
               "hours": 168,
-              "net_usd_approx": 532844901.15,
+              "net_usd_approx": 541950629.83,
               "required": 168
             },
             "bitget": {
               "complete": true,
               "hours": 168,
-              "net_usd_approx": -214098613.52,
+              "net_usd_approx": -212302105.42,
               "required": 168
             },
             "bybit": {
               "complete": true,
               "hours": 168,
-              "net_usd_approx": -57930072.54,
+              "net_usd_approx": -59446197.12,
               "required": 168
             },
             "coinbase": {
               "complete": false,
-              "hours": 49,
+              "hours": 51,
               "net_usd_approx": null,
               "required": 168
             },
             "kraken": {
               "complete": true,
               "hours": 168,
-              "net_usd_approx": -39492053.69,
+              "net_usd_approx": -36871690.97,
               "required": 168
             },
             "okx": {
               "complete": true,
               "hours": 168,
-              "net_usd_approx": -9196101.29,
+              "net_usd_approx": -6975828.68,
               "required": 168
             }
           }
         },
         "1h": {
-          "complete": true,
+          "complete": false,
           "complete_venue_subset": {
             "available": true,
-            "net_usd_approx": -7597871.13,
+            "net_usd_approx": 18503654.66,
             "not_all_venues": true,
-            "venue_count": 6,
+            "venue_count": 5,
             "venues": [
               "binance",
-              "coinbase",
               "okx",
               "bybit",
               "kraken",
@@ -1872,7 +2003,7 @@
             "kraken_hour_basis_mixed": false,
             "kraken_hour_basis_note": "CryptoHFTData received-time UTC hours",
             "kraken_official_rest_hours": 0,
-            "net_usd_approx": -8012707.56,
+            "net_usd_approx": 18503654.66,
             "scope": "fixed selected five spot venues; does not include Coinbase",
             "venues": [
               "binance",
@@ -1882,42 +2013,42 @@
               "bitget"
             ]
           },
-          "net_usd_approx": -6735240.9,
+          "net_usd_approx": null,
           "venues": {
             "binance": {
               "complete": true,
               "hours": 1,
-              "net_usd_approx": 1099881.45,
+              "net_usd_approx": 15975127.46,
               "required": 1
             },
             "bitget": {
               "complete": true,
               "hours": 1,
-              "net_usd_approx": -862630.23,
+              "net_usd_approx": 534668.47,
               "required": 1
             },
             "bybit": {
               "complete": true,
               "hours": 1,
-              "net_usd_approx": -8712699.6,
+              "net_usd_approx": -3023343.81,
               "required": 1
             },
             "coinbase": {
-              "complete": true,
-              "hours": 1,
-              "net_usd_approx": 414836.43,
+              "complete": false,
+              "hours": 0,
+              "net_usd_approx": null,
               "required": 1
             },
             "kraken": {
               "complete": true,
               "hours": 1,
-              "net_usd_approx": 50447.41,
+              "net_usd_approx": 691746.64,
               "required": 1
             },
             "okx": {
               "complete": true,
               "hours": 1,
-              "net_usd_approx": 412293.41,
+              "net_usd_approx": 4325455.9,
               "required": 1
             }
           }
@@ -1926,7 +2057,7 @@
           "complete": false,
           "complete_venue_subset": {
             "available": true,
-            "net_usd_approx": 68831958.0,
+            "net_usd_approx": 65592587.97,
             "not_all_venues": true,
             "venue_count": 5,
             "venues": [
@@ -1942,7 +2073,7 @@
             "kraken_hour_basis_mixed": false,
             "kraken_hour_basis_note": "CryptoHFTData received-time UTC hours",
             "kraken_official_rest_hours": 0,
-            "net_usd_approx": 68831958.0,
+            "net_usd_approx": 65592587.97,
             "scope": "fixed selected five spot venues; does not include Coinbase",
             "venues": [
               "binance",
@@ -1957,37 +2088,37 @@
             "binance": {
               "complete": true,
               "hours": 24,
-              "net_usd_approx": 28640523.29,
+              "net_usd_approx": 43782452.19,
               "required": 24
             },
             "bitget": {
               "complete": true,
               "hours": 24,
-              "net_usd_approx": 9545788.51,
+              "net_usd_approx": 9551009.76,
               "required": 24
             },
             "bybit": {
               "complete": true,
               "hours": 24,
-              "net_usd_approx": -6938615.31,
+              "net_usd_approx": -10342955.4,
               "required": 24
             },
             "coinbase": {
               "complete": false,
-              "hours": 22,
+              "hours": 21,
               "net_usd_approx": null,
               "required": 24
             },
             "kraken": {
               "complete": true,
               "hours": 24,
-              "net_usd_approx": 1931094.01,
+              "net_usd_approx": 996070.13,
               "required": 24
             },
             "okx": {
               "complete": true,
               "hours": 24,
-              "net_usd_approx": 35653167.5,
+              "net_usd_approx": 21606011.29,
               "required": 24
             }
           }
@@ -1996,7 +2127,7 @@
           "complete": false,
           "complete_venue_subset": {
             "available": true,
-            "net_usd_approx": -409144137.17,
+            "net_usd_approx": -391008141.73,
             "not_all_venues": true,
             "venue_count": 5,
             "venues": [
@@ -2012,7 +2143,7 @@
             "kraken_hour_basis_mixed": true,
             "kraken_hour_basis_note": "Kraken REST recovered UTC hours use exchange trade time; CryptoHFTData files use collector receive time",
             "kraken_official_rest_hours": 24,
-            "net_usd_approx": -409144137.17,
+            "net_usd_approx": -391008141.73,
             "scope": "fixed selected five spot venues; does not include Coinbase",
             "venues": [
               "binance",
@@ -2027,37 +2158,37 @@
             "binance": {
               "complete": true,
               "hours": 720,
-              "net_usd_approx": 368103246.54,
+              "net_usd_approx": 385556046.74,
               "required": 720
             },
             "bitget": {
               "complete": true,
               "hours": 720,
-              "net_usd_approx": -350739645.76,
+              "net_usd_approx": -350174926.69,
               "required": 720
             },
             "bybit": {
               "complete": true,
               "hours": 720,
-              "net_usd_approx": -164814334.82,
+              "net_usd_approx": -168114487.34,
               "required": 720
             },
             "coinbase": {
               "complete": false,
-              "hours": 49,
+              "hours": 51,
               "net_usd_approx": null,
               "required": 720
             },
             "kraken": {
               "complete": true,
               "hours": 720,
-              "net_usd_approx": -214932228.78,
+              "net_usd_approx": -214351483.7,
               "required": 720
             },
             "okx": {
               "complete": true,
               "hours": 720,
-              "net_usd_approx": -46761174.35,
+              "net_usd_approx": -43923290.74,
               "required": 720
             }
           }
