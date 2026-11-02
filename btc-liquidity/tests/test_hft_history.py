@@ -83,7 +83,7 @@ class HistoricL2Tests(unittest.TestCase):
         existing["binance_spot"][str(day)]={"status":"ok","data":legacy}
         picked=[x for x in m.targets(through,existing,now=dt.datetime(2026,11,2,tzinfo=dt.timezone.utc))
                 if x[0]=="binance_spot" and x[1]==day]
-        self.assertEqual([x[2] for x in picked],[12,11,13])
+        self.assertEqual([x[2] for x in picked],[12,11,13,0])
         valid={v:{d:row for d,row in rows.items() if m.verified_entry(row,v,d)}
                for v,rows in existing.items()}
         self.assertEqual(m.recent_coverage(valid,through)["7d"]["binance_spot"]["verified_days"],0)
@@ -100,7 +100,7 @@ class HistoricL2Tests(unittest.TestCase):
         existing["binance_spot"][str(day)]=row
         todo=[x for x in m.targets(day,existing,now=dt.datetime(2026,11,2,tzinfo=dt.timezone.utc))
               if x[0]=="binance_spot" and x[1]==day]
-        self.assertEqual([x[2] for x in todo],[12,11,13])
+        self.assertEqual([x[2] for x in todo],[12,11,13,0])
 
     def test_native_snapshot_must_match_venue_day_and_utc_hour(self):
         day=dt.date(2026,10,31)
@@ -117,7 +117,58 @@ class HistoricL2Tests(unittest.TestCase):
             "retry_after":(now+dt.timedelta(days=7)).isoformat()}}
         picked=[t for t in m.targets(dt.date(2026,11,1), records,failed,now)
                 if t[0]=="binance_spot" and t[1]==dt.date(2026,11,1)]
-        self.assertEqual([x[2] for x in picked],[11,13])
+        self.assertEqual([x[2] for x in picked],[11,13,0])
+    def test_00_utc_fallback_is_native_but_not_a_12_utc_comparator(self):
+        day=dt.date(2026,10,31)
+        record=m.parse_checkpoint(fixture(),"binance_spot",
+            "BTCUSDT","spot",1.0,"USDT",day)
+        fallback=dict(record)
+        fallback["time"]="2026-10-31T00:13:20+00:00"
+        fallback["sample_utc_hour"]=0
+        fallback["file_path"]="binance_spot/2026-10-31/00/BTCUSDT_orderbook.parquet"
+        row={"status":"ok","data":fallback}
+        self.assertTrue(m.verified_entry(row,"binance_spot",day.isoformat()))
+        coverage=m.recent_coverage({"binance_spot":{day.isoformat():row}},day)
+        self.assertEqual(coverage["7d"]["binance_spot"]["verified_days"],1)
+        self.assertEqual(coverage["7d"]["binance_spot"]["same_clock_12utc_verified_days"],0)
+        self.assertEqual(coverage["7d"]["binance_spot"]["same_clock_12utc_complete_band_days"]["0.01"],0)
+        original={"status":"ok","data":record}
+        comps,_=m.make_comparisons({"binance_spot":{
+            "2026-10-30":{**row,"data":{**fallback,"time":"2026-10-30T00:13:20+00:00"}},
+            "2026-10-31":original}})
+        self.assertIsNone(comps["binance_spot"]["previous_days"]["1d"])
+
+    def test_00_utc_fallback_preserves_retry_of_primary_hours(self):
+        now=dt.datetime(2026,11,2,8,tzinfo=dt.timezone.utc)
+        day=dt.date(2026,10,31)
+        rec=m.parse_checkpoint(fixture(),"binance_spot","BTCUSDT","spot",1.0,"USDT",day)
+        rec["time"]="2026-10-31T00:13:20+00:00"
+        rec["sample_utc_hour"]=0
+        rec["file_path"]="binance_spot/2026-10-31/00/BTCUSDT_orderbook.parquet"
+        existing={v:{} for v in m.MARKETS}
+        existing["binance_spot"][day.isoformat()]={"status":"ok","data":rec}
+        failures={f"binance_spot:{day}:{hour:02d}":{
+            "retry_after":(now+dt.timedelta(days=7)).isoformat(),
+            "last_error":"ValueError: no verified checkpoint snapshot"
+        } for hour in m.PRIMARY_SEARCH_HOURS}
+        pending=[h for venue,d,h in m.targets(day,existing,failures,now)
+                 if venue=="binance_spot" and d==day]
+        self.assertEqual(pending,[])
+        future=now+dt.timedelta(days=8)
+        pending=[h for venue,d,h in m.targets(day,existing,failures,future)
+                 if venue=="binance_spot" and d==day]
+        self.assertEqual(pending,[12,11,13])
+
+    def test_legacy_audit_explicitly_uses_original_three_hour_scope(self):
+        day=m.ARCHIVE_START
+        found={v:{} for v in m.MARKETS}
+        errors={f"binance_spot:{day}:{h:02d}":{"last_error":"HTTPError: HTTP Error 404"}
+                for h in m.PRIMARY_SEARCH_HOURS}
+        old=m.audit_source_dates(found,errors,day,search_hours=m.PRIMARY_SEARCH_HOURS)
+        new=m.audit_source_dates(found,errors,day)
+        self.assertEqual(old["binance_spot"]["explicit_error_days"],1)
+        self.assertEqual(new["binance_spot"]["not_fully_checked_days"],1)
+
     def test_reject_different_time_of_day_for_baseline(self):
         last=m.parse_checkpoint(fixture(),"binance_spot",
             "BTCUSDT","spot",1.0,"USDT",dt.date(2026,10,31))
