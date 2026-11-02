@@ -87,7 +87,8 @@ def audit_hft(history,latest):
         rows=history["markets"].get(venue,{})
         verified[venue]={day:row for day,row in rows.items()
                          if hft.verified_entry(row,venue,day)}
-    recomputed=hft.audit_source_dates(verified,history.get("failures",{}),through)
+    recomputed=hft.audit_source_dates(verified,history.get("failures",{}),through,
+                                      search_hours=latest.get("searched_utc_hours",hft.PRIMARY_SEARCH_HOURS))
     recent=hft.recent_coverage(verified,through)
     result={}
     for venue in hft.MARKETS:
