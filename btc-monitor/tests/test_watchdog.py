@@ -107,6 +107,46 @@ class WatchdogTests(unittest.TestCase):
         self.assertIn("partial_macro_source", v["coverage_gaps"])
         self.assertIn("etf_flow_unusable_or_reporting_lag", v["coverage_gaps"])
 
+    def test_full_eleven_live_books_are_verified_by_market_not_fresh_json(self):
+        book={"bid_coverage_complete":True,"ask_coverage_complete":True,
+              "bid_usd":1000,"ask_usd":800}
+        markets={}
+        for venue,market in m.LIVE_BOOK_MARKETS.items():
+            transport=("binance_official_ws_api_depth" if venue=="binance_usdm_perp"
+                else "bybit_official_ws_snapshot" if venue in m.WS_REQUIRED
+                else "official_public_rest")
+            markets[venue]={"market":market,"captured_at":"2026-11-02T19:35:00Z",
+                            "source_timestamp":"2026-11-02T19:34:59Z" if venue in m.WS_REQUIRED else None,
+                            "transport":transport,"bands":{"0.01":book}}
+        source={"generated_at":"2026-11-02T19:35:00Z","errors":[],
+                "spot_usable_venues":6,"perpetual_usable_venues":5,
+                "current":{"venues":markets}}
+        value=m.assess("live_depth",source,NOW)
+        self.assertEqual(value["status"],"healthy")
+        self.assertFalse(value["needs_recovery"])
+        self.assertEqual(value["selected_markets_verified"],11)
+        self.assertEqual(value["verified_spot_markets"],6)
+        self.assertEqual(value["verified_perpetual_markets"],5)
+        # A silently absent Binance perpetual must not be reported healthy
+        # simply because ten other venues published fresh books.
+        del markets["binance_usdm_perp"]
+        failure=m.assess("live_depth",source,NOW)
+        self.assertTrue(failure["needs_recovery"])
+        self.assertEqual(failure["selected_markets_verified"],10)
+        self.assertIn("live_orderbook:binance_usdm_perp:missing",failure["coverage_gaps"])
+
+    def test_live_book_stale_bybit_exchange_timestamp_triggers_recovery(self):
+        source={"generated_at":"2026-11-02T19:35:00Z",
+                "current":{"venues":{"bybit_spot":{
+                    "market":"spot","transport":"bybit_official_ws_snapshot",
+                    "captured_at":"2026-11-02T19:35:00Z",
+                    "source_timestamp":"2026-11-02T15:00:00Z",
+                    "bands":{"0.01":{"bid_coverage_complete":True,
+                                       "ask_coverage_complete":True}}}}}}
+        failure=m.assess("live_depth",source,NOW)
+        self.assertEqual(failure["market_health"]["bybit_spot"],"stale_native_ws_timestamp")
+        self.assertTrue(failure["needs_recovery"])
+
     def test_stale_historical_L2_is_external_only(self):
         v = m.assess("hft_depth", {
             "generated_at": "2026-11-02T18:30:00Z",
