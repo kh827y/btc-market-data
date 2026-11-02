@@ -63,7 +63,8 @@ def fred_csv(body,series):
             date=dateparse(row[datecol])
             value=finite(row[series])
             if value is None:continue  # holidays: missing, not zero
-            if not 0<=value<1_000_000:raise ValueError("invalid official FRED data")
+            if not 0<=value<(100_000_000 if series=="WALCL" else 1_000_000):
+                raise ValueError("invalid official FRED data")
             rows[date.isoformat()]=value
         except (TypeError,KeyError,ValueError):
             continue
@@ -137,10 +138,11 @@ def dxy_optional(now):
             rows.append((d,x))
         if not rows:raise ValueError("no usable USD index close")
         d,val=rows[-1];age=(now.date()-d).days
-        return {"source":"Yahoo Finance, DX-Y.NYB (ICE US Dollar Index delayed daily)",
+        return {"source":"Yahoo Finance, DX-Y.NYB (ICE US Dollar Index indicative public bars)",
           "date":d.isoformat(),"lag_days":age,"value":round(val,4) if age<=7 else None,
           "status":"usable" if age<=7 else "delayed","instrument":"ICE DXY six-currency index",
-          "not_fred_broad_usd":True}
+          "not_fred_broad_usd":True,
+          "observation_kind":"unfinished_current_session" if d==now.date() else "finished_prior_session"}
     except Exception as exc:
         return {"source":"Yahoo Finance DX-Y.NYB","status":"unavailable","value":None,
                 "not_fred_broad_usd":True,"error":str(exc)[:160]}
@@ -226,11 +228,21 @@ def main():
     try:
         etf=validate_etf_latest(json.loads(fetch(TFTC+"/latest.json")),now)
         try:
-            hist=etf_history(json.loads(fetch(TFTC+"/data.json",max_bytes=12_000_000)),now)
+            full=json.loads(fetch(TFTC+"/data.json",max_bytes=12_000_000))
+            hist=etf_history(full,now)
             if hist["end_date"]!=etf["date"]:raise ValueError("full ETF record date mismatches latest")
             etf["historical"]=hist
         except Exception as exc:
             etf["historical"]={"status":"unavailable","error":str(exc)[:155]}
+            if "full" in locals():
+                etf["historical"]["schema_top_level_keys"]=list(full)[:35] if isinstance(full,dict) else []
+                etf["historical"]["schema_top_level_types"]={k:type(v).__name__ for k,v in list(full.items())[:35]} if isinstance(full,dict) else {}
+                # Minimal non-personal schema diagnostics, not raw third-party history
+                etf["historical"]["schema_first_entry_keys"]={
+                    k:list(v[0])[:25] if isinstance(v,list) and v and isinstance(v[0],dict) else
+                    list(v)[:25] if isinstance(v,dict) else []
+                    for k,v in list(full.items())[:12]
+                } if isinstance(full,dict) else {}
     except Exception as exc:
         etf["error"]=str(exc)[:190]
     out={"schema_version":1,"generated_utc":now.isoformat(),
