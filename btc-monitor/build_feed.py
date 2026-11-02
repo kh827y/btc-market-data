@@ -215,6 +215,8 @@ def build(source,now):
  usable["spot_cvd_24h_complete"]=feeds.get("spot_cvd",{}).get("status")=="fresh" and val(metrics,"spot_cvd","windows","24h","complete") is True
  usable["spot_cvd_24h_covered_subset"]=feeds.get("spot_cvd",{}).get("status")=="fresh" and val(metrics,"spot_cvd","windows","24h","complete_venue_subset","available") is True
  usable["spot_cvd_24h_fixed_five_ex_coinbase"]=feeds.get("spot_cvd",{}).get("status")=="fresh" and val(metrics,"spot_cvd","windows","24h","fixed_five_ex_coinbase","complete") is True
+ for h in ("168h","720h"):
+  usable["spot_cvd_"+h+"_fixed_five_ex_coinbase"]=feeds.get("spot_cvd",{}).get("status")=="fresh" and val(metrics,"spot_cvd","windows",h,"fixed_five_ex_coinbase","complete") is True
  return {"schema":1,"as_of_utc":now.isoformat(),
          "feed_contract":"Source-level UTC quality bridge; not a standalone reversal signal",
          "audit":{"sources_total":len(SOURCES),"sources_parsed":len(metrics),
@@ -254,7 +256,10 @@ def make_brief(report):
   summary["spot_cvd"]={"last_complete_hour":j.get("last_complete_hour"),
      "windows":{k:{"complete":v["complete"],"net_usd_approx":v["net_usd_approx"],
                 "complete_venue_subset":v.get("complete_venue_subset"),
-                "fixed_five_ex_coinbase":v.get("fixed_five_ex_coinbase")}
+                "fixed_five_ex_coinbase":v.get("fixed_five_ex_coinbase"),
+                "venue_coverage_hours":{name:{"hours":vr.get("hours"),"required":vr.get("required"),
+                                              "complete":vr.get("complete")}
+                                        for name,vr in v.get("venues",{}).items()}}
                 for k,v in j["windows"].items()}}
  if good("derivatives"):
   j=metrics["derivatives"]
