@@ -66,7 +66,7 @@ def calculate_parquet(blob, hour):
     return {"buy":round(buy,2),"sell":round(sell,2),"net":round(buy-sell,2),"trades":len(tab),"complete":True}
 
 
-def archives(state, now, errors, batch=8):
+def archives(state, now, errors, batch=24):
     end=now.replace(minute=0,second=0,microsecond=0)-dt.timedelta(hours=2)
     first=end-dt.timedelta(hours=719)
     for name,(ex,preferred) in VENUES.items():
@@ -94,7 +94,7 @@ def archives(state, now, errors, batch=8):
             errors.append(f"{name}: {str(e)[:120]}")
 
 
-def coinbase(state,now,errors,pages=35):
+def coinbase(state,now,errors,pages=70):
     # Coinbase returns descending IDs; 'after' walks older transactions.
     # Only closed hours with a fully observed subsequent older hour are published.
     cp=state.setdefault("coinbase_cursor",{"after":None,"pending":None,"bucket":None})
