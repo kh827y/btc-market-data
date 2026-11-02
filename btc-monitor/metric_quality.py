@@ -38,6 +38,13 @@ def at(value):
         return t.astimezone(UTC)
     except (TypeError,ValueError,OverflowError):return None
 
+def expiry_date(value):
+    """Recognize native CME YYYYMMDD and regular ISO dates, no inferred epoch."""
+    if isinstance(value,str) and len(value)==8 and value.isdigit():
+        try:return dt.datetime.strptime(value,"%Y%m%d").replace(tzinfo=UTC)
+        except ValueError:return None
+    return at(value)
+
 def amount(value):
     if isinstance(value,bool) or not isinstance(value,(int,float)):return None
     return float(value) if math.isfinite(value) else None
@@ -122,10 +129,15 @@ def gate_spot(g,raw,metrics):
                 is_close(sum(float(row["net"]) for row in per),net,absolute=0.1))
             names=(group!="fixed_ex_coinbase" or field.get("venues")==list(FIXED_EX_COINBASE))
             # Published source proof is separate from the count-only complete marker.
+            # Collector publishes 24h/168h/720h archive audits; its 1h
+            # window is contained in the 24h proof and has exact 1h per-venue
+            # completed trade counts. Do not require a nonexistent 1h audit.
+            coin_audit=(nested(raw,"coinbase_window_integrity",
+                               "24h" if span=="1h" else span) or {})
             coin_proof=(group!="original_five" or
-                        (proof.get("all_hours_id_continuous_verified") is True and
-                         proof.get("id_continuous_proof_hours")==hours and
-                         proof.get("coinbase_missing_hours_count")==0))
+                        (coin_audit.get("all_hours_id_continuous_verified") is True and
+                         coin_audit.get("id_continuous_proof_hours")>=hours and
+                         coin_audit.get("coinbase_missing_hours_count")==0))
             status=("usable" if (fresh=="usable" and complete and native and match and names and coin_proof)
                     else fresh if fresh!="usable" else "incomplete" if not complete or not native or not coin_proof
                     else "invalid")
@@ -258,7 +270,7 @@ def gate_derivatives(g,raw,metrics):
             amount(cme.get("annualized_basis_pct")) is not None and
             cme.get("contract","").endswith(".CME") and
             at(cme.get("timestamp")) is not None and
-            at(cme.get("expiry")) is not None and at(cme["expiry"])>g.now)
+            expiry_date(cme.get("expiry")) is not None and expiry_date(cme["expiry"])>g.now)
     status="usable" if cme_t=="usable" and cme_ok else cme_t if cme_t!="usable" else "invalid"
     if not g.add("derivatives.cme_basis","derivatives",status,"annualized pct",
                  "CME dated futures matched to nearby spot observation; expiry-specific",
