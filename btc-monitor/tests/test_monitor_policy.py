@@ -55,5 +55,36 @@ class MonitorPolicyTests(unittest.TestCase):
         self.assertIn("Никакой привязки к инвестиционному горизонту 12–24 месяца",TEXT)
         self.assertIn("не отправляй почасовое",TEXT.lower())
 
+    def test_one_canonical_health_quality_depth_policy_and_no_contradiction(self):
+        # All controls must exist IN THE SAME versioned instruction; previous
+        # production task acquired separate supplemental passages and drifted.
+        import re
+        required=("0. СНАЧАЛА ЗДОРОВЬЕ ДАННЫХ.",
+                  "btc-monitor/data/health_latest.json",
+                  "checked_utc не старше 90 минут",
+                  "1.1А. ПОМЕТРИЧЕСКИЙ ДОПУСК.",
+                  'status="usable"',
+                  'sources[родитель].status',
+                  "1.1Б. ГРАНИЦЫ ПОКРЫТИЯ.",
+                  "complete_markets_by_band",
+                  "btc-monitor/data/coverage_latest.json",
+                  "11/11 доступных рынков НЕ означает 11/11 полных стаканов",
+                  "Bitview UTXO 150d",
+                  "Дозагрузка истории BTC L2",
+                  "Цена+исполненный спот",
+                  "OI+funding+опционы",
+                  "Что повлияло на оценку",
+                  "5.4. Крайнее исключение из молчания")
+        for phrase in required:
+            self.assertIn(phrase,TEXT)
+        for head in ("0.","1.1.","1.1А.","1.1Б.","1.2.","1.3.","1.4.",
+                     "2.1.","2.2.","2.3.","2.4.","2.5.","2.6.","2.7.","2.8.",
+                     "3.1.","3.2.","3.3.","3.4.","3.5.","4.1.","4.2.",
+                     "4.3.","5.1.","5.2.","5.3.","5.4."):
+            self.assertEqual(len(re.findall(r"^"+re.escape(head)+r" ",TEXT,re.M)),1,
+                             "duplicate or missing heading "+head)
+        self.assertNotIn("metric_quality.status_counts.issues",TEXT)
+        self.assertLess(len(TEXT),19000)
+
 if __name__=="__main__":
     unittest.main()
