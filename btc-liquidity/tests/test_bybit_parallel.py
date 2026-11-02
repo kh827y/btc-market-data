@@ -64,6 +64,39 @@ class ParallelBybitTests(unittest.TestCase):
             self.assertEqual(latest["coverage"]["bybit_independent_linear"]["verified_days"],23)
             self.assertEqual(history["records"]["bybit_independent_linear"][k]["bands"]["0.01"]["bid_share"],0.5)
             self.assertIsNotNone(latest["comparisons"]["bybit_independent_spot"]["comparisons"]["1d"])
+    def test_source_date_audit_preserves_explicit_unverified_day(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=pathlib.Path(d)
+            self.mock_blocks(root/"artifacts")
+            path=root/"artifacts"/"spot-0"/"result.json"
+            block=json.loads(path.read_text())
+            missing=next(iter(block["records"]))
+            del block["records"][missing]
+            block["errors"][missing]="ValueError: initial snapshot not near midnight UTC; offset_seconds=400.000"
+            path.write_text(json.dumps(block))
+            with patch.dict(bp.bi.VENUES,self.venue_starts,clear=True):
+                bp.merge(root/"artifacts",root/"repo",self.now)
+            status=json.loads((root/"repo"/"btc-liquidity/data"/"bybit_full_backfill_status.json").read_text())
+            audit=status["day_audit"]["bybit_independent_spot"]
+            self.assertTrue(status["all_source_dates_accounted_for"])
+            self.assertEqual(audit["eligible_days"],23)
+            self.assertEqual(audit["verified_days"],22)
+            self.assertEqual(audit["explicit_error_days"],1)
+            self.assertEqual(audit["unaccounted_days"],[])
+            self.assertEqual(audit["unverified_dates"][0]["day"],missing)
+
+    def test_inconsistent_shard_through_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=pathlib.Path(d)
+            self.mock_blocks(root/"artifacts")
+            path=root/"artifacts"/"linear-1"/"result.json"
+            block=json.loads(path.read_text())
+            block["through"]="2026-10-31"
+            path.write_text(json.dumps(block))
+            with patch.dict(bp.bi.VENUES,self.venue_starts,clear=True):
+                with self.assertRaisesRegex(ValueError,"inconsistent"):
+                    bp.merge(root/"artifacts",root/"repo",self.now)
+
     def test_missing_shard_dates_rejected(self):
         with tempfile.TemporaryDirectory() as d:
             root=pathlib.Path(d)
