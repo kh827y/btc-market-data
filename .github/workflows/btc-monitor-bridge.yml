@@ -6,6 +6,17 @@ on:
       - "btc-monitor/build_feed.py"
       - "btc-monitor/tests/test_bridge.py"
       - ".github/workflows/btc-monitor-bridge.yml"
+  workflow_run:
+    workflows:
+      - "BTC spot CVD"
+      - "BTC derivatives history"
+      - "BTC options volatility and 25delta skew"
+      - "BTC onchain consolidated feed"
+      - "BTC order book depth and historical liquidity"
+      - "BTC validated historical L2 books"
+      - "BTC independent Bybit L2 historical depth"
+    types: [completed]
+    branches: [main]
   schedule:
     - cron: "30 * * * *"
 permissions:
@@ -15,6 +26,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   validate-and-publish:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
