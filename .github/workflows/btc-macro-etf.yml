@@ -6,6 +6,13 @@ on:
       - "btc-macro/tests/**"
       - ".github/workflows/btc-macro-etf.yml"
   workflow_dispatch:
+  # A fallback hourly trigger from the independently validated BTC price job.
+  # This workflow never triggers price or the separate historical L2 loader.
+  workflow_run:
+    workflows:
+      - "BTC spot OHLCV and verified trend technicals"
+    types: [completed]
+    branches: [main]
   schedule:
     - cron: "19 * * * *"
 permissions:
@@ -15,6 +22,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   collect:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
