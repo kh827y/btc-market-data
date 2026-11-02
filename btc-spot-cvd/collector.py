@@ -18,6 +18,8 @@ VENUES = {
     "kraken": ("kraken_spot", ["BTC_USD","BTC/USD","XBTUSD","XBT/USD","BTCUSD"]),
 }
 ALL = ["binance","coinbase","okx","bybit","kraken"]
+_LAST_HFT_REQUEST_AT = 0.0
+_HFT_INTERVAL_SECONDS = 1.15  # Provider free tier: 60 requests/minute; cap ~52/min
 
 
 def key(t):
@@ -25,16 +27,23 @@ def key(t):
 
 
 def get(url, **kwargs):
-    for n in range(4):
+    global _LAST_HFT_REQUEST_AT
+    for n in range(3):
         try:
+            if url.startswith(BASE):
+                remaining = _HFT_INTERVAL_SECONDS-(time.monotonic()-_LAST_HFT_REQUEST_AT)
+                if remaining > 0: time.sleep(remaining)
+                _LAST_HFT_REQUEST_AT = time.monotonic()
             r = requests.get(url, timeout=35, **kwargs)
             if r.status_code in (429,500,502,503,504):
-                time.sleep(2+n*3)
+                # Bound retries and respect the vendor's 60/min free limit;
+                # never hammer a failed endpoint indefinitely.
+                time.sleep(min(15,3+n*5))
                 continue
             r.raise_for_status()
             return r
         except (requests.ConnectionError,requests.Timeout):
-            if n == 3: raise
+            if n == 2: raise
             time.sleep(2+n*3)
     raise RuntimeError("request failed")
 
