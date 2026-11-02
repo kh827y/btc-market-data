@@ -160,6 +160,19 @@ class QualityTests(unittest.TestCase):
         r=q.assess({"bybit_depth":raw},fresh("bybit_depth"),{"bybit_depth":{}},NOW)
         self.assertEqual(r["checks"]["bybit_depth.bybit_independent_spot.7d.0.01"]["status"],"not_comparable")
 
+    def test_funding_uses_venue_native_okx_contract_not_binance_symbol(self):
+        item={"symbol":"BTC-USDT-SWAP","last":"2026-11-02T16:00:00Z",
+              "count":90,"max_gap_hours":8,
+              "latest_rate_8h":0.0001,"latest_raw_rate":0.0001}
+        raw={"results":{"funding":{"OKX":item}}}
+        t={"derivatives":{"funding_settled":{},"forced_liquidations_24h":{}}}
+        r=q.assess({"derivatives":raw},fresh("derivatives"),t,NOW)
+        self.assertEqual(r["checks"]["derivatives.funding_8h.OKX"]["status"],"usable")
+        self.assertEqual(t["derivatives"]["funding_settled"]["OKX"]["rate_8h"],0.0001)
+        item["symbol"]="BTCUSDT"
+        bad=q.assess({"derivatives":raw},fresh("derivatives"),t,NOW)
+        self.assertEqual(bad["checks"]["derivatives.funding_8h.OKX"]["status"],"invalid")
+
     def test_whole_file_recent_does_not_make_bad_oi_fresh(self):
         oi={"venues":["Binance","Bybit","OKX","Gate.io","Hyperliquid"],
             "unit":"USD notional (vendor normalized)","latest_hour":"2026-11-02T19:00:00Z",
