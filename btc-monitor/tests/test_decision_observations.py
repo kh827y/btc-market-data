@@ -92,4 +92,30 @@ class SevenDayValidationTests(unittest.TestCase):
         self.assertEqual(len(newer["hours"]),1)
         self.assertEqual(newer["rolling_7d_operational_data"]["consecutive_ready_hour_checkpoints"],1)
 
+
+    def test_counterfactual_gate_uses_real_compact_brief_metric_rows(self):
+        # The actual brief has NO proof.source field. Its canonical metric
+        # names, unit/scope and fresh parent are required instead.
+        import sys
+        folder=str(Path(__file__).resolve().parents[1])
+        if folder not in sys.path:sys.path.insert(0,folder)
+        brief,health,quality,policy=data()
+        brief["metric_quality"]={"checks":{
+            "spot_cvd.original_five.24h":{
+                "status":"usable","unit":"USD net executed trades",
+                "scope":"named BTC spot markets",
+                "observed_at":(NOW-dt.timedelta(hours=1)).isoformat()},
+            "derivatives.oi_five":{
+                "status":"usable","unit":"USD notional",
+                "scope":"named BTC perpetual markets",
+                "observed_at":(NOW-dt.timedelta(hours=2)).isoformat()}}}
+        ok=m.real_brief_counterfactual_smoke(brief,NOW)
+        self.assertEqual(ok["status"],"passed")
+        self.assertEqual(ok["probe_type"],"counterfactual_not_actual_market_event")
+        self.assertTrue(ok["does_not_send_alert"])
+        brief["metric_quality"]["checks"]["derivatives.oi_five"]["status"]="stale"
+        bad=m.real_brief_counterfactual_smoke(brief,NOW)
+        self.assertEqual(bad["status"],"failed")
+        self.assertEqual(bad["gate_action"],"silence")
+
 if __name__=="__main__":unittest.main()
