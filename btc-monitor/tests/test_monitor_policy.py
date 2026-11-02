@@ -14,7 +14,7 @@ class MonitorPolicyTests(unittest.TestCase):
     def test_regular_source_reads_and_bad_data_not_rebranded(self):
         for phrase in ("btc-monitor/data/brief.json","btc-monitor/data/latest.json",
                        "as_of_utc","family_readiness","coverage_gaps",
-                       "stale","invalid_schema","null ≠ 0","<2"):
+                       "stale","invalid_schema","null ≠ 0","не делай >2"):
             self.assertIn(phrase,TEXT)
     def test_critical_sources_referenced(self):
         for path in ("btc-price/data/latest.json","btc-spot-cvd/data/latest.json",
