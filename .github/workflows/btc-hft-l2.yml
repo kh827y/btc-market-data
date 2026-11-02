@@ -7,7 +7,7 @@ on:
       - ".github/workflows/btc-hft-l2.yml"
   workflow_dispatch:
   schedule:
-    - cron: "23 * * * *"
+    - cron: "23,53 * * * *"
 permissions:
   contents: write
 concurrency:
@@ -16,7 +16,7 @@ concurrency:
 jobs:
   historical-depth:
     runs-on: ubuntu-latest
-    timeout-minutes: 16
+    timeout-minutes: 28
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -30,7 +30,7 @@ jobs:
           python -m unittest discover -s btc-liquidity/tests -p test_hft_history.py -v
       - name: Build and safely commit dated historical BTC L2 liquidity
         env:
-          HFT_MAX_FILES: "70"
+          HFT_MAX_FILES: "90"
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
