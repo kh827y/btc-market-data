@@ -1,0 +1,37 @@
+name: BTC derivatives history
+on:
+  push:
+    paths:
+      - "btc-derivatives/collector.py"
+      - ".github/workflows/btc-derivatives-history.yml"
+  workflow_dispatch:
+  schedule:
+    - cron: "49 * * * *"
+permissions:
+  contents: write
+concurrency:
+  group: btc-derivatives-history
+  cancel-in-progress: false
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify syntax
+        run: python -m py_compile btc-derivatives/collector.py
+      - name: Collect independent futures venue data
+        run: python btc-derivatives/collector.py
+      - name: Save derivatives summary
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add btc-derivatives/data/latest.json
+          if ! git diff --cached --quiet; then
+            git commit -m "data: BTC multi-market derivatives history"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
