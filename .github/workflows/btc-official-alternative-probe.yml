@@ -1,0 +1,42 @@
+name: BTC missing venue official API and WebSocket diagnostics
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "btc-liquidity/probe_official_alternatives.py"
+      - ".github/workflows/btc-official-alternative-probe.yml"
+permissions:
+  contents: write
+concurrency:
+  group: btc-official-alternative-probe
+  cancel-in-progress: false
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install simple official websocket test client
+        run: pip install websocket-client
+      - name: Read only official Bybit and Binance depth endpoints, verify books
+        run: python -u btc-liquidity/probe_official_alternatives.py
+      - name: Persist timestamped actual source results without mutating live book
+        shell: bash
+        run: |
+          set -eu
+          cp btc-liquidity/data/official_alt_probe.json /tmp/btc-official-alt-proof.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for n in 1 2 3 4 5 6 7 8; do
+            git fetch origin main
+            git reset --hard origin/main
+            cp /tmp/btc-official-alt-proof.json btc-liquidity/data/official_alt_probe.json
+            git add btc-liquidity/data/official_alt_probe.json
+            git commit -m "diagnostic: actual official Bybit and Binance depth access results"
+            if git push origin HEAD:main; then exit 0; fi
+            sleep 2
+          done
+          exit 1
