@@ -1,30 +1,17 @@
-import json,urllib.request,urllib.error,csv,io
-urls={
- "bitview_lth_search":"https://bitview.space/api/series/search?q=lth",
- "bitview_supply_search":"https://bitview.space/api/series/search?q=supply",
- "bitview_realized_search":"https://bitview.space/api/series/search?q=realized",
- "bitview_catalog":"https://bitview.space/api/series/list",
- "explore21_hodl":"https://charts.explore21.com/data/bitcoin-hodl-waves.csv",
- "explore21_realized":"https://charts.explore21.com/data/bitcoin-realized-price.csv",
- "researchbitcoin_demo":"https://api.researchbitcoin.net/v2/supply_distribution",
-}
-for k,u in urls.items():
+import urllib.request, urllib.error, json
+names=["lth_supply","sth_supply","lth_realized_price","sth_realized_price","realized_price","supply_delta_1m","lth_capital","lth_nupl"]
+queries={}
+for name in names:
+ queries[name+"_indexes"]="https://bitview.space/api/series/"+name
+ queries[name+"_latest"]="https://bitview.space/api/series/"+name+"/date/latest"
+ queries[name+"_data"]="https://bitview.space/api/series/"+name+"/date/data?start=2026-10-01&end=2026-10-31"
+for key,url in queries.items():
  try:
-  req=urllib.request.Request(u,headers={"User-Agent":"Mozilla/5.0 (BTC onchain public research)","Accept":"application/json,text/csv,*/*"})
-  with urllib.request.urlopen(req,timeout=22) as r:
-   raw=r.read(450000);ct=r.headers.get("content-type","")
-   try:
-    d=json.loads(raw)
-    if isinstance(d,list):
-     def summarize(x):
-      if isinstance(x,dict):return {name:str(value)[:110] for name,value in list(x.items())[:8]}
-      return str(x)[:140]
-     display={"type":"list","n_partial":len(d),"head":[summarize(x) for x in d[:5]],"tail":[summarize(x) for x in d[-2:]]}
-    elif isinstance(d,dict):
-     display={"type":"dict","keys":list(d)[:20],"top":str(d)[:1200]}
-    else:display=str(d)[:500]
-   except:
-    rows=raw.decode("utf-8",errors="replace").splitlines()
-    display={"first_lines":rows[:2],"last_lines":rows[-2:],"bytes_read":len(raw),"last_complete_line":raw.endswith(b"\n")}
-   print(k,"OK",r.status,ct,str(display)[:2400])
- except Exception as e:print(k,"ERROR",str(e)[:350])
+  req=urllib.request.Request(url,headers={"User-Agent":"BTC-Onchain-Public-Research/1.0","Accept":"application/json"})
+  with urllib.request.urlopen(req,timeout=20) as r:
+   obj=json.load(r)
+   if isinstance(obj,list):v={"type":"list","count":len(obj),"first":obj[:2],"last":obj[-2:]}
+   elif isinstance(obj,dict):v={"type":"dict","keys":list(obj.keys())[:30],"first":str(obj)[:1800]}
+   else:v={"value":str(obj)[:400]}
+   print(key,"OK",str(v)[:2300])
+ except Exception as e:print(key,"ERROR",str(e)[:220])
