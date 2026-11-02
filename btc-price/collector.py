@@ -38,11 +38,21 @@ def request_json(url):
             if attempt<2:time.sleep(attempt+1)
     raise RuntimeError("public API failed: "+str(error)[:140])
 
+def binance_request(endpoint):
+    """Only Binance official spot API hosts, never a proxy or another market."""
+    last_errors=[]
+    for host in (BINANCE, "https://api.binance.com"):
+        try:
+            return request_json(host+endpoint)
+        except (RuntimeError,ValueError,KeyError,TypeError) as exc:
+            last_errors.append(host+": "+str(exc)[:150])
+    raise RuntimeError("all official Binance spot endpoints failed: "+" | ".join(last_errors))
+
 def binance_klines(interval,limit):
     if interval not in ("1d","1w") or not 1<=limit<=1000:
         raise ValueError("bad interval or limit")
     query=urllib.parse.urlencode({"symbol":"BTCUSDT","interval":interval,"limit":limit})
-    raw=request_json(BINANCE+"/api/v3/klines?"+query)
+    raw=binance_request("/api/v3/klines?"+query)
     if not isinstance(raw,list) or not raw:raise ValueError("empty Binance candles")
     rows=[]
     for x in raw:
@@ -205,7 +215,7 @@ def main():
     except Exception as exc:cb_error=str(exc)[:180]
     out=calculate(daily,weekly,now,coinbase,cb_error)
     try:
-        ticker=request_json(BINANCE+"/api/v3/ticker/price?symbol=BTCUSDT")
+        ticker=binance_request("/api/v3/ticker/price?symbol=BTCUSDT")
         price=float(ticker["price"])
         if not math.isfinite(price) or price<=0:raise ValueError("invalid ticker")
         if abs(price/out["daily"]["close_usdt"]-1)>0.3:
