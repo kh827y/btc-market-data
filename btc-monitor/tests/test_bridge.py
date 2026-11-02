@@ -58,7 +58,8 @@ class BridgeTests(unittest.TestCase):
      "windows":{"1h":{"complete":True,"net":30},
                 "24h":{"complete":False,"net":9999}}}
   o=m.build({"spot_cvd":s},NOW)
-  self.assertEqual(o["metrics"]["spot_cvd"]["windows"]["1h"]["net_usd_approx"],30)
+  # "complete" without verified UTC time/five exchange trade proof is unsafe.
+  self.assertIsNone(o["metrics"]["spot_cvd"]["windows"]["1h"]["net_usd_approx"])
   self.assertIsNone(o["metrics"]["spot_cvd"]["windows"]["24h"]["net_usd_approx"])
   self.assertFalse(o["audit"]["family_readiness"]["spot_cvd_24h_complete"])
  def test_unreached_depth_is_null(self):
@@ -94,6 +95,7 @@ class BridgeTests(unittest.TestCase):
        "complete_venue_subset":{"available":True,"venues":["binance","okx","bybit"],
                                 "net":110,"venue_count":3}}
   out=m.build({"spot_cvd":{"generated_utc":"2026-11-02T07:15:00Z",
+                            "last_complete_hour":"2026-11-02T06:00:00Z",
                             "windows":{"24h":row}}},NOW)
   res=out["metrics"]["spot_cvd"]["windows"]["24h"]
   self.assertIsNone(res["net_usd_approx"])
@@ -122,7 +124,10 @@ class BridgeTests(unittest.TestCase):
  def test_actual_cme_recent_observed_basis_is_visible(self):
   source={"generated_utc":"2026-11-02T07:15:00Z","results":{
    "cme_basis":{"status":"recent_observed",
-     "front_recent_contract":{"date":"2026-10-30","contract":"BTCZ26.CME","annualized_basis_pct":2.99}}}}
+     "front_recent_contract":{"date":"2026-10-30","timestamp":"2026-10-30T16:00:00Z",
+       "contract":"BTCZ26.CME","expiry":"20261225",
+       "spot_usd":78300,"futures_usd":78600,
+       "annualized_basis_pct":2.99}}}}
   out=m.build({"derivatives":source},NOW)
   front=out["metrics"]["derivatives"]["cme_front_basis"]
   self.assertEqual(front["contract"],"BTCZ26.CME")
