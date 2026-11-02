@@ -87,6 +87,20 @@ class HistoricL2Tests(unittest.TestCase):
                for v,rows in existing.items()}
         self.assertEqual(m.recent_coverage(valid,through)["7d"]["binance_spot"]["verified_days"],0)
 
+    def test_native_older_snapshot_without_tight_band_is_still_verified(self):
+        day=dt.date(2026,10,31)
+        rec=m.parse_checkpoint(fixture(),"binance_spot","BTCUSDT","spot",1.0,"USDT",day)
+        rec["bands"].pop("0.01")
+        row={"status":"ok","data":rec}
+        self.assertTrue(m.verified_entry(row,"binance_spot",str(day)))
+        # Valid wide bands stay usable; original snapshot may be retried
+        # for the tighter band without losing the verified source day.
+        existing={v:{} for v in m.MARKETS}
+        existing["binance_spot"][str(day)]=row
+        todo=[x for x in m.targets(day,existing,now=dt.datetime(2026,11,2,tzinfo=dt.timezone.utc))
+              if x[0]=="binance_spot" and x[1]==day]
+        self.assertEqual([x[2] for x in todo],[12,11,13])
+
     def test_native_snapshot_must_match_venue_day_and_utc_hour(self):
         day=dt.date(2026,10,31)
         data=m.parse_checkpoint(fixture(),"binance_spot","BTCUSDT","spot",1.0,"USDT",day)
