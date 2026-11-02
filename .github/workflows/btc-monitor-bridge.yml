@@ -4,7 +4,8 @@ on:
   push:
     paths:
       - "btc-monitor/build_feed.py"
-      - "btc-monitor/tests/test_bridge.py"
+      - "btc-monitor/automation_prompt_v2.md"
+      - "btc-monitor/tests/**"
       - ".github/workflows/btc-monitor-bridge.yml"
   workflow_run:
     workflows:
@@ -39,7 +40,7 @@ jobs:
       - name: Verify data quality and stale/missing indicator unit tests
         run: |
           python -m py_compile btc-monitor/build_feed.py
-          python -m unittest discover -s btc-monitor/tests -p test_bridge.py -v
+          python -m unittest discover -s btc-monitor/tests -p "test_*.py" -v
       - name: Publish validated source bridge
         run: |
           git config user.name "github-actions[bot]"
