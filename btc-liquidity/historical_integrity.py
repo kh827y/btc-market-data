@@ -131,6 +131,19 @@ def audit_hft(history,latest):
         for width in ("7d","30d","90d","365d"):
             require(latest["recent_window_coverage"][width][venue]==recent[width][venue],
                     "HFT "+width+" verified coverage mismatch "+venue)
+        # When an independent 00 UTC fallback is published, verify its total
+        # and each window against actual native snapshot provenance. Do not
+        # silently add these days to the noon-comparable subset.
+        if "alternate_00utc_verified_days_total" in latest:
+            fallback={day for day,row in verified[venue].items()
+                      if row["data"]["sample_utc_hour"]==0}
+            require(latest["alternate_00utc_verified_days_total"][venue]==len(fallback),
+                    "HFT 00 UTC all-history fallback count mismatch "+venue)
+            for width in (7,30,90,365):
+                count=sum((through-dt.timedelta(days=n)).isoformat() in fallback
+                          for n in range(width))
+                require(latest["alternate_00utc_verified_days_by_window"][str(width)+"d"][venue]==count,
+                        "HFT 00 UTC fallback window mismatch "+venue)
         result[venue]={"eligible_days":actual["eligible_days"],
                        "verified_days":actual["verified_days"],
                        "explicit_error_days":actual["explicit_error_days"],
