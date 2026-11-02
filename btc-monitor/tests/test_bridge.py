@@ -193,4 +193,50 @@ class BridgeTests(unittest.TestCase):
   self.assertFalse(result["metrics"]["onchain"]["cost_basis_all_three_usable"])
   self.assertTrue(all(v["value"] is None for v in result["metrics"]["onchain"]["cost_basis_independent"].values()))
 
+ def test_closed_price_source_reaches_monitoring_brief(self):
+  j={"generated_utc":"2026-11-02T07:15:00Z","status":"ok",
+     "instrument":{"symbol":"BTCUSDT"},
+     "last_closed_day_utc":"2026-11-01",
+     "last_closed_week_monday_utc":"2026-10-26",
+     "coverage":{"daily_complete":799,"weekly_complete":299,"daily_missing":0,"weekly_missing":0},
+     "daily":{"close_usdt":78500,"ma":{"ma20":79000,"ma50":81000,"ma200":85000},
+              "rsi14_wilder":37.5,"rsi14_previous":39.1,
+              "change_pct":{"1d":-1.8},"breakout20":"within_prev20_range"},
+     "weekly":{"last_close_usdt":78600,"ma200":68000,"prev_ma200":67700},
+     "trend":{"classification":"mixed"},
+     "cross_checks":{"same_venue_daily_weekly_weeks":8,
+                    "coinbase_daily":{"status":"verified","absolute_difference_pct":0.2}},
+     "spot_quote":{"price_usdt":78800,"observed_utc":"2026-11-02T07:15:00Z"}}
+  report=m.build({"price_technical":j},NOW)
+  self.assertEqual(report["feeds"]["price_technical"]["status"],"fresh")
+  self.assertTrue(report["audit"]["family_readiness"]["price_technical_verified"])
+  self.assertTrue(report["audit"]["family_readiness"]["price_technical_cross_venue"])
+  brief=m.make_brief(report)
+  self.assertEqual(brief["btc_technicals"]["daily_ma"]["ma200"],85000)
+  self.assertEqual(brief["btc_technicals"]["weekly_ma200"],68000)
+  self.assertEqual(brief["btc_technicals"]["daily_rsi14_wilder"],37.5)
+  self.assertEqual(brief["btc_technicals"]["latest_spot_price_usdt"],78800)
+  self.assertTrue(brief["btc_technicals"]["closed_candles_only"])
+ def test_missing_weekly_history_cannot_be_rebranded_valid(self):
+  j={"generated_utc":"2026-11-02T07:15:00Z","status":"ok","instrument":{"symbol":"BTCUSDT"},
+     "last_closed_day_utc":"2026-11-01","last_closed_week_monday_utc":"2026-10-26",
+     "coverage":{"daily_complete":799,"weekly_complete":160,"daily_missing":0,"weekly_missing":0},
+     "daily":{"close_usdt":79000,"ma":{"ma20":79000,"ma50":79000,"ma200":79000},"rsi14_wilder":40},
+     "weekly":{"last_close_usdt":79000,"ma200":68000},
+     "cross_checks":{"same_venue_daily_weekly_weeks":8}}
+  result=m.build({"price_technical":j},NOW)
+  self.assertEqual(result["feeds"]["price_technical"]["status"],"invalid_schema")
+  self.assertFalse(result["audit"]["family_readiness"]["price_technical_verified"])
+  self.assertNotIn("btc_technicals",m.make_brief(result))
+ def test_stale_price_close_rejected_despite_fresh_file(self):
+  j={"generated_utc":"2026-11-02T07:15:00Z","status":"ok","instrument":{"symbol":"BTCUSDT"},
+     "last_closed_day_utc":"2026-10-28","last_closed_week_monday_utc":"2026-10-26",
+     "coverage":{"daily_complete":799,"weekly_complete":299,"daily_missing":0,"weekly_missing":0},
+     "daily":{"close_usdt":79000,"ma":{"ma20":79000,"ma50":79000,"ma200":79000},"rsi14_wilder":40},
+     "weekly":{"last_close_usdt":79000,"ma200":68000},
+     "cross_checks":{"same_venue_daily_weekly_weeks":8}}
+  result=m.build({"price_technical":j},NOW)
+  self.assertEqual(result["feeds"]["price_technical"]["status"],"stale_observation")
+  self.assertNotIn("btc_technicals",m.make_brief(result))
+
 if __name__=="__main__":unittest.main()
