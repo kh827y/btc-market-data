@@ -1,5 +1,5 @@
 {
-  "as_of_utc": "2026-11-02T09:14:51.678672+00:00",
+  "as_of_utc": "2026-11-02T09:22:14.760139+00:00",
   "coverage_gaps": [
     "spot_cvd:24h_five_venue_incomplete",
     "spot_cvd:168h_five_venue_incomplete",
@@ -7,72 +7,12 @@
     "live_depth:failed_venues=3",
     "onchain:missing_or_delayed_metrics=2"
   ],
-  "derivatives": {
-    "cftc_cme_weekly": {
-      "as_of": "2026-10-27",
-      "positions": {
-        "asset_manager_long": 4743,
-        "asset_manager_short": 1989,
-        "dealer_long": 6257,
-        "dealer_short": 5001,
-        "leveraged_long": 5887,
-        "leveraged_short": 9866,
-        "open_interest_btc_equivalent": 103955,
-        "open_interest_contracts": 20791
-      }
-    },
-    "cme_front_basis": {
-      "annualized_basis_pct": 2.99081,
-      "contract": "BTCZ26.CME",
-      "date": "2026-10-30",
-      "days_to_expiry": 55.8333,
-      "expiry": "20261225",
-      "futures_usd": 77290.0,
-      "spot_usd": 76938.01,
-      "timestamp": "2026-10-30T20:00:00+00:00"
-    },
-    "dated_futures_matched_expiry": "2026-12-25",
-    "forced_liquidations_24h": {
-      "data_freshness": {
-        "age_h": 0.02,
-        "source": "Edge liquidations",
-        "status": "fresh"
-      },
-      "long_usd": 4923943.96,
-      "short_usd": 10287073.56,
-      "updated": "2026-11-02T06:13:53.443000+00:00"
-    },
-    "funding_settled": {
-      "Binance": {
-        "last": "2026-11-02T00:00:00+00:00",
-        "max_gap_h": 8.0,
-        "rate": 0.0001
-      },
-      "Bybit": {
-        "last": "2026-11-02T00:00:00+00:00",
-        "max_gap_h": 8.0,
-        "rate": 9.689e-05
-      },
-      "OKX": {
-        "last": "2026-11-02T00:00:00+00:00",
-        "max_gap_h": 8.0,
-        "rate": 0.0001
-      }
-    },
-    "oi_1d_7d_30d_pct": {
-      "1d": -0.324,
-      "30d": 3.246,
-      "7d": -0.386
-    },
-    "oi_five_venue_usd": 21011130995.13,
-    "oi_latest_hour": "2026-11-02T06:00:00Z"
-  },
   "family_readiness": {
-    "current_orderbook": true,
+    "current_orderbook": false,
     "holder_behavior": true,
     "options": true,
     "orderbook": true,
-    "positioning": true,
+    "positioning": false,
     "spot_cvd_168h_fixed_five_ex_coinbase": false,
     "spot_cvd_24h_complete": false,
     "spot_cvd_24h_covered_subset": true,
@@ -80,7 +20,10 @@
     "spot_cvd_720h_fixed_five_ex_coinbase": false,
     "spot_execution": true
   },
-  "issues": [],
+  "issues": [
+    "derivatives:stale",
+    "live_depth:stale"
+  ],
   "onchain": {
     "historical_whale_alerts": {
       "count_ge_1000_btc": {
@@ -609,72 +552,6 @@
       }
     }
   },
-  "orderbook_live": {
-    "perpetual_venues": 1,
-    "spot_venues": 3,
-    "venues": {
-      "binance_spot": {
-        "bands": {
-          "0.05": {
-            "ask_usd": 4086961.74,
-            "bid_share": 0.4373,
-            "bid_usd": 3176186.99,
-            "complete": true
-          },
-          "0.2": {
-            "ask_usd": 10190399.96,
-            "bid_share": 0.4199,
-            "bid_usd": 7376321.45,
-            "complete": true
-          }
-        },
-        "captured_at": "2026-11-02T06:49:08.159108Z",
-        "market": "spot"
-      },
-      "coinbase_spot": {
-        "bands": {
-          "0.05": {
-            "ask_usd": 1754065.83,
-            "bid_share": 0.23213,
-            "bid_usd": 530264.77,
-            "complete": true
-          },
-          "0.2": {
-            "ask_usd": 3585441.62,
-            "bid_share": 0.51473,
-            "bid_usd": 3803152.31,
-            "complete": true
-          }
-        },
-        "captured_at": "2026-11-02T06:49:08.159108Z",
-        "market": "spot"
-      },
-      "okx_spot": {
-        "bands": {
-          "0.05": {
-            "ask_usd": 1172524.44,
-            "bid_share": 0.574,
-            "bid_usd": 1579898.16,
-            "complete": true
-          }
-        },
-        "captured_at": "2026-11-02T06:49:08.159108Z",
-        "market": "spot"
-      },
-      "okx_usdt_perp": {
-        "bands": {
-          "0.05": {
-            "ask_usd": 14237462.5,
-            "bid_share": 0.45179,
-            "bid_usd": 11733140.28,
-            "complete": true
-          }
-        },
-        "captured_at": "2026-11-02T06:49:08.159108Z",
-        "market": "perpetual"
-      }
-    }
-  },
   "rules": [
     "Only fresh source + complete original window/band can support current risk",
     "Orderbook resting orders are NOT executed purchases; not a world-wide book",
@@ -687,50 +564,50 @@
   "schema": 1,
   "sources": {
     "bybit_depth": {
-      "age_h": 1.58,
+      "age_h": 1.7,
       "measurement_age_h": null,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-liquidity/data/bybit_independent_latest.json",
       "source_errors": 0,
       "status": "fresh"
     },
     "derivatives": {
-      "age_h": 3.0,
+      "age_h": 3.12,
       "measurement_age_h": null,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-derivatives/data/latest.json",
       "source_errors": 0,
-      "status": "fresh"
+      "status": "stale"
     },
     "hft_depth": {
-      "age_h": 1.79,
+      "age_h": 1.91,
       "measurement_age_h": null,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-liquidity/data/hft_latest.json",
       "source_errors": 3,
       "status": "fresh"
     },
     "live_depth": {
-      "age_h": 2.43,
-      "measurement_age_h": 2.43,
+      "age_h": 2.55,
+      "measurement_age_h": 2.55,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-liquidity/data/latest.json",
       "source_errors": 3,
-      "status": "fresh"
+      "status": "stale"
     },
     "onchain": {
-      "age_h": 3.45,
+      "age_h": 3.58,
       "measurement_age_h": null,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-onchain/data/monitor_latest.json",
       "source_errors": 0,
       "status": "fresh"
     },
     "options": {
-      "age_h": 2.76,
+      "age_h": 2.88,
       "measurement_age_h": null,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-options/data/latest.json",
       "source_errors": 0,
       "status": "fresh"
     },
     "spot_cvd": {
-      "age_h": 0.03,
-      "measurement_age_h": 2.25,
+      "age_h": 0.1,
+      "measurement_age_h": 2.37,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-spot-cvd/data/latest.json",
       "source_errors": 0,
       "status": "fresh"
@@ -758,32 +635,32 @@
         "venue_coverage_hours": {
           "binance": {
             "complete": false,
-            "hours": 60,
+            "hours": 63,
             "required": 168
           },
           "bitget": {
             "complete": false,
-            "hours": 9,
+            "hours": 12,
             "required": 168
           },
           "bybit": {
             "complete": false,
-            "hours": 60,
+            "hours": 63,
             "required": 168
           },
           "coinbase": {
             "complete": false,
-            "hours": 26,
+            "hours": 27,
             "required": 168
           },
           "kraken": {
             "complete": false,
-            "hours": 60,
+            "hours": 63,
             "required": 168
           },
           "okx": {
             "complete": false,
-            "hours": 60,
+            "hours": 63,
             "required": 168
           }
         }
@@ -878,7 +755,7 @@
           },
           "bitget": {
             "complete": false,
-            "hours": 9,
+            "hours": 12,
             "required": 24
           },
           "bybit": {
@@ -922,32 +799,32 @@
         "venue_coverage_hours": {
           "binance": {
             "complete": false,
-            "hours": 91,
+            "hours": 94,
             "required": 720
           },
           "bitget": {
             "complete": false,
-            "hours": 9,
+            "hours": 12,
             "required": 720
           },
           "bybit": {
             "complete": false,
-            "hours": 92,
+            "hours": 95,
             "required": 720
           },
           "coinbase": {
             "complete": false,
-            "hours": 26,
+            "hours": 27,
             "required": 720
           },
           "kraken": {
             "complete": false,
-            "hours": 84,
+            "hours": 87,
             "required": 720
           },
           "okx": {
             "complete": false,
-            "hours": 91,
+            "hours": 94,
             "required": 720
           }
         }
