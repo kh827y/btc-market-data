@@ -36,11 +36,20 @@ def worker(category,shard,out,through=None):
         key=day.isoformat()
         url,depth=bi.source_url(category,day)
         attempted+=1
+        obj=None
         try:
-            rec=bi.measure(bi.first_zip_snapshot(bi.range_bytes(url)),day,venue,depth,url)
+            obj=bi.first_zip_snapshot(bi.range_bytes(url))
+            rec=bi.measure(obj,day,venue,depth,url)
             rows[key]=rec
         except Exception as e:
-            failed[key]=f"{type(e).__name__}: {str(e)[:180]}"
+            reason=f"{type(e).__name__}: {str(e)[:180]}"
+            if obj is not None and "not near midnight" in reason:
+                # A genuine but late source snapshot is NOT a valid midnight observation.
+                # Preserve the observed timestamp for a defensible source-gap audit.
+                stamp=dt.datetime.fromtimestamp(int(obj["ts"])/1000,UTC)
+                offset=(stamp-dt.datetime.combine(day,dt.time(),UTC)).total_seconds()
+                reason+=f"; first_source_snapshot_utc={stamp.isoformat()}; offset_seconds={offset:.3f}"
+            failed[key]=reason
         if attempted%35==0:
             write(out,{"status":"partial","category":category,"venue":venue,
                        "shard":shard,"shards":SHARDS[category],"through":str(through),
@@ -62,6 +71,7 @@ def merge(artifact_dir,root=".",now=None):
     records=state.setdefault("records",{})
     failures=state.setdefault("failures",{})
     stats={}
+    common_through=None
     for category,num_shards in SHARDS.items():
         venue=NAME[category]
         start=bi.VENUES[venue][1]
@@ -71,6 +81,9 @@ def merge(artifact_dir,root=".",now=None):
             path=pathlib.Path(artifact_dir)/f"{category}-{shard}"/"result.json"
             block=json.loads(path.read_text(encoding="utf8"))
             through=dt.date.fromisoformat(block["through"])
+            if common_through is None:common_through=through
+            if through!=common_through or not start<=through<=asof:
+                raise ValueError("shards have inconsistent or future source through dates")
             total=(through-start).days+1
             expected=set((start+dt.timedelta(days=i)).isoformat()
                          for i in range(shard,total,num_shards))
@@ -112,6 +125,24 @@ def merge(artifact_dir,root=".",now=None):
             "coverage_pct":round(valid/total*100,2) if total else 0,
             "first_verified":min(records[venue],default=None),
             "latest_verified":max(records[venue],default=None)}
+    # A day is accounted for only when it has a verified original snapshot or
+    # a concrete recorded failure. Never infer a missing day is zero liquidity.
+    day_audit={}
+    for venue,(category,start) in bi.VENUES.items():
+        verified=[];unverified=[];unaccounted=[]
+        for n in range((asof-start).days+1):
+            day=(start+dt.timedelta(days=n)).isoformat()
+            if day in records[venue]:verified.append(day)
+            elif venue+":"+day in failures:
+                unverified.append({"day":day,"reason":failures[venue+":"+day].get("last_error","unknown")})
+            else:unaccounted.append(day)
+        day_audit[venue]={
+            "eligible_days":len(verified)+len(unverified)+len(unaccounted),
+            "verified_days":len(verified),"explicit_error_days":len(unverified),
+            "unaccounted_days":unaccounted,"source_dates_accounted_for":not unaccounted,
+            "unverified_dates":unverified,
+            "coverage_7d":sum(d>=(asof-dt.timedelta(days=6)).isoformat() for d in verified),
+            "coverage_30d":sum(d>=(asof-dt.timedelta(days=29)).isoformat() for d in verified)}
     newest_count=sum(asof.isoformat() in records[v] for v in bi.VENUES)
     latest={"schema_version":1,"generated_at":now.isoformat(),
         "status":"ok" if newest_count==2 else "partial" if newest_count else "unavailable",
@@ -133,7 +164,10 @@ def merge(artifact_dir,root=".",now=None):
     write(loc/"bybit_independent_latest.json",latest)
     write(loc/"bybit_full_backfill_status.json",{
         "merged_utc":now.isoformat(),"shard_results":stats,"coverage":coverage,
-        "errors_by_venue":{k:v["worker_failures"] for k,v in stats.items()},
+        "worker_source_through":common_through.isoformat(),
+        "day_audit":day_audit,
+        "all_source_dates_accounted_for":all(x["source_dates_accounted_for"] for x in day_audit.values()),
+        "errors_by_venue":{k:v["explicit_error_days"] for k,v in day_audit.items()},
         "completeness_is_per_source_date_not_full_day_orderbook":True})
     print("MERGED",json.dumps(stats),flush=True)
 
