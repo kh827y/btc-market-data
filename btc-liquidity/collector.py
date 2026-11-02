@@ -170,7 +170,7 @@ def collect_live(now, errors):
                 # OKX orderbook size is number of contracts, not base BTC.
                 bids = [[row[0], str(float(row[1]) * contract_size)] for row in bids]
                 asks = [[row[0], str(float(row[1]) * contract_size)] for row in asks]
-            if source_ms is not None and abs(now.timestamp() * 1000 - source_ms) > 120_000:
+            if source_ms is not None and abs(dt.datetime.now(UTC).timestamp() * 1000 - source_ms) > 120_000:
                 raise ValueError("stale source timestamp")
             record = summarize_orderbook(bids, asks)
             if contract_size is not None:
@@ -179,7 +179,7 @@ def collect_live(now, errors):
                                                 if name == "gate_usdt_perp" else
                                                 "OKX contracts times ctVal times ctMult into BTC")
             record.update({"market": market, "symbol": symbol, "quote": "USD" if name == "coinbase_spot" else "USDT",
-                           "captured_at": captured, "source_timestamp": dt.datetime.fromtimestamp(source_ms / 1000, UTC).isoformat()
+                           "captured_at": dt.datetime.now(UTC).isoformat().replace("+00:00", "Z"), "source_timestamp": dt.datetime.fromtimestamp(source_ms / 1000, UTC).isoformat()
                            if source_ms is not None else None, "source_url": url.split("?")[0]})
             venues[name] = record
         except Exception as exc:
@@ -351,7 +351,7 @@ def main():
     perp_usable = sum(v["market"] == "perpetual" and any(b["imbalance_bid_share"] is not None for b in v["bands"].values()) for v in sample["venues"].values())
     latest = {
         "schema_version": 1, "generated_at": now.isoformat(),
-        "status": "ok" if spot_usable >= 2 and perp_usable >= 1 else "partial" if spot_usable + perp_usable else "unavailable",
+        "status": "ok" if spot_usable >= 2 and perp_usable >= 2 else "partial" if spot_usable + perp_usable else "unavailable",
         "spot_venues": spot_count, "perpetual_venues": perp_count,
         "spot_usable_venues": spot_usable, "perpetual_usable_venues": perp_usable,
         "current": sample if sample["venues"] else None,
