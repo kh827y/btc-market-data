@@ -33,7 +33,12 @@ def main():
     previous=ROOT/"history.json"
     data=json.loads(previous.read_text()) if previous.exists() else {}
     errors=[]
-    for name,slug in METRICS.items():
+    # Free BGeometrics: max 15/day. Rotate lower-priority metrics to stay <= 10 API calls/day.
+    required=["mvrv","mvrv_zscore","nupl","sth_sopr","lth_sopr","lth_realized_profit","lth_realized_loss","sth_realized_profit","sth_realized_loss"]
+    optional=["sth_realized_price","lth_realized_price","realized_price"]
+    rotation=optional[now.toordinal()%len(optional)]
+    for name in required+[rotation]:
+        slug=METRICS[name]
         try:
             rows=parse_rows(fetch("https://bitcoin-data.com/v1/"+slug+"?startday=2022-11-01"))
             data.setdefault(name,{}).update(rows)
