@@ -76,9 +76,14 @@ def parse_checkpoint(blob,venue,symbol,kind,multiplier,quote,day,hour=12):
     blob=decode_parquet(blob)
     target=dt.datetime.combine(day,dt.time(hour),tzinfo=UTC)
     with pq.ParquetFile(io.BytesIO(blob)) as f:
-        columns=("received_time","event_type","side","price","quantity","final_update_id")
-        if not set(columns).issubset(set(f.schema.names)):
+        required=("received_time","event_type","side","price","quantity","final_update_id")
+        if not set(required).issubset(set(f.schema.names)):
             raise ValueError("schema mismatch")
+        # Binance may publish the same REST snapshot in multiple receive-time
+        # halves. Use the native event_time + last_update_id grouping instead.
+        # Other venues lacking these fields fall back to final_update_id.
+        extras=[x for x in ("event_time","last_update_id") if x in f.schema.names]
+        columns=required+tuple(extras)
         # Most legacy hours contain NO verified checkpoint at all. Scan only
         # the small event_type column first, avoiding conversion of millions of
         # unrelated full-depth update rows to Python objects.
@@ -91,6 +96,7 @@ def parse_checkpoint(blob,venue,symbol,kind,multiplier,quote,day,hour=12):
             raise ValueError("no verified checkpoint snapshot found anywhere in the requested UTC hour")
         bids={};asks={}
         checkpoint=None
+        checkpoint_received=None
         rows=0
         done=False
         for batch in f.iter_batches(batch_size=8192,columns=columns):
@@ -104,9 +110,17 @@ def parse_checkpoint(blob,venue,symbol,kind,multiplier,quote,day,hour=12):
                     stamp=dt.datetime.fromtimestamp(timestamp/1e9,UTC)
                     if not target<=stamp<target+dt.timedelta(hours=1):
                         raise ValueError("snapshot timestamp outside requested file hour")
-                    checkpoint=(timestamp,data["final_update_id"][i])
+                    received_id=data["final_update_id"][i]
+                    source_event=data["event_time"][i] if "event_time" in extras else None
+                    native_last=data["last_update_id"][i] if "last_update_id" in extras else None
+                    checkpoint=(source_event,native_last,received_id) if source_event is not None and native_last is not None else (received_id,)
+                    checkpoint_received=timestamp
                     bids={};asks={};rows=0
-                if typ!="snapshot" or (data["received_time"][i],data["final_update_id"][i])!=checkpoint:
+                source_event=data["event_time"][i] if "event_time" in extras else None
+                native_last=data["last_update_id"][i] if "last_update_id" in extras else None
+                received_id=data["final_update_id"][i]
+                key=(source_event,native_last,received_id) if source_event is not None and native_last is not None else (received_id,)
+                if typ!="snapshot" or key!=checkpoint:
                     done=True
                     break
                 side=data["side"][i]
@@ -119,7 +133,10 @@ def parse_checkpoint(blob,venue,symbol,kind,multiplier,quote,day,hour=12):
                     raise ValueError("invalid snapshot price/size")
                 target_side=bids if side=="bid" else asks
                 if p in target_side:
-                    raise ValueError("duplicate price level in initial checkpoint")
+                    # Older Binance archives may contain a byte-for-byte
+                    # duplicate REST snapshot; do not double-count it.
+                    if target_side[p]==q:continue
+                    raise ValueError("conflicting duplicate price inside native snapshot")
                 target_side[p]=q
                 rows+=1
             if done:break
@@ -147,7 +164,7 @@ def parse_checkpoint(blob,venue,symbol,kind,multiplier,quote,day,hour=12):
                           "bid_coverage_complete":bid_ok,
                           "ask_coverage_complete":ask_ok,
                           "bid_share":round(b/(a+b),5) if b is not None and a is not None and a+b>0 else None}
-    stamp=dt.datetime.fromtimestamp(checkpoint[0]/1e9,UTC)
+    stamp=dt.datetime.fromtimestamp(checkpoint_received/1e9,UTC)
     return {"time":stamp.isoformat(),"venue":venue,"symbol":symbol,"market":kind,"quote":quote,
             "source":"CryptoHFTData historical verified L2 snapshot",
             "file_path":f"{venue}/{day}/{hour:02d}/{symbol}_orderbook.parquet",
