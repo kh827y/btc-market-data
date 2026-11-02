@@ -403,9 +403,9 @@ def gate_live(g,raw,metrics):
                r.get("transport")==WS_TRANSPORTS.get(name,r.get("transport")))
         if name in WS_TRANSPORTS:
             source=at(r.get("source_timestamp"));capture=at(r.get("captured_at"))
-            fresh=fresh and source is not None and capture is not None and (
-                -10<= (capture-source).total_seconds()<=120) and
-                r.get("transport")==WS_TRANSPORTS[name]
+            fresh=(fresh and source is not None and capture is not None and
+                   -10 <= (capture-source).total_seconds() <= 120 and
+                   r.get("transport")==WS_TRANSPORTS[name])
         bands=r.get("bands") or {}
         anygood=False
         for band in ("0.01","0.05","0.2","1.0"):
