@@ -168,6 +168,40 @@ class BridgeTests(unittest.TestCase):
   self.assertFalse(out["audit"]["family_readiness"]["current_spot_orderbook"])
   self.assertEqual(out["audit"]["family_readiness"]["current_spot_orderbook_venues"],0)
 
+ def test_all_eleven_native_books_appear_in_trend_brief_with_source_provenance(self):
+  bands={"0.01":{"bid_coverage_complete":True,"ask_coverage_complete":True,
+                  "bid_usd":100000,"ask_usd":90000,"imbalance_bid_share":0.5263},
+         "0.2":{"bid_coverage_complete":False,"ask_coverage_complete":False,
+                 "bid_usd":None,"ask_usd":None}}
+  spot={"binance_spot","coinbase_spot","bybit_spot","okx_spot","bitget_spot","gate_spot"}
+  perp={"binance_usdm_perp","bybit_usdt_perp","okx_usdt_perp","bitget_usdt_perp","gate_usdt_perp"}
+  venues={}
+  for name in spot|perp:
+   venues[name]={"market":"spot" if name in spot else "perpetual",
+     "symbol":"BTCUSDT","captured_at":"2026-11-02T07:20:00Z",
+     "source_timestamp":"2026-11-02T07:19:59Z",
+     "transport":"bybit_official_ws_snapshot" if name.startswith("bybit") else
+                 "binance_official_ws_api_depth" if name=="binance_usdm_perp" else "official_public_rest",
+     "source_url":"wss://stream.bybit.com/v5/public/spot" if name=="bybit_spot" else "official source",
+     "bands":bands}
+  source={"generated_at":"2026-11-02T07:20:00Z","status":"ok","errors":[],
+          "spot_usable_venues":6,"perpetual_usable_venues":5,
+          "current":{"time":"2026-11-02T07:20:00Z","venues":venues}}
+  report=m.build({"live_depth":source},NOW)
+  self.assertTrue(report["audit"]["family_readiness"]["current_all_11_selected_orderbooks"])
+  self.assertEqual(report["audit"]["family_readiness"]["current_spot_orderbook_venues"],6)
+  self.assertEqual(report["audit"]["family_readiness"]["current_perp_orderbook_venues"],5)
+  brief=m.make_brief(report)
+  self.assertTrue(brief["orderbook_live"]["all_selected_markets_verified"])
+  self.assertEqual(len(brief["orderbook_live"]["venues"]),11)
+  self.assertEqual(brief["orderbook_live"]["venues"]["bybit_spot"]["transport"],"bybit_official_ws_snapshot")
+  self.assertEqual(list(brief["orderbook_live"]["venues"]["bybit_spot"]["bands"]),["0.01"])
+  self.assertFalse(any(x.startswith("live_depth:") for x in brief["coverage_gaps"]))
+  del venues["bybit_spot"]
+  report=m.build({"live_depth":source},NOW)
+  self.assertFalse(report["audit"]["family_readiness"]["current_all_11_selected_orderbooks"])
+  self.assertIn("live_depth:original_11_selected_markets_not_all_verified",report["audit"]["coverage_gaps"])
+
  def test_zero_bid_share_is_retained(self):
   got=m.guard_bands({"0.05":{"bid_coverage_complete":True,"ask_coverage_complete":True,
                            "bid_share":0.0,"imbalance_bid_share":0.7}})
