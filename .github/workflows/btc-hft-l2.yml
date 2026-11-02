@@ -1,0 +1,48 @@
+name: BTC validated historical L2 books
+on:
+  push:
+    paths:
+      - "btc-liquidity/hft_history.py"
+      - "btc-liquidity/tests/test_hft_history.py"
+      - ".github/workflows/btc-hft-l2.yml"
+  workflow_dispatch:
+  schedule:
+    - cron: "23 * * * *"
+permissions:
+  contents: write
+concurrency:
+  group: btc-hft-l2-history
+  cancel-in-progress: false
+jobs:
+  historical-depth:
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install free Parquet decoding dependency
+        run: pip install --disable-pip-version-check pyarrow
+      - name: Verify sample parsing and quality tests
+        run: |
+          python -m py_compile btc-liquidity/hft_history.py
+          python -m unittest discover -s btc-liquidity/tests -p test_hft_history.py -v
+      - name: Build and safely commit dated historical BTC L2 liquidity
+        env:
+          HFT_MAX_FILES: "70"
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git reset --hard origin/main
+            python -u btc-liquidity/hft_history.py
+            git add btc-liquidity/data/hft_latest.json btc-liquidity/data/hft_history.json
+            if git diff --cached --quiet; then exit 0; fi
+            git commit -m "data: verified historical BTC spot/perpetual L2 depth"
+            if git push origin HEAD:main; then exit 0; fi
+            echo "Concurrent update; restart from canonical historical state"
+            sleep 3
+          done
+          exit 1
