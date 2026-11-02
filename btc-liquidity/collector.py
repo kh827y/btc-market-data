@@ -22,10 +22,10 @@ VENUES = {
     "binance_spot": ("spot", "BTCUSDT", "https://data-api.binance.vision/api/v3/depth?symbol=BTCUSDT&limit=5000"),
     "coinbase_spot": ("spot", "BTCUSD", "https://api.exchange.coinbase.com/products/BTC-USD/book?level=2"),
     "bybit_spot": ("spot", "BTCUSDT", "https://api.bybit.com/v5/market/orderbook?category=spot&symbol=BTCUSDT&limit=1000"),
-    "okx_spot": ("spot", "BTCUSDT", "https://www.okx.com/api/v5/market/books?instId=BTC-USDT&sz=400"),
+    "okx_spot": ("spot", "BTCUSDT", "https://www.okx.com/api/v5/market/books-full?instId=BTC-USDT&sz=5000"),
     "binance_usdm_perp": ("perpetual", "BTCUSDT", "https://fapi.binance.com/fapi/v1/depth?symbol=BTCUSDT&limit=1000"),
     "bybit_usdt_perp": ("perpetual", "BTCUSDT", "https://api.bybit.com/v5/market/orderbook?category=linear&symbol=BTCUSDT&limit=1000"),
-    "okx_usdt_perp": ("perpetual", "BTCUSDT", "https://www.okx.com/api/v5/market/books?instId=BTC-USDT-SWAP&sz=400"),
+    "okx_usdt_perp": ("perpetual", "BTCUSDT", "https://www.okx.com/api/v5/market/books-full?instId=BTC-USDT-SWAP&sz=5000"),
     # Distinct real exchanges, NOT substitutes presented as Bybit/Binance.
     "bitget_spot": ("spot", "BTCUSDT", "https://api.bitget.com/api/v3/market/orderbook?category=SPOT&symbol=BTCUSDT&limit=1000"),
     "bitget_usdt_perp": ("perpetual", "BTCUSDT", "https://api.bitget.com/api/v3/market/orderbook?category=USDT-FUTURES&symbol=BTCUSDT&limit=1000"),
@@ -183,6 +183,25 @@ def collect_live(now, errors):
                 # venue/instrument. No proxies or different exchanges.
                 from official_ws import read_official_book
                 raw=read_official_book(name)
+            elif name in ("okx_spot", "okx_usdt_perp"):
+                # New official FREE full book: 5000 native levels/side, same
+                # instrument and organic liquidity as 400-depth books.
+                # Validate data before selecting; 400 REST is a safe fallback.
+                try:
+                    candidate = fetch(url)
+                    cb, ca, ct = normalize_book(name, candidate)
+                    if ct is None or abs(dt.datetime.now(UTC).timestamp()*1000-ct)>120_000:
+                        raise ValueError("stale OKX books-full source timestamp")
+                    summarize_orderbook(cb, ca)
+                    if len(cb) < 400 or len(ca) < 400:
+                        raise ValueError("OKX books-full returned truncated sides")
+                    raw = candidate
+                except Exception as deep_exc:
+                    errors.append("okx_full_5000_unavailable "+name+"; fallback 400: "+str(deep_exc)[:120])
+                    fallback=url.replace("/books-full?", "/books?").replace("&sz=5000", "&sz=400")
+                    raw=fetch(fallback)
+                    raw["_source_url"]="https://www.okx.com/api/v5/market/books"
+                    raw["_transport"]="okx_official_rest_400_fallback"
             else:
                 raw=fetch(url)
             bids, asks, source_ms = normalize_book(name, raw)
@@ -208,6 +227,11 @@ def collect_live(now, errors):
                 record["quantity_conversion"] = ("Gate contracts times quanto_multiplier into BTC"
                                                 if name == "gate_usdt_perp" else
                                                 "OKX contracts times ctVal times ctMult into BTC")
+            if name in ("okx_spot", "okx_usdt_perp"):
+                record["native_depth_levels_requested"] = (
+                    400 if raw.get("_transport") == "okx_official_rest_400_fallback" else 5000
+                )
+                record["book_composition"] = "organic_no_rpi"
             if name == "gate_usdt_perp":
                 record["exchange_update_id"] = raw["id"]
                 record["native_depth_levels_requested"] = (
