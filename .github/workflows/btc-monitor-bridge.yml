@@ -1,0 +1,44 @@
+name: BTC risk monitor validated source bridge
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "btc-monitor/build_feed.py"
+      - "btc-monitor/tests/test_bridge.py"
+      - ".github/workflows/btc-monitor-bridge.yml"
+  schedule:
+    - cron: "30 * * * *"
+permissions:
+  contents: write
+concurrency:
+  group: btc-monitor-bridge
+  cancel-in-progress: false
+jobs:
+  validate-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify data quality and stale/missing indicator unit tests
+        run: |
+          python -m py_compile btc-monitor/build_feed.py
+          python -m unittest discover -s btc-monitor/tests -p test_bridge.py -v
+      - name: Publish validated source bridge
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in 1 2 3 4; do
+            git fetch origin main
+            git reset --hard origin/main
+            python -u btc-monitor/build_feed.py
+            git add btc-monitor/data/latest.json
+            if git diff --cached --quiet; then exit 0; fi
+            git commit -m "data: BTC risk monitor source freshness and metric snapshot"
+            if git push origin HEAD:main; then exit 0; fi
+            echo "Competing collector push; retry from latest source data"
+            sleep 3
+          done
+          exit 1
