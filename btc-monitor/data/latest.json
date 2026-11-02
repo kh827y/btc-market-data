@@ -1,9 +1,8 @@
 {
-  "as_of_utc": "2026-11-02T10:06:06.354322+00:00",
+  "as_of_utc": "2026-11-02T10:06:47.910688+00:00",
   "audit": {
     "WARNING": "Bridge generation success DOES NOT imply source freshness or all-market coverage",
     "coverage_gaps": [
-      "macro_etf:unavailable_or_stale",
       "spot_cvd:24h_five_venue_incomplete",
       "spot_cvd:168h_five_venue_incomplete",
       "spot_cvd:720h_five_venue_incomplete",
@@ -13,11 +12,11 @@
     "family_readiness": {
       "current_orderbook": false,
       "holder_behavior": true,
-      "macro_exact_ice_dxy": false,
-      "macro_fed_rates": false,
-      "macro_liquidity": false,
-      "macro_treasury_yields": false,
-      "macro_usd_broad_not_dxy": false,
+      "macro_exact_ice_dxy": true,
+      "macro_fed_rates": true,
+      "macro_liquidity": true,
+      "macro_treasury_yields": true,
+      "macro_usd_broad_not_dxy": true,
       "onchain_independent_cost_basis": true,
       "options": false,
       "orderbook": true,
@@ -31,22 +30,21 @@
       "spot_cvd_24h_fixed_five_ex_coinbase": true,
       "spot_cvd_720h_fixed_five_ex_coinbase": true,
       "spot_execution": true,
-      "us_spot_btc_etf_flows": false
+      "us_spot_btc_etf_flows": true
     },
-    "fresh": 5,
+    "fresh": 6,
     "issues": [
-      "macro_etf:invalid_schema:compact_macro_etf() missing 1 required positional argument: 'now'",
       "derivatives:stale",
       "options:stale",
       "live_depth:stale"
     ],
-    "sources_parsed": 8,
+    "sources_parsed": 9,
     "sources_total": 9
   },
   "feed_contract": "Source-level UTC quality bridge; not a standalone reversal signal",
   "feeds": {
     "bybit_depth": {
-      "age_h": 0.19,
+      "age_h": 0.2,
       "family": "orderbook",
       "generated_at": "2026-11-02T09:54:48.158381+00:00",
       "max_age_h": 36.0,
@@ -58,7 +56,7 @@
       "status": "fresh"
     },
     "derivatives": {
-      "age_h": 3.85,
+      "age_h": 3.87,
       "family": "positioning",
       "generated_at": "2026-11-02T06:14:51.807126+00:00",
       "max_age_h": 3.0,
@@ -70,7 +68,7 @@
       "status": "stale"
     },
     "hft_depth": {
-      "age_h": 0.39,
+      "age_h": 0.4,
       "family": "orderbook",
       "generated_at": "2026-11-02T09:42:35.944461+00:00",
       "max_age_h": 36.0,
@@ -82,11 +80,11 @@
       "status": "fresh"
     },
     "live_depth": {
-      "age_h": 3.28,
+      "age_h": 3.29,
       "family": "orderbook",
       "generated_at": "2026-11-02T06:49:08.159108+00:00",
       "max_age_h": 2.5,
-      "measurement_age_h": 3.28,
+      "measurement_age_h": 3.29,
       "measurement_at": "2026-11-02T06:49:08.159108+00:00",
       "source": "https://github.com/kh827y/btc-market-data/blob/main/btc-liquidity/data/latest.json",
       "source_errors": 3,
@@ -94,7 +92,7 @@
       "status": "stale"
     },
     "macro_etf": {
-      "age_h": 0.0,
+      "age_h": 0.01,
       "family": "macro_liquidity",
       "generated_at": "2026-11-02T10:06:02.780453+00:00",
       "max_age_h": 2.5,
@@ -103,10 +101,10 @@
       "source": "https://github.com/kh827y/btc-market-data/blob/main/btc-macro/data/latest.json",
       "source_errors": 0,
       "source_status": "ok",
-      "status": "invalid_schema"
+      "status": "fresh"
     },
     "onchain": {
-      "age_h": 4.31,
+      "age_h": 4.32,
       "family": "holder_behavior",
       "generated_at": "2026-11-02T05:47:35.197827+00:00",
       "max_age_h": 36.0,
@@ -118,7 +116,7 @@
       "status": "fresh"
     },
     "options": {
-      "age_h": 3.62,
+      "age_h": 3.63,
       "family": "options",
       "generated_at": "2026-11-02T06:29:11.135978+00:00",
       "max_age_h": 3.0,
@@ -130,11 +128,11 @@
       "status": "stale"
     },
     "price_technical": {
-      "age_h": 0.15,
+      "age_h": 0.16,
       "family": "price_trend",
       "generated_at": "2026-11-02T09:57:00.090126+00:00",
       "max_age_h": 2.5,
-      "measurement_age_h": 34.1,
+      "measurement_age_h": 34.11,
       "measurement_at": "2026-11-01T00:00:00+00:00",
       "source": "https://github.com/kh827y/btc-market-data/blob/main/btc-price/data/latest.json",
       "source_errors": 0,
@@ -142,11 +140,11 @@
       "status": "fresh"
     },
     "spot_cvd": {
-      "age_h": 0.1,
+      "age_h": 0.11,
       "family": "spot_execution",
       "generated_at": "2026-11-02T09:59:57.452092+00:00",
       "max_age_h": 2.5,
-      "measurement_age_h": 3.1,
+      "measurement_age_h": 3.11,
       "measurement_at": "2026-11-02T07:00:00+00:00",
       "source": "https://github.com/kh827y/btc-market-data/blob/main/btc-spot-cvd/data/latest.json",
       "source_errors": 0,
@@ -1212,6 +1210,130 @@
           "symbol": "BTCUSDT"
         }
       }
+    },
+    "macro_etf": {
+      "caveats": [
+        "Observed Fed target is not probability of next FOMC move",
+        "FRED trade-weighted broad USD is NOT ICE 6-currency DXY",
+        "ETF flows settle after US market close and may be revised",
+        "Rising Treasury yields, DXY and risk assets are not mechanically causal"
+      ],
+      "dxy_exact": {
+        "date": "2026-11-02",
+        "exact_ice_index": true,
+        "not_finalized_eod": true,
+        "observation_kind": "unfinished_current_session",
+        "source": "Yahoo Finance, DX-Y.NYB (ICE US Dollar Index indicative public bars)",
+        "status": "usable",
+        "value": 101.585
+      },
+      "fred": {
+        "fed_balance_sheet_millions": {
+          "date": "2026-10-28",
+          "lag_days": 5,
+          "series_id": "WALCL",
+          "source_url": "https://fred.stlouisfed.org/series/WALCL",
+          "status": "usable",
+          "unit": "USD millions",
+          "value": 6745635.0
+        },
+        "fed_funds_effective_pct": {
+          "date": "2026-10-29",
+          "lag_days": 4,
+          "series_id": "DFF",
+          "source_url": "https://fred.stlouisfed.org/series/DFF",
+          "status": "usable",
+          "unit": "annual interest percentage points",
+          "value": 3.88
+        },
+        "fed_target_lower_pct": {
+          "date": "2026-11-01",
+          "lag_days": 1,
+          "series_id": "DFEDTARL",
+          "source_url": "https://fred.stlouisfed.org/series/DFEDTARL",
+          "status": "usable",
+          "unit": "annual interest percentage points",
+          "value": 3.75
+        },
+        "fed_target_upper_pct": {
+          "date": "2026-11-01",
+          "lag_days": 1,
+          "series_id": "DFEDTARU",
+          "source_url": "https://fred.stlouisfed.org/series/DFEDTARU",
+          "status": "usable",
+          "unit": "annual interest percentage points",
+          "value": 4.0
+        },
+        "treasury_10y_pct": {
+          "date": "2026-10-29",
+          "lag_days": 4,
+          "series_id": "DGS10",
+          "source_url": "https://fred.stlouisfed.org/series/DGS10",
+          "status": "usable",
+          "unit": "annual interest percentage points",
+          "value": 4.98
+        },
+        "treasury_2y_pct": {
+          "date": "2026-10-29",
+          "lag_days": 4,
+          "series_id": "DGS2",
+          "source_url": "https://fred.stlouisfed.org/series/DGS2",
+          "status": "usable",
+          "unit": "annual interest percentage points",
+          "value": 4.61
+        },
+        "usd_broad_trade_weighted": {
+          "date": "2026-10-23",
+          "lag_days": 10,
+          "series_id": "DTWEXBGS",
+          "source_url": "https://fred.stlouisfed.org/series/DTWEXBGS",
+          "status": "usable",
+          "unit": "index Jan 2006=100",
+          "value": 121.3202
+        }
+      },
+      "quality": {
+        "fed_rates": true,
+        "ice_dxy_exact": true,
+        "spot_etf_flow": true,
+        "treasury_yields": true,
+        "usd_broad_index": true
+      },
+      "treasury_curve": {
+        "date": "2026-10-29",
+        "spread_pct_points": 0.37,
+        "status": "usable"
+      },
+      "us_spot_bitcoin_etf": {
+        "US_spot_only": true,
+        "attribution": "TFTC (tftc.io/bitcoin-etf-flows), CC BY 4.0",
+        "five_sessions_negative": 1,
+        "five_sessions_net_flow_usd": -202590627.48,
+        "five_sessions_positive": 4,
+        "last_21_reported_sessions_net_flow_usd": null,
+        "latest_session_date": "2026-10-30",
+        "net_flow_usd": -643330345.88,
+        "not_intraday": true,
+        "per_fund_flow_usd": {
+          "ARKB": -129546134.33999999,
+          "BITB": -25718285.72,
+          "BRRR": 0,
+          "BTC": 0,
+          "BTCO": 0,
+          "BTCW": 0,
+          "EZBC": 0,
+          "FBTC": -201039905.82500002,
+          "GBTC": -53324820,
+          "HODL": 0,
+          "IBIT": -233701200,
+          "MSBT": 0
+        },
+        "per_fund_verified": true,
+        "source": "The Commoner Bitcoin ETF Tracker by TFTC (SoSoValue aggregate; Farside issuer history)",
+        "status": "usable",
+        "url": "https://www.tftc.io/bitcoin-etf-flows"
+      },
+      "usd_broad_index_is_NOT_dxy": true
     },
     "onchain": {
       "cost_basis_all_three_usable": true,
