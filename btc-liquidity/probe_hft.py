@@ -8,7 +8,7 @@ import urllib.request
 import time
 
 BASE="https://api.cryptohftdata.com/v1"
-VENUES=["binance_spot","okx_spot","bybit_spot","binance_futures","okx_futures","kraken_spot"]
+VENUES=["binance_spot","okx_spot","bybit_spot","binance_futures","okx_futures","kraken_spot","bitget_spot","bybit"]
 for venue in VENUES:
     try:
         query=urllib.parse.urlencode({"exchange":venue,"data_type":"orderbook"})
@@ -29,7 +29,7 @@ for venue in VENUES:
         print("ERROR",venue,type(e).__name__,str(e)[:230],flush=True)
 
 import pyarrow.parquet as pq
-for venue,symbol in (("binance_spot","BTCUSDT"),("bybit_spot","BTCUSDT"),("okx_spot","BTC-USDT"),("binance_futures","BTCUSDT"),("okx_futures","BTC-USDT-SWAP")):
+for venue,symbol in (("binance_spot","BTCUSDT"),("bybit_spot","BTCUSDT"),("okx_spot","BTC-USDT"),("binance_futures","BTCUSDT"),("okx_futures","BTC-USDT-SWAP"),("bitget_spot","BTCUSDT"),("bybit","BTCUSDT")):
     try:
         path=f"{venue}/2026-10-31/12/{symbol}_orderbook.parquet"
         url=BASE+"/download?"+urllib.parse.urlencode({"file":path})
