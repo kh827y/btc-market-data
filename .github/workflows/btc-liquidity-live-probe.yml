@@ -27,7 +27,7 @@ jobs:
         run: |
           python -m py_compile btc-liquidity/collector.py btc-liquidity/probe_live.py btc-liquidity/official_ws.py
           cd btc-liquidity
-          python -m unittest discover -s tests -p test_collector.py -v
+          python -m unittest discover -s tests -p 'test_*.py' -v
       - name: Fetch REAL public API orderbooks and persist proof
         run: |
           python -u btc-liquidity/probe_live.py
