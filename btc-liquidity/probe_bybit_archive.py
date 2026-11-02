@@ -76,3 +76,25 @@ for market,date,depth,cap in (("spot","2026-10-31",200,70_000_000),("linear","20
                         "elapsed_s",round(time.monotonic()-start,2),flush=True)
     except Exception as exc:
         print("FULL_ERROR",market,type(exc).__name__,str(exc)[:240],flush=True)
+
+# Investigate whether a *range read* plus ZIP local-header streaming can
+# recover the first genuine snapshot WITHOUT downloading 33-115 MB/day.
+import struct,zlib
+for market in ("spot","linear"):
+    url=f"https://quote-saver.bycsi.com/orderbook/{market}/BTCUSDT/2026-10-31_BTCUSDT_ob200.data.zip"
+    try:
+        request=urllib.request.Request(url,headers={"User-Agent":"BTC-market-data-quality-probe/1.0","Range":"bytes=0-2097151"})
+        with urllib.request.urlopen(request,timeout=40) as response:
+            raw=response.read(2097152)
+            status=response.status
+        if raw[:4]!=b"PK\x03\x04":raise ValueError("not ZIP local header")
+        flags,method,name_len,extra_len=struct.unpack_from("<HHxx4xHH",raw,6) if False else (None,None,None,None)
+        (sig,version,flags,method,modtime,moddate,crc,compressed,uncompressed,name_len,extra_len)=struct.unpack_from("<IHHHHHIIIHH",raw)
+        start=30+name_len+extra_len
+        if method!=8:raise ValueError("expected deflate ZIP member")
+        data=zlib.decompressobj(-15).decompress(raw[start:],2_000_000)
+        lines=data.splitlines()
+        parsed=[json.loads(line) for line in lines[:4] if line]
+        print("PARTIAL",market,"status",status,"range_bytes",len(raw),"header",{"flags":flags,"compressed":compressed,"name":raw[30:30+name_len].decode("utf8","replace")},
+              "decompressed",len(data),"first_rows",parsed,"first_full_lines",len(lines)-1,flush=True)
+    except Exception as e:print("PARTIAL_ERROR",market,str(e)[:200],flush=True)
