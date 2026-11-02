@@ -1,0 +1,212 @@
+{
+  "schema": 1,
+  "checked_utc": "2026-11-02T19:56:59.253912+00:00",
+  "dry_run": false,
+  "status": "healthy",
+  "sources_checked": 10,
+  "workflow_api_checked": true,
+  "unavailable_or_stale": [],
+  "separate_l2_backfill_managed": [
+    "hft_depth",
+    "bybit_depth"
+  ],
+  "auto_recovery": {
+    "dispatched": [],
+    "pending_or_blocked": [],
+    "max_dispatch_per_check": 2,
+    "max_dispatch_per_source_24h": 3
+  },
+  "sources": {
+    "price_technical": {
+      "status": "healthy",
+      "reason": null,
+      "needs_recovery": false,
+      "workflow": "btc-price-technicals.yml",
+      "source_path": "btc-price/data/latest.json",
+      "repair_enabled": true,
+      "coverage_gaps": [],
+      "generated_utc": "2026-11-02T19:34:04.112584+00:00",
+      "file_age_h": 0.382,
+      "closed_day_utc": "2026-11-01",
+      "closed_week_utc": "2026-10-26",
+      "live_quote_age_h": 0.382,
+      "closed_candles_valid": true,
+      "workflow_api_error": "GitHub_HTTP_401: {\r\n  \"message\": \"Bad credentials\",\r\n  \"documentation_url\": \"https://docs.github.com/rest\",\r\n  \"status\": \"401\"\r\n}",
+      "recovery": {
+        "action": "none",
+        "reason": "verified_current_observation"
+      }
+    },
+    "spot_cvd": {
+      "status": "healthy",
+      "reason": null,
+      "needs_recovery": false,
+      "workflow": "btc-spot-cvd.yml",
+      "source_path": "btc-spot-cvd/data/latest.json",
+      "repair_enabled": true,
+      "coverage_gaps": [
+        "five_venue_cvd_24h_incomplete",
+        "five_venue_cvd_168h_incomplete",
+        "five_venue_cvd_720h_incomplete"
+      ],
+      "generated_utc": "2026-11-02T19:44:29.566469+00:00",
+      "file_age_h": 0.208,
+      "last_complete_hour": "2026-11-02T17:00:00Z",
+      "observation_age_h": 1.95,
+      "workflow_api_error": "GitHub_HTTP_401: {\r\n  \"message\": \"Bad credentials\",\r\n  \"documentation_url\": \"https://docs.github.com/rest\",\r\n  \"status\": \"401\"\r\n}",
+      "recovery": {
+        "action": "none",
+        "reason": "verified_current_observation"
+      }
+    },
+    "derivatives": {
+      "status": "healthy",
+      "reason": null,
+      "needs_recovery": false,
+      "workflow": "btc-derivatives-history.yml",
+      "source_path": "btc-derivatives/data/latest.json",
+      "repair_enabled": true,
+      "coverage_gaps": [],
+      "generated_utc": "2026-11-02T17:00:08.003517+00:00",
+      "file_age_h": 2.948,
+      "oi_observation_age_h": 3.95,
+      "workflow_api_error": "GitHub_HTTP_401: {\r\n  \"message\": \"Bad credentials\",\r\n  \"documentation_url\": \"https://docs.github.com/rest\",\r\n  \"status\": \"401\"\r\n}",
+      "recovery": {
+        "action": "none",
+        "reason": "verified_current_observation"
+      }
+    },
+    "options": {
+      "status": "healthy",
+      "reason": null,
+      "needs_recovery": false,
+      "workflow": "btc-options-history.yml",
+      "source_path": "btc-options/data/latest.json",
+      "repair_enabled": true,
+      "coverage_gaps": [],
+      "generated_utc": "2026-11-02T17:02:36.428987+00:00",
+      "file_age_h": 2.906,
+      "deribit_surface_age_h": 2.906,
+      "workflow_api_error": "GitHub_HTTP_401: {\r\n  \"message\": \"Bad credentials\",\r\n  \"documentation_url\": \"https://docs.github.com/rest\",\r\n  \"status\": \"401\"\r\n}",
+      "recovery": {
+        "action": "none",
+        "reason": "verified_current_observation"
+      }
+    },
+    "macro_etf": {
+      "status": "healthy",
+      "reason": null,
+      "needs_recovery": false,
+      "workflow": "btc-macro-etf.yml",
+      "source_path": "btc-macro/data/latest.json",
+      "repair_enabled": true,
+      "coverage_gaps": [],
+      "generated_utc": "2026-11-02T19:36:41.588443+00:00",
+      "file_age_h": 0.338,
+      "workflow_api_error": "GitHub_HTTP_401: {\r\n  \"message\": \"Bad credentials\",\r\n  \"documentation_url\": \"https://docs.github.com/rest\",\r\n  \"status\": \"401\"\r\n}",
+      "recovery": {
+        "action": "none",
+        "reason": "verified_current_observation"
+      }
+    },
+    "live_depth": {
+      "status": "healthy",
+      "reason": null,
+      "needs_recovery": false,
+      "workflow": "btc-liquidity.yml",
+      "source_path": "btc-liquidity/data/latest.json",
+      "repair_enabled": true,
+      "coverage_gaps": [
+        "3_failed_live_book_venues"
+      ],
+      "generated_utc": "2026-11-02T19:43:53.798166+00:00",
+      "file_age_h": 0.218,
+      "workflow_api_error": "GitHub_HTTP_401: {\r\n  \"message\": \"Bad credentials\",\r\n  \"documentation_url\": \"https://docs.github.com/rest\",\r\n  \"status\": \"401\"\r\n}",
+      "recovery": {
+        "action": "none",
+        "reason": "verified_current_observation"
+      }
+    },
+    "onchain": {
+      "status": "healthy",
+      "reason": null,
+      "needs_recovery": false,
+      "workflow": "btc-onchain-consolidate.yml",
+      "source_path": "btc-onchain/data/monitor_latest.json",
+      "repair_enabled": true,
+      "coverage_gaps": [
+        "market_onchain:lth_realized_price: 7 days",
+        "market_onchain:realized_price: 7 days",
+        "market_onchain:sth_realized_price: 7 days"
+      ],
+      "generated_utc": "2026-11-02T16:37:22.256713+00:00",
+      "file_age_h": 3.327,
+      "workflow_api_error": "GitHub_HTTP_401: {\r\n  \"message\": \"Bad credentials\",\r\n  \"documentation_url\": \"https://docs.github.com/rest\",\r\n  \"status\": \"401\"\r\n}",
+      "recovery": {
+        "action": "none",
+        "reason": "verified_current_observation"
+      }
+    },
+    "hft_depth": {
+      "status": "healthy",
+      "reason": null,
+      "needs_recovery": false,
+      "workflow": "btc-hft-l2.yml",
+      "source_path": "btc-liquidity/data/hft_latest.json",
+      "repair_enabled": false,
+      "coverage_gaps": [
+        "20_historical_source_errors"
+      ],
+      "generated_utc": "2026-11-02T19:45:15.246619+00:00",
+      "file_age_h": 0.196,
+      "snapshot_date": "2026-11-01",
+      "snapshot_age_h": 43.95,
+      "workflow_api_error": "GitHub_HTTP_401: {\r\n  \"message\": \"Bad credentials\",\r\n  \"documentation_url\": \"https://docs.github.com/rest\",\r\n  \"status\": \"401\"\r\n}",
+      "recovery": {
+        "action": "none",
+        "reason": "verified_current_observation"
+      }
+    },
+    "bybit_depth": {
+      "status": "healthy",
+      "reason": null,
+      "needs_recovery": false,
+      "workflow": "btc-bybit-independent.yml",
+      "source_path": "btc-liquidity/data/bybit_independent_latest.json",
+      "repair_enabled": false,
+      "coverage_gaps": [],
+      "generated_utc": "2026-11-02T18:38:07.582668+00:00",
+      "file_age_h": 1.314,
+      "snapshot_date": "2026-11-01",
+      "snapshot_age_h": 43.95,
+      "workflow_api_error": "GitHub_HTTP_401: {\r\n  \"message\": \"Bad credentials\",\r\n  \"documentation_url\": \"https://docs.github.com/rest\",\r\n  \"status\": \"401\"\r\n}",
+      "recovery": {
+        "action": "none",
+        "reason": "verified_current_observation"
+      }
+    },
+    "monitor_bridge": {
+      "status": "healthy",
+      "reason": null,
+      "needs_recovery": false,
+      "workflow": "btc-monitor-bridge.yml",
+      "source_path": "btc-monitor/data/brief.json",
+      "repair_enabled": true,
+      "coverage_gaps": [
+        "spot_cvd:24h_five_venue_incomplete",
+        "spot_cvd:168h_five_venue_incomplete",
+        "spot_cvd:720h_five_venue_incomplete",
+        "live_depth:failed_venues=3",
+        "onchain:missing_or_delayed_metrics=3"
+      ],
+      "generated_utc": "2026-11-02T19:56:23.000725+00:00",
+      "file_age_h": 0.01,
+      "workflow_api_error": "GitHub_HTTP_401: {\r\n  \"message\": \"Bad credentials\",\r\n  \"documentation_url\": \"https://docs.github.com/rest\",\r\n  \"status\": \"401\"\r\n}",
+      "recovery": {
+        "action": "none",
+        "reason": "verified_current_observation"
+      }
+    }
+  },
+  "note": "Fresh JSON != fresh observation. Unavailable/null != zero. Coinbase CVD 24h coverage gaps do not trigger endless collector retries. An externally disabled GitHub Actions service needs a truly independent watcher."
+}
