@@ -130,4 +130,21 @@ class CoverageLedgerTests(unittest.TestCase):
         result=m.build(*data)["live_orderbook"]["official_deeper_snapshot_probe"]
         self.assertFalse(result["okx_perpetual_5000_actual_live"])
 
+
+    def test_gate_spot_5000_receipt_rejects_missing_id_or_undersized_book(self):
+        data=list(fixture())
+        spot=data[1]["current"]["venues"]["gate_spot"]
+        spot.update({"native_depth_levels_requested":5000,
+                     "exchange_update_id":40819228080,
+                     "source_timestamp":"2026-11-02T21:42:00.095Z",
+                     "levels":{"bid":5000,"ask":5000}})
+        x=m.build(*data)["live_orderbook"]
+        self.assertTrue(x["official_deeper_snapshot_probe"]["gate_spot_5000_actual_live"])
+        self.assertEqual(x["market_details"]["gate_spot"]["source_id"],40819228080)
+        spot["levels"]["bid"]=1000
+        self.assertFalse(m.build(*data)["live_orderbook"]["official_deeper_snapshot_probe"]["gate_spot_5000_actual_live"])
+        spot["levels"]["bid"]=5000
+        spot.pop("exchange_update_id")
+        self.assertFalse(m.build(*data)["live_orderbook"]["official_deeper_snapshot_probe"]["gate_spot_5000_actual_live"])
+
 if __name__=="__main__":unittest.main()
