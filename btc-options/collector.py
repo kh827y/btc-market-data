@@ -240,3 +240,62 @@ def fetch_research(now):
         "sign_convention":"RR25 25Δ call minus 25Δ put; negative=put wing richer",
         "standard_tenors":summary,
         "raw_daily_republication":False}
+
+def main():
+    now=dt.datetime.now(UTC)
+    ROOT.mkdir(parents=True,exist_ok=True)
+    results={}
+    errors=[]
+    for key,fn in (("deribit_live_surface",fetch_chain),
+                   ("deribit_dvol_history",fetch_dvol),
+                   ("derivasys_daily_research",fetch_research)):
+        try:
+            results[key]=fn(now)
+            print("OBTAINED",key)
+        except Exception as exc:
+            errors.append({"dataset":key,"error":str(exc)[:220]})
+            print("ERROR",key,str(exc)[:220])
+    path=ROOT/"derived_history.json"
+    history=json.loads(path.read_text()) if path.exists() else {}
+    live=results.get("deribit_live_surface")
+    if live:
+        timestamp=now.replace(minute=0,second=0,microsecond=0).isoformat()
+        entry={}
+        for name,v in live["term_structure"].items():
+            if v.get("status")=="available":
+                entry[name]={"atm_iv_pct":v["atm_iv_pct"],
+                             "rr25_volpts":v["rr25_call_minus_put_volpts"],
+                             "bf25_volpts":v["bf25_volpts"]}
+        if entry:history[timestamp]=entry
+    threshold=now-dt.timedelta(days=90)
+    for key in list(history):
+        try:
+            if dt.datetime.fromisoformat(key)<threshold:del history[key]
+        except ValueError:del history[key]
+    path.write_text(json.dumps(history,separators=(",",":"))+"\n")
+    research=results.get("derivasys_daily_research",{})
+    latest_report=research.get("report_date")
+    latest_age=(now.date()-dt.date.fromisoformat(latest_report)).days if latest_report else None
+    report={"generated_utc":now.isoformat(),
+            "sources":{
+               "Deribit":"public BTC option chain, independent 25-delta approximate forwards and DVOL history",
+               "Derivasys":"direct public daily ATM IV/RR25/BF25 2026-04-22+ research; no complete raw republication"},
+            "results":results,"errors":errors,
+            "coverage":{"collected":len(results),"expected":3,
+                        "current_1m_deribit":bool(live and live["term_structure"].get("1M",{}).get("status")=="available"),
+                        "derivasys_published_days":research.get("published_days",0),
+                        "derivasys_report_lag_days":latest_age,
+                        "dvol_closed_days":results.get("deribit_dvol_history",{}).get("history_closed_days",0),
+                        "all_sources_retrieved":len(results)==3},
+            "limitations":[
+              "DVOL is a forward volatility index, not exactly ATM IV.",
+              "Deribit surface mark-IV interpolation with forward proxy; do not treat as a broker executable 25-delta quote or Derivasys fitted SVI.",
+              "Derivasys research measured daily near 17:31 UTC; same-day intraday option movement is NOT captured in their daily archive.",
+              "RR25 convention call minus put; negative implies put IV greater than call IV; fixed tenor must bracket two expiries.",
+              "Historical vendor full raw feed deliberately not redistributed due to research artifact license.",
+              "Source observations, timestamps and missing tenors are not zero.",
+            ]}
+    (ROOT/"latest.json").write_text(json.dumps(report,ensure_ascii=False,separators=(",",":"))+"\n")
+    print("QUALITY",json.dumps(report["coverage"]), "errors",len(errors))
+if __name__=="__main__":
+    main()
