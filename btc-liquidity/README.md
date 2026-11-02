@@ -80,3 +80,24 @@ Two different, non-interchangeable historical observations remain available free
 4. The ChatGPT risk-monitor bridge exposes historical `coverage_30d` separately, without confusing the % of the total archive with the % of the last month. Do not combine midnight Bybit records with 12:00 CryptoHFTData records or spot/perpetual.
 
 **As of the initial Nov 2 review** the 7-market CryptoHFTData global archive covers 25–26 verified dates per market out of 492, but the most recent 30 days already contain roughly 24–25 valid checkpoints per venue; remaining month-end dates were still being backfilled. The Bybit native archive contains 120 verified dates *per market*, with full daily backfill pending. These numbers must be checked against the latest published output before claiming completion. Some vendor-documented historical gaps cannot be recovered by simply retrying an API; mark them as unverified and use an independent vendor when possible.
+
+## All 11 selected LIVE BTC markets restored — November 2, 2026
+
+The previous GitHub-runner Bybit HTTP 403 / Binance USD-M HTTP 451 failures were resolved using each exchange's **own official public mainnet WebSocket market data**, without proxies, jurisdiction-switching, testnet, or substituting a different exchange/instrument:
+
+- **Bybit Spot BTCUSDT**: `wss://stream.bybit.com/v5/public/spot`, topic `orderbook.1000.BTCUSDT`, native **snapshot** only (not delta). Verify `s=BTCUSDT`, `u`, `seq`, exchange `ts` freshness and both sides.
+- **Bybit USDT Perpetual BTCUSDT**: `wss://stream.bybit.com/v5/public/linear`, same 1000-level topic; spot and perp remain separate markets.
+- **Binance USD-M Perpetual BTCUSDT**: `wss://ws-fapi.binance.com/ws-fapi/v1`, official WS API `depth` method, `symbol=BTCUSDT, limit=1000`; verify matching request id, success status, native `lastUpdateId`, `E` timestamp, bid/ask levels. A separate partial 20-level stream was tested but **not** used because it lacks reliable 0.05%/0.2% depth.
+
+Source docs:
+- https://bybit-exchange.github.io/docs/v5/ws/connect
+- https://bybit-exchange.github.io/docs/v5/websocket/public/orderbook
+- https://developers.binance.com/en/docs/products/derivatives-trading-usds-futures/websocket-api/market-data-requests
+
+Implementation `btc-liquidity/official_ws.py` is used by BOTH `collector.py` and `probe_live.py` for these exact three markets. Other eight existing public REST books remain unchanged. WebSocket dependencies are installed only in the LIVE workflows, never in the separate historical L2 automation. `test_official_ws.py` tests wrong-market, wrong-symbol, delayed timestamp, partial-delta, insufficient sides, request ID and sequence verification.
+
+**Real production evidence:** First successful live production collector reported **11/11 selected exchanges/instruments, zero source errors**, with **6/6 spot + 5/5 perpetual**. All three recovered exchanges returned genuine 1,000-by-1,000 bid/ask order-book snapshots and complete 0.01% plus some wider bands; see `btc-liquidity/data/latest.json` and `btc-liquidity/data/live_probe.json`. Independent `btc-monitor/data/health_latest.json` now validates all 11 named markets and specifically checks native Bybit/Binance WebSocket provenance and source time; missing just one real market is a recovery-worthy outage. Main `btc-monitor/data/brief.json` publishes `family_readiness.current_all_11_selected_orderbooks`, along with source timestamps, transport and individually complete bands.
+
+**Do not overstate completeness:** Individual public API books can be limited to 100/400/1000/5000 levels; a missing 1% (or even 0.2%) band means **no full depth beyond returned levels**, not zero liquidity. Coinbase is BTCUSD; others BTCUSDT (USDT only approximately USD). WebSocket snapshots remain periodic point-in-time observations, **not** continuous multi-year Level 2 history and not guaranteed realizable orders. Any future 403, 451, stale exchange timestamp or incomplete band is disclosed, not silently replaced.
+
+The existing separate active task **«Дозагрузка истории BTC L2»** remains responsible only for historical snapshots/backfill; these LIVE changes neither stop it nor duplicate its work.
