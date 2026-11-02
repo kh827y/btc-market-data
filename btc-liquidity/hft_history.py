@@ -113,13 +113,13 @@ def parse_checkpoint(blob,venue,symbol,kind,multiplier,quote,day,hour=12):
                     received_id=data["final_update_id"][i]
                     source_event=data["event_time"][i] if "event_time" in extras else None
                     native_last=data["last_update_id"][i] if "last_update_id" in extras else None
-                    checkpoint=(source_event,native_last,received_id) if source_event is not None and native_last is not None else (received_id,)
+                    checkpoint=(source_event,native_last) if source_event is not None and native_last is not None else (received_id,)
                     checkpoint_received=timestamp
                     bids={};asks={};rows=0
                 source_event=data["event_time"][i] if "event_time" in extras else None
                 native_last=data["last_update_id"][i] if "last_update_id" in extras else None
                 received_id=data["final_update_id"][i]
-                key=(source_event,native_last,received_id) if source_event is not None and native_last is not None else (received_id,)
+                key=(source_event,native_last) if source_event is not None and native_last is not None else (received_id,)
                 if typ!="snapshot" or key!=checkpoint:
                     done=True
                     break
