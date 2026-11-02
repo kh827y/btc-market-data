@@ -1,0 +1,44 @@
+name: BTC free macro rates and US spot ETF flows
+on:
+  push:
+    paths:
+      - "btc-macro/collector.py"
+      - "btc-macro/tests/**"
+      - ".github/workflows/btc-macro-etf.yml"
+  workflow_dispatch:
+  schedule:
+    - cron: "19 * * * *"
+permissions:
+  contents: write
+concurrency:
+  group: btc-macro-etf
+  cancel-in-progress: false
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate ETF reporting dates, monetary policy and missing FRED observations
+        run: |
+          python -m py_compile btc-macro/collector.py
+          python -m unittest discover -s btc-macro/tests -v
+      - name: Read real public daily macro and ETF data with concurrent commit recovery
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in 1 2 3 4; do
+            git fetch origin main
+            git reset --hard origin/main
+            python -u btc-macro/collector.py
+            git add btc-macro/data/latest.json btc-macro/data/fred_history.json
+            if git diff --cached --quiet; then exit 0; fi
+            git commit -m "data: source-validated Fed, Treasury, dollar and US spot BTC ETF flows"
+            if git push origin HEAD:main; then exit 0; fi
+            sleep 3
+          done
+          exit 1
