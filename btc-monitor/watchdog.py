@@ -113,6 +113,17 @@ def loaded(path):
         return None
 
 
+# Explicit monitored instrument set. Per-venue absence cannot be hidden by
+# another healthy exchange; order-book REST/WS snapshots are not interchangeable.
+LIVE_BOOK_MARKETS={
+    "binance_spot":"spot","bybit_spot":"spot","coinbase_spot":"spot",
+    "okx_spot":"spot","bitget_spot":"spot","gate_spot":"spot",
+    "binance_usdm_perp":"perpetual","bybit_usdt_perp":"perpetual",
+    "okx_usdt_perp":"perpetual","bitget_usdt_perp":"perpetual",
+    "gate_usdt_perp":"perpetual",
+}
+WS_REQUIRED=("bybit_spot","bybit_usdt_perp","binance_usdm_perp")
+
 def assess(name, record, now):
     """Return machine-verifiable freshness; historical gaps are separate."""
     cfg = FEEDS[name]
@@ -191,12 +202,59 @@ def assess(name, record, now):
             result.update(status="stale_observation", reason="deribit_surface_stale",
                           needs_recovery=True)
     elif name == "live_depth":
-        if (record.get("spot_usable_venues") or 0) < 1 and (record.get("perpetual_usable_venues") or 0) < 1:
-            result.update(status="unavailable", reason="no_verified_orderbooks",
-                          needs_recovery=True)
-        errors = record.get("errors") or []
+        venues=get(record,"current","venues") or {}
+        market_health={}
+        for market,kind in LIVE_BOOK_MARKETS.items():
+            book=venues.get(market) if isinstance(venues,dict) else None
+            if not isinstance(book,dict):
+                market_health[market]="missing"
+                continue
+            if book.get("market")!=kind:
+                market_health[market]="instrument_type_mismatch"
+                continue
+            bands=book.get("bands") or {}
+            usable=any(
+                isinstance(b,dict) and
+                b.get("bid_coverage_complete") is True and
+                b.get("ask_coverage_complete") is True
+                for b in bands.values())
+            if not usable:
+                market_health[market]="no_complete_bid_and_ask_band"
+                continue
+            source_age=age_h(now,book.get("captured_at"))
+            if source_age is None or source_age < -0.2 or source_age > cfg["max_age_h"]:
+                market_health[market]="stale_market_capture"
+                continue
+            if market in WS_REQUIRED:
+                expected=("binance_official_ws_api_depth" if market=="binance_usdm_perp"
+                          else "bybit_official_ws_snapshot")
+                if book.get("transport")!=expected:
+                    market_health[market]="unverified_official_ws_transport"
+                    continue
+                # Exchange source time must be within 120 sec of local capture;
+                # a wrapper's newer generated_at is never proof of a new book.
+                source=age_h(parse_time(book["captured_at"]),book.get("source_timestamp"))
+                if source is None or source < -0.003 or source > 120/3600:
+                    market_health[market]="stale_native_ws_timestamp"
+                    continue
+            market_health[market]="verified"
+        bad=[venue for venue,st in market_health.items() if st!="verified"]
+        result["market_health"]=market_health
+        result["selected_markets_expected"]=len(LIVE_BOOK_MARKETS)
+        result["selected_markets_verified"]=len(LIVE_BOOK_MARKETS)-len(bad)
+        result["verified_spot_markets"]=sum(
+            market_health[n]=="verified" for n,v in LIVE_BOOK_MARKETS.items() if v=="spot")
+        result["verified_perpetual_markets"]=sum(
+            market_health[n]=="verified" for n,v in LIVE_BOOK_MARKETS.items() if v=="perpetual")
+        for n in bad:
+            result["coverage_gaps"].append("live_orderbook:"+n+":"+market_health[n])
+        errors=record.get("errors") or []
         if errors:
             result["coverage_gaps"].append(f"{len(errors)}_failed_live_book_venues")
+        if bad or errors:
+            result.update(status="partial_market_coverage",
+                          reason="selected_live_depth_markets_unavailable_or_unverified",
+                          needs_recovery=True)
     elif name == "macro_etf":
         if record.get("status") == "partial":
             result["coverage_gaps"].append("partial_macro_source")
