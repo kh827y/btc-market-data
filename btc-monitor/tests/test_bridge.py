@@ -161,4 +161,36 @@ class BridgeTests(unittest.TestCase):
   self.assertEqual(brief["orderbook_history"]["hft_12utc"]["binance_spot"]["coverage_30d"]["eligible_days"],30)
   self.assertFalse(report["audit"]["family_readiness"]["current_orderbook"])
 
+ def test_bitview_cost_basis_separately_usable_when_original_provider_delayed(self):
+  src={"generated_utc":"2026-11-02T07:10:00Z","components":{
+   "market_onchain":{"feed_age_hours":1,"latest":{
+    "realized_price":{"date":"2026-10-26","value":54035.57,"status":"delayed"},
+    "sth_realized_price":{"date":"2026-10-26","value":75834.46,"status":"delayed"},
+    "lth_realized_price":{"date":None,"value":None,"status":"missing"}}},
+   "lth_sth_bitview":{"feed_age_hours":1,"source":"https://bitview.space/api/",
+     "latest":{"realized_price_bitview":{"date":"2026-11-01","value":54005.60},
+               "sth_realized_price_150d":{"date":"2026-11-01","value":75817.90},
+               "lth_realized_price_150d":{"date":"2026-11-01","value":49003.22}}}}}
+  result=m.build({"onchain":src},NOW)
+  self.assertTrue(result["audit"]["family_readiness"]["onchain_independent_cost_basis"])
+  self.assertFalse(result["metrics"]["onchain"]["groups"]["market_onchain"]["metrics"]["realized_price"]["status"]=="usable")
+  metrics=result["metrics"]["onchain"]["cost_basis_independent"]
+  self.assertTrue(all(v["status"]=="usable" for v in metrics.values()))
+  self.assertEqual(metrics["lth_cost_basis_150d"]["methodology"],"utxo_age_at_least_150d")
+  self.assertTrue(metrics["lth_cost_basis_150d"]["not_interchangeable_with_bgeometrics_155d_cohorts"])
+  brief=m.make_brief(result)
+  self.assertEqual(brief["onchain_cost_basis_independent"]["network_realized_price"]["value"],54005.6)
+  self.assertEqual(brief["onchain"]["lth_sth_bitview"]["realized_price_bitview"]["value"],54005.6)
+
+ def test_old_bitview_component_is_quarantined_even_if_outer_feed_is_recent(self):
+  src={"generated_utc":"2026-11-02T07:10:00Z","components":{
+   "lth_sth_bitview":{"feed_age_hours":47,"latest":{
+    "realized_price_bitview":{"date":"2026-11-01","value":54005.6},
+    "sth_realized_price_150d":{"date":"2026-11-01","value":75817.9},
+    "lth_realized_price_150d":{"date":"2026-11-01","value":49003.22}}}}}
+  result=m.build({"onchain":src},NOW)
+  self.assertFalse(result["audit"]["family_readiness"]["onchain_independent_cost_basis"])
+  self.assertFalse(result["metrics"]["onchain"]["cost_basis_all_three_usable"])
+  self.assertTrue(all(v["value"] is None for v in result["metrics"]["onchain"]["cost_basis_independent"].values()))
+
 if __name__=="__main__":unittest.main()
