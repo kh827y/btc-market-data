@@ -40,7 +40,8 @@ class CVDTests(unittest.TestCase):
                     "bucket":{"buy":100,"sell":0,"trades":9},
                     "cutoff":"2026-10-03T00:00:00Z"}
         state={"coinbase_cursor":historical.copy(),"hourly":{}}
-        def scan(state,now,errors,pages):
+        def scan(state,now,errors,pages,window_hours=720):
+            self.assertEqual(window_hours,30)
             self.assertEqual(pages,12)
             self.assertIsNone(state["coinbase_cursor"]["after"])
             state["coinbase_cursor"]["after"]="8888"
@@ -49,6 +50,26 @@ class CVDTests(unittest.TestCase):
             coinbase_recent(state,now,[],pages=12)
         self.assertEqual(state["coinbase_cursor"],historical)
         self.assertTrue(state["hourly"]["coinbase"]["2026-11-02T11:00:00Z"]["complete"])
+
+    def test_coinbase_recent_rolling_cursor_resumes_across_runs(self):
+        now=dt.datetime(2026,11,2,14,tzinfo=UTC)
+        deep={"after":"9998","pending":"2026-10-28T12:00:00Z","bucket":{"buy":7,"sell":3,"trades":1}}
+        recent={"after":"8888","pending":"2026-11-02T09:00:00Z","bucket":{"buy":2,"sell":1,"trades":1}}
+        state={"coinbase_cursor":deep.copy(),"coinbase_recent_cursor":recent.copy(),"hourly":{}}
+        calls=[]
+        def scan(state,now,errors,pages,window_hours=720):
+            self.assertEqual(window_hours,30)
+            calls.append((pages,state["coinbase_cursor"]["after"]))
+            if pages==22:
+                state["coinbase_cursor"]["after"]="7777" if len(calls)<=2 else "6666"
+        with patch("collector.coinbase",side_effect=scan):
+            coinbase_recent(state,now,[],pages=40)
+            self.assertEqual(state["coinbase_cursor"],deep)
+            self.assertEqual(state["coinbase_recent_cursor"]["after"],"7777")
+            coinbase_recent(state,now,[],pages=40)
+        self.assertEqual(calls,[(18,None),(22,"8888"),(18,None),(22,"7777")])
+        self.assertEqual(state["coinbase_recent_cursor"]["after"],"6666")
+        self.assertEqual(state["coinbase_cursor"],deep)
 
     def test_fixed_five_without_coinbase_is_not_original_five(self):
         from collector import ALT_FIVE, OBSERVED
