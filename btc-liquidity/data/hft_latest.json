@@ -167,7 +167,7 @@
         "required": 20
       },
       "365d": {
-        "available": 22,
+        "available": 23,
         "bands": {
           "0.05": null,
           "0.2": null,
@@ -397,11 +397,12 @@
     }
   },
   "caveats": [
-    "Historical hourly file snapshot is a point-in-time book, NOT daily median or full 24h book.",
-    "Missing checkpoint or insufficient band coverage is null; do not infer zero liquidity.",
-    "Venue and spot/perpetual observations are not pooled or presented as whole market.",
-    "OKX perpetual book uses 0.01 BTC/contract; historical denomination assumed constant.",
-    "CryptoHFTData archive has documented gaps and retroactive corrections."
+    "One real checkpoint per date, typically around 12:00 UTC; not a daily median nor 24h continuous depth.",
+    "Daily observations used in comparisons are required to be within 2 hours of the same UTC clock time.",
+    "Missing checkpoint or insufficient coverage is NOT interpreted as no liquidity; null values are intentional.",
+    "Market is venue/instrument specific; spot and perpetuals are never pooled or called global.",
+    "OKX perpetual 0.01 BTC/contract is assumed historically constant; contract-value history remains unverified.",
+    "Provider's archives may have gaps and revisions; negative checks retried after 7 days."
   ],
   "comparison": {
     "binance_futures": {
@@ -426,7 +427,10 @@
               "bid_share_change_pp": -4.801
             }
           },
-          "baseline_day": "2026-10-31"
+          "baseline_day": "2026-10-31",
+          "baseline_time": "2026-10-31T12:00:00+00:00",
+          "clock_offset_hours": 0.0,
+          "latest_time": "2026-11-01T12:00:00+00:00"
         },
         "30d": {
           "bands": {
@@ -446,7 +450,10 @@
               "bid_share_change_pp": 4.709
             }
           },
-          "baseline_day": "2026-10-02"
+          "baseline_day": "2026-10-02",
+          "baseline_time": "2026-10-02T12:00:00+00:00",
+          "clock_offset_hours": 0.0,
+          "latest_time": "2026-11-01T12:00:00+00:00"
         },
         "365d": null,
         "7d": {
@@ -467,7 +474,10 @@
               "bid_share_change_pp": -4.38
             }
           },
-          "baseline_day": "2026-10-25"
+          "baseline_day": "2026-10-25",
+          "baseline_time": "2026-10-25T12:00:00+00:00",
+          "clock_offset_hours": 0.0,
+          "latest_time": "2026-11-01T12:00:00+00:00"
         },
         "90d": null
       }
@@ -494,7 +504,10 @@
               "bid_share_change_pp": -8.038
             }
           },
-          "baseline_day": "2026-10-31"
+          "baseline_day": "2026-10-31",
+          "baseline_time": "2026-10-31T12:00:00+00:00",
+          "clock_offset_hours": 0.0,
+          "latest_time": "2026-11-01T12:00:00+00:00"
         },
         "30d": {
           "bands": {
@@ -514,7 +527,10 @@
               "bid_share_change_pp": 11.944
             }
           },
-          "baseline_day": "2026-10-02"
+          "baseline_day": "2026-10-02",
+          "baseline_time": "2026-10-02T12:00:00+00:00",
+          "clock_offset_hours": 0.0,
+          "latest_time": "2026-11-01T12:00:00+00:00"
         },
         "365d": null,
         "7d": {
@@ -535,7 +551,10 @@
               "bid_share_change_pp": 4.924
             }
           },
-          "baseline_day": "2026-10-25"
+          "baseline_day": "2026-10-25",
+          "baseline_time": "2026-10-25T12:00:00+00:00",
+          "clock_offset_hours": 0.0,
+          "latest_time": "2026-11-01T12:00:00+00:00"
         },
         "90d": null
       }
@@ -557,7 +576,10 @@
               "bid_share_change_pp": -1.988
             }
           },
-          "baseline_day": "2026-10-31"
+          "baseline_day": "2026-10-31",
+          "baseline_time": "2026-10-31T12:00:00+00:00",
+          "clock_offset_hours": 0.0,
+          "latest_time": "2026-11-01T12:00:00+00:00"
         },
         "30d": {
           "bands": {
@@ -572,7 +594,10 @@
               "bid_share_change_pp": -26.506
             }
           },
-          "baseline_day": "2026-10-02"
+          "baseline_day": "2026-10-02",
+          "baseline_time": "2026-10-02T12:00:00+00:00",
+          "clock_offset_hours": 0.0,
+          "latest_time": "2026-11-01T12:00:00+00:00"
         },
         "365d": null,
         "7d": {
@@ -588,9 +613,29 @@
               "bid_share_change_pp": -23.0
             }
           },
-          "baseline_day": "2026-10-25"
+          "baseline_day": "2026-10-25",
+          "baseline_time": "2026-10-25T12:00:00+00:00",
+          "clock_offset_hours": 0.0,
+          "latest_time": "2026-11-01T12:00:00+00:00"
         },
-        "90d": null
+        "90d": {
+          "bands": {
+            "0.05": {
+              "ask_change_pct": 34.4,
+              "bid_change_pct": -13.59,
+              "bid_share_change_pp": -10.923
+            },
+            "0.2": {
+              "ask_change_pct": 39.24,
+              "bid_change_pct": -56.01,
+              "bid_share_change_pp": -25.093
+            }
+          },
+          "baseline_day": "2026-08-03",
+          "baseline_time": "2026-08-03T12:02:58.597819+00:00",
+          "clock_offset_hours": 0.05,
+          "latest_time": "2026-11-01T12:00:00+00:00"
+        }
       }
     },
     "bybit": {
@@ -627,7 +672,10 @@
               "bid_share_change_pp": 16.541
             }
           },
-          "baseline_day": "2026-10-31"
+          "baseline_day": "2026-10-31",
+          "baseline_time": "2026-10-31T12:00:00+00:00",
+          "clock_offset_hours": 0.0,
+          "latest_time": "2026-11-01T12:00:00+00:00"
         },
         "30d": {
           "bands": {
@@ -637,7 +685,10 @@
               "bid_share_change_pp": 16.633
             }
           },
-          "baseline_day": "2026-10-02"
+          "baseline_day": "2026-10-02",
+          "baseline_time": "2026-10-02T12:00:00+00:00",
+          "clock_offset_hours": 0.0,
+          "latest_time": "2026-11-01T12:00:00+00:00"
         },
         "365d": null,
         "7d": {
@@ -648,7 +699,10 @@
               "bid_share_change_pp": 9.937
             }
           },
-          "baseline_day": "2026-10-25"
+          "baseline_day": "2026-10-25",
+          "baseline_time": "2026-10-25T12:00:00+00:00",
+          "clock_offset_hours": 0.0,
+          "latest_time": "2026-11-01T12:00:00+00:00"
         },
         "90d": null
       }
@@ -665,7 +719,10 @@
               "bid_share_change_pp": 22.088
             }
           },
-          "baseline_day": "2026-10-31"
+          "baseline_day": "2026-10-31",
+          "baseline_time": "2026-10-31T12:00:00+00:00",
+          "clock_offset_hours": 0.0,
+          "latest_time": "2026-11-01T12:00:00+00:00"
         },
         "30d": {
           "bands": {
@@ -675,7 +732,10 @@
               "bid_share_change_pp": 12.108
             }
           },
-          "baseline_day": "2026-10-02"
+          "baseline_day": "2026-10-02",
+          "baseline_time": "2026-10-02T12:00:00+00:00",
+          "clock_offset_hours": 0.0,
+          "latest_time": "2026-11-01T12:00:00+00:00"
         },
         "365d": null,
         "7d": {
@@ -686,44 +746,99 @@
               "bid_share_change_pp": 20.655
             }
           },
-          "baseline_day": "2026-10-25"
+          "baseline_day": "2026-10-25",
+          "baseline_time": "2026-10-25T12:00:00+00:00",
+          "clock_offset_hours": 0.0,
+          "latest_time": "2026-11-01T12:00:00+00:00"
         },
         "90d": null
       }
     }
   },
+  "coverage": {
+    "binance_futures": {
+      "coverage_pct_of_global_window": 4.27,
+      "eligible_days_since_global_start": 492,
+      "first_verified_day": "2026-10-02",
+      "latest_verified_day": "2026-11-01",
+      "verified_days": 21
+    },
+    "binance_spot": {
+      "coverage_pct_of_global_window": 4.67,
+      "eligible_days_since_global_start": 492,
+      "first_verified_day": "2026-09-02",
+      "latest_verified_day": "2026-11-01",
+      "verified_days": 23
+    },
+    "bitget_spot": {
+      "coverage_pct_of_global_window": 4.67,
+      "eligible_days_since_global_start": 492,
+      "first_verified_day": "2026-08-03",
+      "latest_verified_day": "2026-11-01",
+      "verified_days": 23
+    },
+    "bybit": {
+      "coverage_pct_of_global_window": 4.27,
+      "eligible_days_since_global_start": 492,
+      "first_verified_day": "2026-10-02",
+      "latest_verified_day": "2026-11-01",
+      "verified_days": 21
+    },
+    "bybit_spot": {
+      "coverage_pct_of_global_window": 4.47,
+      "eligible_days_since_global_start": 492,
+      "first_verified_day": "2026-10-02",
+      "latest_verified_day": "2026-11-01",
+      "verified_days": 22
+    },
+    "okx_futures": {
+      "coverage_pct_of_global_window": 4.47,
+      "eligible_days_since_global_start": 492,
+      "first_verified_day": "2026-09-02",
+      "latest_verified_day": "2026-11-01",
+      "verified_days": 22
+    },
+    "okx_spot": {
+      "coverage_pct_of_global_window": 4.47,
+      "eligible_days_since_global_start": 492,
+      "first_verified_day": "2026-09-02",
+      "latest_verified_day": "2026-11-01",
+      "verified_days": 22
+    }
+  },
   "coverage_days": {
     "binance_futures": 21,
     "binance_spot": 23,
-    "bitget_spot": 22,
+    "bitget_spot": 23,
     "bybit": 21,
     "bybit_spot": 22,
     "okx_futures": 22,
     "okx_spot": 22
   },
   "errors_recent_run": [
-    "bybit 2026-08-03 ValueError: missing hour-start checkpoint; cannot reconstruct full book from an arbitrary update",
-    "okx_futures 2026-08-03 ValueError: missing hour-start checkpoint; cannot reconstruct full book from an arbitrary update",
-    "binance_spot 2025-11-01 ValueError: missing hour-start checkpoint; cannot reconstruct full book from an arbitrary update",
-    "bybit_spot 2025-11-01 ValueError: missing hour-start checkpoint; cannot reconstruct full book from an arbitrary update",
-    "bitget_spot 2025-11-01 ValueError: missing hour-start checkpoint; cannot reconstruct full book from an arbitrary update",
-    "okx_spot 2025-11-01 ValueError: missing hour-start checkpoint; cannot reconstruct full book from an arbitrary update",
-    "binance_futures 2025-11-01 ValueError: missing hour-start checkpoint; cannot reconstruct full book from an arbitrary update",
-    "bybit 2025-11-01 ValueError: missing hour-start checkpoint; cannot reconstruct full book from an arbitrary update",
-    "okx_futures 2025-11-01 ValueError: missing hour-start checkpoint; cannot reconstruct full book from an arbitrary update",
-    "binance_spot 2026-05-05 ValueError: missing hour-start checkpoint; cannot reconstruct full book from an arbitrary update",
-    "bybit_spot 2026-05-05 ValueError: missing hour-start checkpoint; cannot reconstruct full book from an arbitrary update",
-    "bitget_spot 2026-05-05 ValueError: missing hour-start checkpoint; cannot reconstruct full book from an arbitrary update",
-    "okx_spot 2026-05-05 ValueError: missing hour-start checkpoint; cannot reconstruct full book from an arbitrary update",
-    "binance_futures 2026-05-05 ValueError: missing hour-start checkpoint; cannot reconstruct full book from an arbitrary update",
-    "bybit 2026-05-05 ValueError: missing hour-start checkpoint; cannot reconstruct full book from an arbitrary update",
-    "okx_futures 2026-05-05 ValueError: missing hour-start checkpoint; cannot reconstruct full book from an arbitrary update",
-    "bybit_spot 2026-09-02 ValueError: missing hour-start checkpoint; cannot reconstruct full book from an arbitrary update",
-    "bitget_spot 2026-09-02 ValueError: missing hour-start checkpoint; cannot reconstruct full book from an arbitrary update",
-    "binance_futures 2026-09-02 ValueError: missing hour-start checkpoint; cannot reconstruct full book from an arbitrary update",
-    "bybit 2026-09-02 ValueError: missing hour-start checkpoint; cannot reconstruct full book from an arbitrary update"
+    "okx_spot 2026-05-05 11h ValueError: no verified checkpoint snapshot found anywhere in the requested UTC hour",
+    "okx_spot 2026-05-05 13h ValueError: no verified checkpoint snapshot found anywhere in the requested UTC hour",
+    "binance_futures 2026-05-05 12h ValueError: no verified checkpoint snapshot found anywhere in the requested UTC hour",
+    "binance_futures 2026-05-05 11h ValueError: no verified checkpoint snapshot found anywhere in the requested UTC hour",
+    "binance_futures 2026-05-05 13h ValueError: no verified checkpoint snapshot found anywhere in the requested UTC hour",
+    "bybit 2026-05-05 12h ValueError: no verified checkpoint snapshot found anywhere in the requested UTC hour",
+    "bybit 2026-05-05 11h ValueError: no verified checkpoint snapshot found anywhere in the requested UTC hour",
+    "bybit 2026-05-05 13h ValueError: no verified checkpoint snapshot found anywhere in the requested UTC hour",
+    "okx_futures 2026-05-05 12h ValueError: no verified checkpoint snapshot found anywhere in the requested UTC hour",
+    "okx_futures 2026-05-05 11h ValueError: no verified checkpoint snapshot found anywhere in the requested UTC hour",
+    "okx_futures 2026-05-05 13h ValueError: no verified checkpoint snapshot found anywhere in the requested UTC hour",
+    "bybit_spot 2026-09-02 12h ValueError: no verified checkpoint snapshot found anywhere in the requested UTC hour",
+    "bybit_spot 2026-09-02 11h ValueError: no verified checkpoint snapshot found anywhere in the requested UTC hour",
+    "bybit_spot 2026-09-02 13h ValueError: no verified checkpoint snapshot found anywhere in the requested UTC hour",
+    "bitget_spot 2026-09-02 12h ValueError: no verified checkpoint snapshot found anywhere in the requested UTC hour",
+    "bitget_spot 2026-09-02 11h ValueError: no verified checkpoint snapshot found anywhere in the requested UTC hour",
+    "bitget_spot 2026-09-02 13h ValueError: no verified checkpoint snapshot found anywhere in the requested UTC hour",
+    "binance_futures 2026-09-02 12h ValueError: no verified checkpoint snapshot found anywhere in the requested UTC hour",
+    "binance_futures 2026-09-02 11h ValueError: no verified checkpoint snapshot found anywhere in the requested UTC hour",
+    "binance_futures 2026-09-02 13h ValueError: no verified checkpoint snapshot found anywhere in the requested UTC hour"
   ],
-  "generated_at": "2026-11-02T07:07:14.100492+00:00",
+  "files_attempted_this_run": 70,
+  "generated_at": "2026-11-02T07:21:14.901642+00:00",
   "latest_by_venue": {
     "binance_futures": "2026-11-01",
     "binance_spot": "2026-11-01",
@@ -733,6 +848,15 @@
     "okx_futures": "2026-11-01",
     "okx_spot": "2026-11-01"
   },
-  "source": "CryptoHFTData free historical L2, actual 12:00 UTC orderbook checkpoint",
-  "status": "ok"
+  "schema_version": 2,
+  "searched_utc_hours": [
+    12,
+    11,
+    13
+  ],
+  "source": "CryptoHFTData historical L2 /download; real observed vendor checkpoint",
+  "status": "ok",
+  "target_anchor_date": "2026-11-01",
+  "unverifiable_hour_files_total": 69,
+  "verified_this_run": 1
 }
