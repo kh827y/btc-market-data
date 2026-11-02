@@ -7,6 +7,15 @@ on:
       - "btc-liquidity/historical_integrity.py"
       - ".github/workflows/btc-hft-l2.yml"
   workflow_dispatch:
+  # GitHub scheduled events for newly created workflows can be delayed or
+  # dropped; chain this independent historical collector after the existing
+  # successful hourly live-depth collector. Does NOT modify that collector.
+  # This is one-way: the live-depth workflow does not listen for HFT events.
+  workflow_run:
+    workflows:
+      - "BTC order book depth and historical liquidity"
+    types: [completed]
+    branches: [main]
   schedule:
     - cron: "23,53 * * * *"
 permissions:
@@ -16,6 +25,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   historical-depth:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 28
     steps:
