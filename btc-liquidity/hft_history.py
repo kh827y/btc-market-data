@@ -281,6 +281,22 @@ def retry_delay_days(reason):
     """
     return SOURCE_RECHECK_DAYS if ("no verified checkpoint" in reason or "HTTP Error 404" in reason) else 1
 
+def compact_date_intervals(days):
+    """Losslessly encode a set of actual calendar days as inclusive UTC ranges.
+
+    This reports verified, explicit-error and unchecked dates independently;
+    a range never implies unobserved intermediate dates were measured.
+    """
+    ordered=sorted({dt.date.fromisoformat(day) for day in days})
+    intervals=[]
+    for day in ordered:
+        if intervals and day==dt.date.fromisoformat(intervals[-1]["end"])+dt.timedelta(days=1):
+            intervals[-1]["end"]=day.isoformat()
+            intervals[-1]["days"]+=1
+        else:
+            intervals.append({"start":day.isoformat(),"end":day.isoformat(),"days":1})
+    return intervals
+
 def audit_source_dates(verified_markets, failures, through):
     """Classify every source calendar date without treating retries as genuine books.
 
@@ -293,7 +309,7 @@ def audit_source_dates(verified_markets, failures, through):
     audit={}
     for venue in MARKETS:
         observed=verified_markets.get(venue,{})
-        bad=[];pending=[];reason_counts=defaultdict(int);details=[];retryable=0
+        bad=[];pending=[];reason_counts=defaultdict(int);reason_days=defaultdict(list);details=[];retryable=0
         for day in dates:
             if day in observed:continue
             attempts=[failures.get(f"{venue}:{day}:{hour:02d}") for hour in SEARCH_HOURS]
@@ -308,6 +324,7 @@ def audit_source_dates(verified_markets, failures, through):
                             else "source_file_404_in_sampled_hours" if file_404
                             else "transient_or_other_error")
             reason_counts[classification]+=1
+            reason_days[classification].append(day)
             if classification=="transient_or_other_error":retryable+=1
             if len(details)<12:
                 details.append({"day":day,"classification":classification,
@@ -323,6 +340,12 @@ def audit_source_dates(verified_markets, failures, through):
             "all_source_dates_accounted_for":not pending,
             "error_date_examples":bad[:8],"error_date_details":details,
             "error_reason_counts":dict(reason_counts),
+            "verified_date_intervals":compact_date_intervals(set(observed).intersection(dates)),
+            "explicit_error_date_intervals":compact_date_intervals(bad),
+            "explicit_error_intervals_by_reason":{
+                reason:compact_date_intervals(reason_days[reason])
+                for reason in sorted(reason_days)},
+            "unchecked_date_intervals":compact_date_intervals(pending),
             "transient_or_other_error_days":retryable,
             "unchecked_date_examples":pending[:8],
         }
