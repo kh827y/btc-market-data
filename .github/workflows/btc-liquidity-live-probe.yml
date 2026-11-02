@@ -1,0 +1,46 @@
+name: BTC live order book API verification
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "btc-liquidity/collector.py"
+      - "btc-liquidity/probe_live.py"
+      - ".github/workflows/btc-liquidity-live-probe.yml"
+permissions:
+  contents: write
+concurrency:
+  group: btc-liquidity-live-probe
+  cancel-in-progress: true
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Offline integrity tests
+        run: |
+          python -m py_compile btc-liquidity/collector.py btc-liquidity/probe_live.py
+          cd btc-liquidity
+          python -m unittest discover -s tests -v
+      - name: Fetch REAL public API orderbooks and persist proof
+        run: |
+          python -u btc-liquidity/probe_live.py
+      - name: Publish observed availability
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          cp btc-liquidity/data/live_probe.json /tmp/live_probe.json
+          for attempt in 1 2 3 4; do
+            git fetch origin main
+            git reset --hard origin/main
+            cp /tmp/live_probe.json btc-liquidity/data/live_probe.json
+            git add btc-liquidity/data/live_probe.json
+            if git diff --cached --quiet; then exit 0; fi
+            git commit -m "diagnostic: verified BTC public live depth venue coverage"
+            if git push origin HEAD:main; then exit 0; fi
+            sleep 3
+          done
+          exit 1
