@@ -1,0 +1,40 @@
+name: BTC free primary realized price endpoint diagnostic
+on:
+  push:
+    paths:
+      - "btc-onchain/probe_bgeometrics_realized.py"
+      - ".github/workflows/btc-onchain-realized-probe.yml"
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: btc-primary-onchain-single-probe
+  cancel-in-progress: true
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: One real request per original free endpoint
+        run: python -u btc-onchain/probe_bgeometrics_realized.py
+      - name: Persist observed source status
+        shell: bash
+        run: |
+          cp btc-onchain/data/bgeometrics_probe.json /tmp/realized-probe.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in 1 2 3 4; do
+            git fetch origin main
+            git reset --hard origin/main
+            cp /tmp/realized-probe.json btc-onchain/data/bgeometrics_probe.json
+            git add btc-onchain/data/bgeometrics_probe.json
+            if git diff --cached --quiet; then exit 0; fi
+            git commit -m "diagnostic: status of free BTC realized price primary data"
+            if git push origin HEAD:main; then exit 0; fi
+            sleep 3
+          done
+          exit 1
