@@ -1,5 +1,5 @@
 {
-  "as_of_utc": "2026-11-02T09:37:39.364426+00:00",
+  "as_of_utc": "2026-11-02T09:40:59.365754+00:00",
   "audit": {
     "WARNING": "Bridge generation success DOES NOT imply source freshness or all-market coverage",
     "coverage_gaps": [
@@ -12,6 +12,7 @@
     "family_readiness": {
       "current_orderbook": false,
       "holder_behavior": true,
+      "onchain_independent_cost_basis": true,
       "options": false,
       "orderbook": true,
       "positioning": false,
@@ -34,7 +35,7 @@
   "feed_contract": "Source-level UTC quality bridge; not a standalone reversal signal",
   "feeds": {
     "bybit_depth": {
-      "age_h": 0.03,
+      "age_h": 0.08,
       "family": "orderbook",
       "generated_at": "2026-11-02T09:36:05.932396+00:00",
       "max_age_h": 36.0,
@@ -46,7 +47,7 @@
       "status": "fresh"
     },
     "derivatives": {
-      "age_h": 3.38,
+      "age_h": 3.44,
       "family": "positioning",
       "generated_at": "2026-11-02T06:14:51.807126+00:00",
       "max_age_h": 3.0,
@@ -58,7 +59,7 @@
       "status": "stale"
     },
     "hft_depth": {
-      "age_h": 2.17,
+      "age_h": 2.22,
       "family": "orderbook",
       "generated_at": "2026-11-02T07:27:43.915542+00:00",
       "max_age_h": 36.0,
@@ -70,11 +71,11 @@
       "status": "fresh"
     },
     "live_depth": {
-      "age_h": 2.81,
+      "age_h": 2.86,
       "family": "orderbook",
       "generated_at": "2026-11-02T06:49:08.159108+00:00",
       "max_age_h": 2.5,
-      "measurement_age_h": 2.81,
+      "measurement_age_h": 2.86,
       "measurement_at": "2026-11-02T06:49:08.159108+00:00",
       "source": "https://github.com/kh827y/btc-market-data/blob/main/btc-liquidity/data/latest.json",
       "source_errors": 3,
@@ -82,7 +83,7 @@
       "status": "stale"
     },
     "onchain": {
-      "age_h": 3.83,
+      "age_h": 3.89,
       "family": "holder_behavior",
       "generated_at": "2026-11-02T05:47:35.197827+00:00",
       "max_age_h": 36.0,
@@ -94,7 +95,7 @@
       "status": "fresh"
     },
     "options": {
-      "age_h": 3.14,
+      "age_h": 3.2,
       "family": "options",
       "generated_at": "2026-11-02T06:29:11.135978+00:00",
       "max_age_h": 3.0,
@@ -106,11 +107,11 @@
       "status": "stale"
     },
     "spot_cvd": {
-      "age_h": 0.02,
+      "age_h": 0.07,
       "family": "spot_execution",
       "generated_at": "2026-11-02T09:36:33.394858+00:00",
       "max_age_h": 2.5,
-      "measurement_age_h": 2.63,
+      "measurement_age_h": 2.68,
       "measurement_at": "2026-11-02T07:00:00+00:00",
       "source": "https://github.com/kh827y/btc-market-data/blob/main/btc-spot-cvd/data/latest.json",
       "source_errors": 17,
@@ -1031,6 +1032,39 @@
       }
     },
     "onchain": {
+      "cost_basis_all_three_usable": true,
+      "cost_basis_independent": {
+        "lth_cost_basis_150d": {
+          "date": "2026-11-01",
+          "lag_days": 1,
+          "methodology": "utxo_age_at_least_150d",
+          "not_interchangeable_with_bgeometrics_155d_cohorts": true,
+          "source": "Bitview",
+          "source_url": "https://bitview.space/api/",
+          "status": "usable",
+          "value": 49003.22
+        },
+        "network_realized_price": {
+          "date": "2026-11-01",
+          "lag_days": 1,
+          "methodology": "bitcoin_utxo_network",
+          "not_interchangeable_with_bgeometrics_155d_cohorts": false,
+          "source": "Bitview",
+          "source_url": "https://bitview.space/api/",
+          "status": "usable",
+          "value": 54005.6
+        },
+        "sth_cost_basis_150d": {
+          "date": "2026-11-01",
+          "lag_days": 1,
+          "methodology": "utxo_age_less_than_150d",
+          "not_interchangeable_with_bgeometrics_155d_cohorts": true,
+          "source": "Bitview",
+          "source_url": "https://bitview.space/api/",
+          "status": "usable",
+          "value": 75817.9
+        }
+      },
       "groups": {
         "historical_whale_alerts": {
           "metrics": {
@@ -1059,7 +1093,8 @@
               "value": 6111.0
             }
           },
-          "scope": "Non-exhaustive public alert subset. NOT entity-wide whale holdings classification. Exchange tags and alert thresholds can change over time."
+          "scope": "Non-exhaustive public alert subset. NOT entity-wide whale holdings classification. Exchange tags and alert thresholds can change over time.",
+          "source": "https://whale-alert.io/whale-alerts-archive.json.gzip"
         },
         "lth_sth_bitview": {
           "metrics": {
@@ -1093,6 +1128,12 @@
               "status": "usable",
               "value": 16355649.99181072
             },
+            "realized_price_bitview": {
+              "date": "2026-11-01",
+              "lag_days": 1,
+              "status": "usable",
+              "value": 54005.6
+            },
             "sth_nupl_150d": {
               "date": "2026-11-01",
               "lag_days": 1,
@@ -1104,9 +1145,16 @@
               "lag_days": 1,
               "status": "usable",
               "value": 75817.9
+            },
+            "sth_supply_150d": {
+              "date": "2026-11-01",
+              "lag_days": 1,
+              "status": "usable",
+              "value": 3750966.74856034
             }
           },
-          "scope": null
+          "scope": null,
+          "source": "https://bitview.space/api/"
         },
         "market_onchain": {
           "metrics": {
@@ -1195,7 +1243,8 @@
               "value": 1.0003
             }
           },
-          "scope": null
+          "scope": null,
+          "source": null
         },
         "whale_deposits": {
           "metrics": {
@@ -1224,7 +1273,13 @@
               "value": 0.74
             }
           },
-          "scope": null
+          "scope": null,
+          "source": {
+            "swiss_whale_deposit_count_ge50": "Swiss Whale Intelligence; >=50 BTC tagged exchange deposits; NOT CoinGlass entity-labelled deposit count",
+            "whale_exchange_deposit_count": "CoinGlass: entity-labelled large-holder deposits",
+            "whale_exchange_deposit_volume_btc": "CoinGlass: entity-labelled large-holder deposits",
+            "whale_only_top10_deposit_ratio": "Swiss Whale Intelligence: top-10 deposits / whale-size inflow only, not total inflow"
+          }
         }
       },
       "historical_exact_whale_entity_flows": false,
