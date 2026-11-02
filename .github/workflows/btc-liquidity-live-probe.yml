@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - "btc-liquidity/collector.py"
+      - "btc-liquidity/official_ws.py"
       - "btc-liquidity/probe_live.py"
       - ".github/workflows/btc-liquidity-live-probe.yml"
 permissions:
@@ -20,9 +21,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Install official public WebSocket transport client
+        run: pip install websocket-client
       - name: Offline integrity tests
         run: |
-          python -m py_compile btc-liquidity/collector.py btc-liquidity/probe_live.py
+          python -m py_compile btc-liquidity/collector.py btc-liquidity/probe_live.py btc-liquidity/official_ws.py
           cd btc-liquidity
           python -m unittest discover -s tests -p test_collector.py -v
       - name: Fetch REAL public API orderbooks and persist proof
