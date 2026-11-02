@@ -46,22 +46,36 @@ FEEDS = {
     "live_depth": {
         "path": "btc-liquidity/data/latest.json",
         "workflow": "btc-liquidity.yml", "max_age_h": 4.0, "priority": 6},
+    # Inspect the actual four independent daily onchain collectors, not
+    # only their newly generated consolidated wrapper.
+    "onchain_market": {
+        "path": "btc-onchain/data/latest.json",
+        "workflow": "btc-onchain-history.yml", "max_age_h": 38.0, "priority": 7},
+    "onchain_bitview": {
+        "path": "btc-onchain/data/bitview_latest.json",
+        "workflow": "btc-bitview-history.yml", "max_age_h": 38.0, "priority": 8},
+    "onchain_whale": {
+        "path": "btc-onchain/data/whale_latest.json",
+        "workflow": "btc-whale-history.yml", "max_age_h": 38.0, "priority": 9},
+    "onchain_whale_alerts": {
+        "path": "btc-onchain/data/whale_alert_latest.json",
+        "workflow": "btc-whale-alert-archive.yml", "max_age_h": 38.0, "priority": 10},
     "onchain": {
         "path": "btc-onchain/data/monitor_latest.json",
-        "workflow": "btc-onchain-consolidate.yml", "max_age_h": 30.0, "priority": 7},
+        "workflow": "btc-onchain-consolidate.yml", "max_age_h": 30.0, "priority": 11},
     # Historical collectors are already maintained by the active separate
     # L2 backfill. Observe health, never dispatch another backfill here.
     "hft_depth": {
         "path": "btc-liquidity/data/hft_latest.json",
         "workflow": "btc-hft-l2.yml", "max_age_h": 40.0,
-        "priority": 10, "repair": False},
+        "priority": 20, "repair": False},
     "bybit_depth": {
         "path": "btc-liquidity/data/bybit_independent_latest.json",
         "workflow": "btc-bybit-independent.yml", "max_age_h": 40.0,
-        "priority": 11, "repair": False},
+        "priority": 21, "repair": False},
     "monitor_bridge": {
         "path": "btc-monitor/data/brief.json",
-        "workflow": "btc-monitor-bridge.yml", "max_age_h": 4.0, "priority": 9},
+        "workflow": "btc-monitor-bridge.yml", "max_age_h": 4.0, "priority": 15},
 }
 
 
@@ -186,6 +200,29 @@ def assess(name, record, now):
             result["coverage_gaps"].append(str(gap)[:160])
         for gap in record.get("missing", []) or []:
             result["coverage_gaps"].append(str(gap)[:160])
+        # Failed upstream collectors are checked by their own status below.
+    elif name in ("onchain_market", "onchain_bitview", "onchain_whale"):
+        latest = record.get("latest")
+        if not isinstance(latest, dict) or not latest:
+            result.update(status="invalid_schema", reason="missing_onchain_metric_rows",
+                          needs_recovery=True)
+        else:
+            for metric, row in latest.items():
+                if not isinstance(row, dict) or row.get("status") in ("missing", "delayed", "error"):
+                    result["coverage_gaps"].append(f"{metric}:missing_or_vendor_delay")
+        if name == "onchain_bitview":
+            date = parse_time(record.get("last_closed_utc_day"))
+            lag = (now.date()-date.date()).days if date else None
+            result["last_closed_day_utc"] = record.get("last_closed_utc_day")
+            if lag is None or lag > 3 or lag < 0:
+                result.update(status="stale_observation",
+                              reason="bitview_holder_series_lag_gt_3d",
+                              needs_recovery=True)
+    elif name == "onchain_whale_alerts":
+        if not isinstance(record.get("labelled_to_exchange_alerts"), (int, float)):
+            result.update(status="invalid_schema", reason="whale_archive_aggregate_invalid",
+                          needs_recovery=True)
+        # No published whale alert on a calendar day is NOT zero market transfers.
     elif name in ("hft_depth", "bybit_depth"):
         date = (record.get("target_anchor_date") if name == "hft_depth"
                 else record.get("target_day"))
