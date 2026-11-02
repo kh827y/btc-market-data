@@ -3,7 +3,10 @@ import datetime as dt
 import json
 import math
 import os
+import sys
 from pathlib import Path
+sys.path.insert(0,str(Path(__file__).resolve().parent))
+from metric_quality import assess as assess_metric_quality
 
 SOURCES={
  "macro_etf":("btc-macro/data/latest.json",26.0,"macro_liquidity"),
@@ -447,6 +450,9 @@ def build(source,now):
    feeds[key]["status"]="invalid_schema"
    issues.append(key+":invalid_schema:"+str(exc)[:100]);continue
   if feeds[key]["status"]!="fresh":issues.append(key+":"+feeds[key]["status"])
+ # Independent, fail-closed per-METRIC checks. These can null out invalid
+ # numbers even when the enclosing JSON is current and well formed.
+ metric_quality=assess_metric_quality(source,feeds,metrics,now)
  coverage_gaps=[]
  if feeds.get("macro_etf",{}).get("status")!="fresh":
   coverage_gaps.append("macro_etf:unavailable_or_stale")
@@ -488,7 +494,9 @@ def build(source,now):
   feeds.get("live_depth",{}).get("status")=="fresh" and
   feeds["live_depth"].get("source_errors",0)==0 and
   all(n in valid_rows and live_rows[n].get("market")=="spot" for n in expected_spot) and
-  all(n in valid_rows and live_rows[n].get("market")=="perpetual" for n in expected_perp))
+  all(n in valid_rows and live_rows[n].get("market")=="perpetual" for n in expected_perp) and
+  all(metric_quality["checks"].get("live_depth."+n,{}).get("status")=="usable"
+      for n in expected_spot|expected_perp))
  if "live_depth" in metrics and not usable["current_all_11_selected_orderbooks"]:
   coverage_gaps.append("live_depth:original_11_selected_markets_not_all_verified")
  usable["macro_fed_rates"]=feeds.get("macro_etf",{}).get("status")=="fresh" and val(metrics,"macro_etf","quality","fed_rates") is True
@@ -496,23 +504,47 @@ def build(source,now):
  usable["macro_usd_broad_not_dxy"]=feeds.get("macro_etf",{}).get("status")=="fresh" and val(metrics,"macro_etf","quality","usd_broad_index") is True
  usable["macro_exact_ice_dxy"]=feeds.get("macro_etf",{}).get("status")=="fresh" and val(metrics,"macro_etf","quality","ice_dxy_exact") is True
  usable["us_spot_btc_etf_flows"]=feeds.get("macro_etf",{}).get("status")=="fresh" and val(metrics,"macro_etf","quality","spot_etf_flow") is True
- usable["price_technical_verified"]=feeds.get("price_technical",{}).get("status")=="fresh"
+ usable["price_technical_verified"]=(feeds.get("price_technical",{}).get("status")=="fresh"
+  and metric_quality["checks"].get("price.closed_daily_weekly",{}).get("status")=="usable")
  usable["price_live_spot_quote"]=usable["price_technical_verified"] and feeds.get("price_technical",{}).get("spot_quote_status")=="fresh"
  usable["price_technical_cross_venue"]=usable["price_technical_verified"] and val(metrics,"price_technical","confidence")=="cross_venue_verified"
  usable["onchain_independent_cost_basis"]=feeds.get("onchain",{}).get("status")=="fresh" and val(metrics,"onchain","cost_basis_all_three_usable") is True
  for span in ("1h","24h","168h","720h"):
-  usable["spot_cvd_"+span+"_complete"]=feeds.get("spot_cvd",{}).get("status")=="fresh" and val(metrics,"spot_cvd","windows",span,"complete") is True
+  usable["spot_cvd_"+span+"_complete"]=(feeds.get("spot_cvd",{}).get("status")=="fresh"
+   and val(metrics,"spot_cvd","windows",span,"complete") is True
+   and metric_quality["checks"].get("spot_cvd.original_five."+span,{}).get("status")=="usable")
  usable["spot_cvd_24h_covered_subset"]=feeds.get("spot_cvd",{}).get("status")=="fresh" and val(metrics,"spot_cvd","windows","24h","complete_venue_subset","available") is True
- usable["spot_cvd_24h_fixed_five_ex_coinbase"]=feeds.get("spot_cvd",{}).get("status")=="fresh" and val(metrics,"spot_cvd","windows","24h","fixed_five_ex_coinbase","complete") is True
+ usable["spot_cvd_24h_fixed_five_ex_coinbase"]=(feeds.get("spot_cvd",{}).get("status")=="fresh"
+  and val(metrics,"spot_cvd","windows","24h","fixed_five_ex_coinbase","complete") is True
+  and metric_quality["checks"].get("spot_cvd.fixed_ex_coinbase.24h",{}).get("status")=="usable")
  for h in ("168h","720h"):
-  usable["spot_cvd_"+h+"_fixed_five_ex_coinbase"]=feeds.get("spot_cvd",{}).get("status")=="fresh" and val(metrics,"spot_cvd","windows",h,"fixed_five_ex_coinbase","complete") is True
+  usable["spot_cvd_"+h+"_fixed_five_ex_coinbase"]=(feeds.get("spot_cvd",{}).get("status")=="fresh"
+   and val(metrics,"spot_cvd","windows",h,"fixed_five_ex_coinbase","complete") is True
+   and metric_quality["checks"].get("spot_cvd.fixed_ex_coinbase."+h,{}).get("status")=="usable")
+ # A family is eligible only if at least one independently validated metric
+ # actually exists, not merely because an upstream collector ran.
+ check=metric_quality["checks"]
+ usable["positioning"]=(feeds.get("derivatives",{}).get("status")=="fresh" and
+      any(v.get("status")=="usable" for k,v in check.items() if k.startswith("derivatives.")))
+ usable["options"]=(feeds.get("options",{}).get("status")=="fresh" and
+      check.get("options.deribit.1M",{}).get("status")=="usable")
+ usable["holder_behavior"]=(feeds.get("onchain",{}).get("status")=="fresh" and
+      any(v.get("status")=="usable" for k,v in check.items() if k.startswith("onchain.")))
+ if not usable["positioning"] and feeds.get("derivatives",{}).get("status")=="fresh":
+  coverage_gaps.append("derivatives:all_significant_metrics_unverified")
+ if not usable["options"] and feeds.get("options",{}).get("status")=="fresh":
+  coverage_gaps.append("options:deribit_1m_surface_unverified")
+ for factor in metric_quality["critical_issues"]:
+  if not factor.startswith(("live_depth.","onchain.")):
+   coverage_gaps.append("metric_quality:"+factor)
+ coverage_gaps=list(dict.fromkeys(coverage_gaps))
  return {"schema":1,"as_of_utc":now.isoformat(),
          "feed_contract":"Source-level UTC quality bridge; not a standalone reversal signal",
          "audit":{"sources_total":len(SOURCES),"sources_parsed":len(metrics),
                   "fresh":sum(x.get("status")=="fresh" for x in feeds.values()),
                   "issues":issues,"coverage_gaps":coverage_gaps,"family_readiness":usable,
                   "WARNING":"Bridge generation success DOES NOT imply source freshness or all-market coverage"},
-         "feeds":feeds,"metrics":metrics,
+         "feeds":feeds,"metrics":metrics,"metric_quality":metric_quality,
          "rules":["Trust only source rows with status=fresh for current conditions",
                   "Also check original source measurement date and complete window/band for each indicator",
                   "A daily historical snapshot is not live orderbook or a daily average",
@@ -559,6 +591,14 @@ def make_brief(report):
                          "spot_quote_status":v.get("spot_quote_status"),"spot_quote_age_h":v.get("spot_quote_age_h"),
                          "source_errors":v.get("source_errors",0),"collector_health":v.get("collector_health")} for k,v in feeds.items()},
           "family_readiness":report["audit"]["family_readiness"],
+          "metric_quality":{"checked_utc":report["metric_quality"]["checked_utc"],
+             "metrics_checked":report["metric_quality"]["metrics_checked"],
+             "status_counts":report["metric_quality"]["status_counts"],
+             "critical_issues":report["metric_quality"]["critical_issues"],
+             "checks":{k:{"status":v.get("status"),"reason":v.get("reason"),
+                           "observed_at":v.get("observed_at"),"scope":v.get("scope"),
+                           "unit":v.get("unit"),"comparison_key":v.get("comparison_key")}
+                       for k,v in report["metric_quality"]["checks"].items()}},
           "issues":report["audit"]["issues"],"coverage_gaps":report["audit"].get("coverage_gaps",[]),
           "rules":["Only fresh source + complete original window/band can support current risk",
                    "Orderbook resting orders are NOT executed purchases; not a world-wide book",
