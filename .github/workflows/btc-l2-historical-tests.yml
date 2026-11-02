@@ -5,6 +5,7 @@ on:
       - "btc-liquidity/bybit_parallel_backfill.py"
       - "btc-liquidity/bybit_independent.py"
       - "btc-liquidity/hft_history.py"
+      - "btc-liquidity/historical_integrity.py"
       - "btc-liquidity/tests/test_bybit_parallel.py"
       - "btc-liquidity/tests/test_bybit_independent.py"
       - "btc-liquidity/tests/test_hft_history.py"
@@ -42,6 +43,8 @@ jobs:
           echo "B=$b" >> "$GITHUB_ENV"
           echo "P=$p" >> "$GITHUB_ENV"
           echo "H=$h" >> "$GITHUB_ENV"
+      - name: Validate actual published archive source-date coverage against history
+        run: python -u btc-liquidity/historical_integrity.py
       - name: Commit test evidence without changing historical source files
         shell: bash
         run: |
@@ -61,7 +64,8 @@ jobs:
             git reset --hard origin/main
             mkdir -p btc-liquidity/data
             cp /tmp/verified-history-test.json btc-liquidity/data/historical_test_status.json
-            git add btc-liquidity/data/historical_test_status.json
+            python -u btc-liquidity/historical_integrity.py
+            git add btc-liquidity/data/historical_test_status.json btc-liquidity/data/historical_integrity_status.json
             if git diff --cached --quiet; then break; fi
             git commit -m "test: BTC depth history regression verification"
             if git push origin HEAD:main; then break; fi
