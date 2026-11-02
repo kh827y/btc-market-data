@@ -1,43 +1,43 @@
 {
-  "checked_utc": "2026-11-02T20:28:12.202761+00:00",
+  "checked_utc": "2026-11-02T20:28:57.538086+00:00",
   "scope": "GitHub-hosted runner; official matching market only; no regional proxies",
   "tests": {
     "bybit_spot_primary": {
       "status": "blocked",
       "http_status": 403,
       "reason": "Forbidden",
-      "elapsed_s": 0.15
+      "elapsed_s": 0.22
     },
     "bybit_spot_official_second_domain": {
       "status": "blocked",
       "http_status": 403,
       "reason": "Forbidden",
-      "elapsed_s": 0.23
+      "elapsed_s": 0.21
     },
     "bybit_perp_official_second_domain": {
       "status": "blocked",
       "http_status": 403,
       "reason": "Forbidden",
-      "elapsed_s": 0.12
+      "elapsed_s": 0.1
     },
     "binance_usdm_fapi": {
       "status": "blocked",
       "http_status": 451,
       "reason": "",
-      "elapsed_s": 0.22
+      "elapsed_s": 0.17
     },
     "bybit_spot_official_ws": {
       "status": "verified",
       "transport": "official_websocket_snapshot",
       "market": "spot",
       "url": "wss://stream.bybit.com/v5/public/spot",
-      "elapsed_s": 1.02,
+      "elapsed_s": 1.47,
       "verified": true,
       "levels": {
-        "bid": 200,
-        "ask": 200
+        "bid": 1000,
+        "ask": 1000
       },
-      "mid_usd": 77047.95,
+      "mid_usd": 77030.95,
       "complete_bands": [
         "0.01",
         "0.05",
@@ -51,37 +51,88 @@
       "transport": "official_websocket_snapshot",
       "market": "perpetual",
       "url": "wss://stream.bybit.com/v5/public/linear",
-      "elapsed_s": 1.16,
+      "elapsed_s": 1.4,
       "verified": true,
       "levels": {
-        "bid": 200,
-        "ask": 200
+        "bid": 1000,
+        "ask": 1000
       },
-      "mid_usd": 77016.35,
+      "mid_usd": 77011.15,
       "complete_bands": [
-        "0.01"
+        "0.01",
+        "0.05",
+        "0.2"
       ],
       "bid_ask_ordering_valid": true,
       "source_time_valid": true
     },
     "binance_usdm_official_partial_ws": {
-      "status": "error",
-      "transport": "websocket",
+      "status": "verified",
+      "transport": "official_websocket_partial_depth",
+      "market": "perpetual",
       "url": "wss://fstream.binance.com/ws/btcusdt@depth20@100ms",
-      "error": "No order book snapshot after 8 frames",
-      "elapsed_s": 1.35
+      "elapsed_s": 0.45,
+      "returned_keys": [
+        "e",
+        "E",
+        "T",
+        "s",
+        "ps",
+        "U",
+        "u",
+        "pu",
+        "b",
+        "a",
+        "st"
+      ],
+      "verified": true,
+      "levels": {
+        "bid": 20,
+        "ask": 20
+      },
+      "mid_usd": 77015.95,
+      "complete_bands": [],
+      "bid_ask_ordering_valid": true,
+      "source_time_valid": true
+    },
+    "binance_usdm_ws_api_depth_1000": {
+      "status": "verified",
+      "transport": "official_websocket_depth_request",
+      "market": "perpetual",
+      "url": "wss://ws-fapi.binance.com/ws-fapi/v1",
+      "elapsed_s": 0.7,
+      "returned_keys": [
+        "lastUpdateId",
+        "E",
+        "T",
+        "bids",
+        "asks"
+      ],
+      "verified": true,
+      "levels": {
+        "bid": 1000,
+        "ask": 1000
+      },
+      "mid_usd": 77006.05,
+      "complete_bands": [
+        "0.01",
+        "0.05"
+      ],
+      "bid_ask_ordering_valid": true,
+      "source_time_valid": true
     }
   },
-  "finished_utc": "2026-11-02T20:28:17.120017+00:00",
+  "finished_utc": "2026-11-02T20:29:03.034412+00:00",
   "verified_official_alternatives": [
     "bybit_spot_official_ws",
-    "bybit_perp_official_ws"
+    "bybit_perp_official_ws",
+    "binance_usdm_official_partial_ws",
+    "binance_usdm_ws_api_depth_1000"
   ],
   "restricted_or_failed": [
     "bybit_spot_primary",
     "bybit_spot_official_second_domain",
     "bybit_perp_official_second_domain",
-    "binance_usdm_fapi",
-    "binance_usdm_official_partial_ws"
+    "binance_usdm_fapi"
   ]
 }
