@@ -29,6 +29,9 @@ PAIR="XBTUSD"
 MAX_PAGES=2400
 GAP_FIRST="2026-10-24T15:00:00Z"
 GAP_LAST="2026-10-25T13:00:00Z"
+# Published first hour after the 23-hour outage exists but is only partial:
+# Kraken official full-hour gross $4,050,790.53 vs HFT $2,274,245.09.
+KNOWN_PARTIAL_HOURS={"2026-10-25T14:00:00Z"}
 def instant(s):return dt.datetime.fromisoformat(s.replace("Z","+00:00"))
 def iso(t):return t.strftime("%Y-%m-%dT%H:00:00Z")
 def money(v):return float(v.quantize(CENT,rounding=decimal.ROUND_HALF_UP))
@@ -64,12 +67,15 @@ def recover(repository_root="."):
     start=instant(GAP_FIRST);last=instant(GAP_LAST)
     target=[start+dt.timedelta(hours=i) for i in range(int((last-start).total_seconds()//3600)+1)]
     missing=[t for t in target if iso(t) not in known]
-    if not missing:
+    partial=[instant(k) for k in KNOWN_PARTIAL_HOURS
+             if known.get(k,{}).get("source")=="CryptoHFTData"]
+    required=sorted(set(missing+partial))
+    if not required:
         return {"generated_utc":dt.datetime.now(UTC).isoformat(),"venue":VENUE,
                 "requested_hours":[],"data":{},"pages":0,"already_complete":True}
-    # Download two surrounding fully archived hours as independent source checks.
-    left=missing[0]-dt.timedelta(hours=1)
-    right=missing[-1]+dt.timedelta(hours=1)
+    # Download surrounding source hours to validate independent taker-side totals.
+    left=required[0]-dt.timedelta(hours=1)
+    right=required[-1]+dt.timedelta(hours=1)
     stop=right+dt.timedelta(hours=1)
     start_ns=int(left.timestamp())*1_000_000_000-1_000_000_000
     cursor=str(start_ns)
@@ -117,7 +123,7 @@ def recover(repository_root="."):
                   "latest trade timestamp",last_trade,flush=True)
         time.sleep(1.15)
     if not crossed_end:raise RuntimeError("Could not paginate through final boundary; pages="+str(pages))
-    if any(buckets[iso(t)]["trades"]==0 for t in missing):
+    if any(buckets[iso(t)]["trades"]==0 for t in required):
         raise RuntimeError("Missing UTC hour has no authenticated Kraken trades")
     comparisons=[]
     for t in (left,right):
@@ -133,15 +139,16 @@ def recover(repository_root="."):
         new_net=float(new["buy"]-new["sell"])
         gross_error=abs(gross-original_gross)/max(gross,original_gross)
         net_error=abs(new_net-original_net)/max(gross,original_gross)
-        comparisons.append({"hour":k,"source_gross":round(original_gross,2),
+        comparisons.append({"hour":k,"reference_source":old.get("source"),
+                            "source_gross":round(original_gross,2),
                             "kraken_rest_gross":round(gross,2),
                             "gross_relative_error":round(gross_error,6),
                             "net_to_gross_error":round(net_error,6),
                             "close":gross_error<0.05 and net_error<0.05})
-    if not comparisons or not any(x["close"] for x in comparisons):
-        raise RuntimeError("Kraken REST vs CryptoHFTData adjacent-hour validation failed: "+str(comparisons))
+    if not any(x["close"] and x["reference_source"]=="CryptoHFTData" for x in comparisons):
+        raise RuntimeError("Kraken REST vs independent CryptoHFTData adjacent-hour validation failed: "+str(comparisons))
     recovered={}
-    for t in missing:
+    for t in required:
         k=iso(t);b=buckets[k]
         buy=money(b["buy"]);sell=money(b["sell"])
         recovered[k]={"buy":buy,"sell":sell,"net":money(b["buy"]-b["sell"]),
@@ -151,7 +158,7 @@ def recover(repository_root="."):
     return {"generated_utc":dt.datetime.now(UTC).isoformat(),
             "venue":VENUE,"symbol":"BTC_USD","source":"Kraken official public REST Trades",
             "methodology":"verified full UTC hour by trade timestamp; no zero-filled hours",
-            "requested_hours":[iso(t) for t in missing],"data":recovered,
+            "requested_hours":[iso(t) for t in required],"data":recovered,
             "pages":pages,"unique_trade_ids":len(seen),"duplicates_skipped":duplicates,
             "independent_adjacent_hour_checks":comparisons,"already_complete":False}
 def merge(output,repository_root="."):
@@ -165,7 +172,7 @@ def merge(output,repository_root="."):
     state_path=root/"btc-spot-cvd/data/state.json"
     state=json.loads(state_path.read_text())
     kraken=state.setdefault("hourly",{}).setdefault(VENUE,{})
-    added=[]
+    added=[];replaced={}
     for hour,rec in data["data"].items():
         if (rec.get("hour")!=hour or rec.get("complete") is not True
             or rec.get("symbol")!="BTC_USD" or rec.get("quote")!="USD"
@@ -177,6 +184,20 @@ def merge(output,repository_root="."):
             raise ValueError("Unverified Kraken hourly trade record: "+hour)
         if hour not in kraken:
             kraken[hour]=rec;added.append(hour)
+        elif hour in KNOWN_PARTIAL_HOURS and kraken[hour].get("source")=="CryptoHFTData":
+            old=kraken[hour]
+            old_gross=old["buy"]+old["sell"]
+            new_gross=rec["buy"]+rec["sell"]
+            relative=abs(new_gross-old_gross)/max(new_gross,old_gross)
+            if relative<0.20:
+                raise ValueError("Refuse to replace existing Kraken hour without verified >20% partial-source discrepancy")
+            replaced[hour]={"original_gross":round(old_gross,2),
+                            "recovered_gross":round(new_gross,2),
+                            "original_trades":old["trades"],
+                            "recovered_trades":rec["trades"],
+                            "relative_gross_disagreement":round(relative,6),
+                            "reason":"CryptoHFTData first hour after 23h archive outage contains partial BTC/USD trades"}
+            kraken[hour]=rec
     now=dt.datetime.now(UTC)
     output_latest=collector.summarise(state,now,[])
     state_path.write_text(json.dumps(state,separators=(",",":"))+"\n")
@@ -184,7 +205,8 @@ def merge(output,repository_root="."):
     status_path=root/"btc-spot-cvd/data/full_backfill_status.json"
     status=json.loads(status_path.read_text()) if status_path.exists() else {}
     status.update({"merged_utc":now.isoformat(),
-      "kraken_official_recovered_hours":sorted(set(status.get("kraken_official_recovered_hours",[])+added)),
+      "kraken_official_recovered_hours":sorted(set(status.get("kraken_official_recovered_hours",[])+added+list(replaced))),
+      "kraken_partial_hour_replacements":{**status.get("kraken_partial_hour_replacements",{}),**replaced},
       "kraken_official_recovery_pages":data.get("pages"),
       "kraken_recovery_source":"Kraken official public REST Trades; exchange trade-time UTC hours",
       "kraken_recovery_validation":data.get("independent_adjacent_hour_checks",[]),
@@ -192,7 +214,7 @@ def merge(output,repository_root="."):
       "complete_original_5":{k:v["complete"] for k,v in output_latest["windows"].items()},
       "note":"CryptoHFTData received-time hours and recovered Kraken exchange trade-time hours are separately labelled; no fabricated or zero-filled hours. Coinbase is outside the alternative five."})
     status_path.write_text(json.dumps(status,indent=2)+"\n")
-    print("MERGED",len(added),"Kraken verified REST hours; complete alternative 5:",
+    print("MERGED",len(added),"new and",len(replaced),"repaired Kraken verified REST hours; complete alternative 5:",
           status["complete_alternative_5"],flush=True)
 def main():
     p=argparse.ArgumentParser()
