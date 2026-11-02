@@ -1,0 +1,60 @@
+name: BTC HFT alternate-hour historical snapshot provenance probe
+on:
+  push:
+    paths:
+      - ".github/workflows/btc-hft-alternate-hour-probe.yml"
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  check-source-hours:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install --disable-pip-version-check pyarrow zstandard
+      - name: Inspect native checkpoints without inferring book from deltas
+        run: |
+          python - <<'PY'
+          import datetime as dt
+          import importlib.util
+          import json
+          import pathlib
+          import urllib.parse
+          import traceback
+          p=pathlib.Path("btc-liquidity/hft_history.py")
+          spec=importlib.util.spec_from_file_location("hft",p)
+          h=importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(h)
+          checks=[]
+          for day in ("2025-11-01","2026-06-24","2026-10-25"):
+            for venue in ("binance_spot","bybit"):
+              symbol,kind,mul,quote=h.MARKETS[venue]
+              for hour in (0,6,18):
+                name=f"{venue}/{day}/{hour:02d}/{symbol}_orderbook.parquet"
+                url=h.API+"?"+urllib.parse.urlencode({"file":name})
+                try:
+                  data=h.parse_checkpoint(h.download(url),venue,symbol,kind,mul,quote,dt.date.fromisoformat(day),hour=hour)
+                  checks.append({"day":day,"venue":venue,"hour":hour,"status":"verified_native_snapshot","time":data["time"],"levels":data["levels"],"complete_0_01":data["bands"]["0.01"]["bid_coverage_complete"] and data["bands"]["0.01"]["ask_coverage_complete"]})
+                except Exception as e:
+                  checks.append({"day":day,"venue":venue,"hour":hour,"status":"unverified","error":f"{type(e).__name__}: {str(e)[:180]}"})
+                print(checks[-1],flush=True)
+          out={"checked_utc":dt.datetime.now(dt.timezone.utc).isoformat(),"scope":"Source probe, NOT canonical HFT coverage; only native snapshots count; different hours are not 12:00 UTC comparable","checks":checks}
+          pathlib.Path("btc-liquidity/data/hft_alternate_hour_probe.json").write_text(json.dumps(out,indent=2)+"\n")
+          PY
+      - name: Publish source diagnostics
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add btc-liquidity/data/hft_alternate_hour_probe.json
+          git commit -m "data: independent HFT historical alternate-hour provenance probe"
+          for attempt in 1 2 3 4 5 6 7 8; do
+            if git push origin HEAD:main; then exit 0; fi
+            git fetch origin main
+            git rebase origin/main || exit 1
+            sleep 2
+          done
+          exit 1
