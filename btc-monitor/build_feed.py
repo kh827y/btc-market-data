@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 
 SOURCES={
+ "macro_etf":("btc-macro/data/latest.json",2.5,"macro_liquidity"),
  "price_technical":("btc-price/data/latest.json",2.5,"price_trend"),
  "spot_cvd":("btc-spot-cvd/data/latest.json",2.5,"spot_execution"),
  "derivatives":("btc-derivatives/data/latest.json",3.0,"positioning"),
@@ -248,9 +249,100 @@ def compact_price(j):
    "closed_candles_only":True,
    "spot_not_futures":True}
 
+def compact_macro_etf(j,now):
+ if j.get("schema_version")!=1:raise ValueError("invalid macro/ETF schema")
+ data=val(j,"macro","metrics") or {}
+ required={"treasury_2y_pct":"DGS2","treasury_10y_pct":"DGS10",
+    "fed_funds_effective_pct":"DFF","fed_target_upper_pct":"DFEDTARU",
+    "fed_target_lower_pct":"DFEDTARL","usd_broad_trade_weighted":"DTWEXBGS",
+    "fed_balance_sheet_millions":"WALCL"}
+ results={}
+ for key,series in required.items():
+  row=data.get(key) or {}
+  date=timeparse(row.get("date"))
+  lag=(now.date()-date.date()).days if date else None
+  v=num(row.get("value"))
+  limit=18 if series in ("DTWEXBGS","WALCL") else 7
+  ok=(row.get("series_id")==series and row.get("status")=="usable"
+       and lag is not None and 0<=lag<=limit and v is not None
+       and 0<=v<1_000_000)
+  results[key]={"date":date.date().isoformat() if date else None,
+     "status":"usable" if ok else "missing_or_delayed","value":v if ok else None,
+     "unit":"index Jan 2006=100" if series=="DTWEXBGS" else
+            "USD millions" if series=="WALCL" else "annual interest percentage points",
+     "series_id":series,"source_url":"https://fred.stlouisfed.org/series/"+series,
+     "lag_days":lag}
+ curve=val(j,"macro","yield_curve_10y_minus_2y") or {}
+ curve_dt=timeparse(curve.get("date"))
+ curve_age=(now.date()-curve_dt.date()).days if curve_dt else None
+ crv=num(curve.get("spread_pct_points"))
+ curve_ok=curve.get("status")=="usable" and curve_age is not None and 0<=curve_age<=7 and crv is not None
+ if curve_ok:
+  # Each source may have a different LATEST trading day. The curve must
+  # contain two yields measured on the SAME exact observation date.
+  a=num(curve.get("same_day_2y_pct"))
+  b=num(curve.get("same_day_10y_pct"))
+  curve_ok=a is not None and b is not None and abs((b-a)-crv)<=0.005
+ curve_out={"status":"usable" if curve_ok else "missing_or_delayed",
+            "date":curve.get("date") if curve_ok else None,
+            "spread_pct_points":crv if curve_ok else None}
+ raw=val(j,"macro","ice_dxy") or {}
+ date=timeparse(raw.get("date"))
+ age=(now.date()-date.date()).days if date else None
+ exact=num(raw.get("value"))
+ dxy_ok=(raw.get("status")=="usable" and
+         raw.get("not_fred_broad_usd") is True and
+         raw.get("instrument")=="ICE DXY six-currency index" and
+         exact is not None and exact>0 and age is not None and 0<=age<=7)
+ dxy={"value":exact if dxy_ok else None,"date":raw.get("date") if dxy_ok else None,
+      "status":"usable" if dxy_ok else "unavailable_or_delayed",
+      "source":raw.get("source"),"exact_ice_index":True}
+ raw=val(j,"etf") or {}
+ date=timeparse(raw.get("date"));age=(now.date()-date.date()).days if date else None
+ total=num(raw.get("latest_net_flow_usd"))
+ recent=raw.get("last_five_sessions") or []
+ values=[num(a.get("net_flow_usd")) for a in recent if isinstance(a,dict)]
+ etf_ok=(raw.get("status")=="usable" and raw.get("license")=="CC BY 4.0"
+         and raw.get("market","").startswith("US-listed spot BTC ETFs")
+         and date is not None and age is not None and 0<=age<=7
+         and total is not None and abs(total)<=20_000_000_000
+         and len(recent)==5 and len(values)==5 and all(x is not None for x in values)
+         and abs(values[0]-total)<=0.01
+         and abs(sum(values)-(num(raw.get("five_sessions_net_flow_usd")) or 0))<=0.1)
+ history=raw.get("historical") or {}
+ last21=num(history.get("last_21_reported_sessions_net_usd"))
+ hist_ok=etf_ok and history.get("end_date")==raw.get("date") and
+         isinstance(history.get("observations"),int) and history["observations"]>=21 and last21 is not None
+ etf={"status":"usable" if etf_ok else "missing_or_delayed",
+      "latest_session_date":raw.get("date") if etf_ok else None,
+      "net_flow_usd":total if etf_ok else None,
+      "five_sessions_net_flow_usd":sum(values) if etf_ok else None,
+      "five_sessions_positive":raw.get("five_sessions_positive") if etf_ok else None,
+      "five_sessions_negative":raw.get("five_sessions_negative") if etf_ok else None,
+      "per_fund_verified":raw.get("per_fund_verified") is True if etf_ok else False,
+      "per_fund_flow_usd":raw.get("per_fund_flow_usd") if etf_ok and raw.get("per_fund_verified") is True else None,
+      "last_21_reported_sessions_net_flow_usd":last21 if hist_ok else None,
+      "source":"The Commoner Bitcoin ETF Tracker by TFTC (SoSoValue aggregate; Farside issuer history)",
+      "attribution":"TFTC (tftc.io/bitcoin-etf-flows), CC BY 4.0",
+      "url":"https://www.tftc.io/bitcoin-etf-flows",
+      "US_spot_only":True,"not_intraday":True}
+ return {"fred":results,"treasury_curve":curve_out,
+    "dxy_exact":dxy,"usd_broad_index_is_NOT_dxy":True,
+    "us_spot_bitcoin_etf":etf,
+    "quality":{"fed_rates":all(results[k]["status"]=="usable" for k in
+       ("fed_funds_effective_pct","fed_target_upper_pct","fed_target_lower_pct")),
+       "treasury_yields":all(results[k]["status"]=="usable" for k in ("treasury_2y_pct","treasury_10y_pct"))
+             and curve_ok,
+       "usd_broad_index":results["usd_broad_trade_weighted"]["status"]=="usable",
+       "ice_dxy_exact":dxy_ok,"spot_etf_flow":etf_ok},
+    "caveats":["Observed Fed target is not probability of next FOMC move",
+               "FRED trade-weighted broad USD is NOT ICE 6-currency DXY",
+               "ETF flows settle after US market close and may be revised",
+               "Rising Treasury yields, DXY and risk assets are not mechanically causal"]}
+
 TRANSFORM={"spot_cvd":compact_spot,"derivatives":compact_deriv,"options":compact_options,
            "live_depth":compact_live_depth,"hft_depth":compact_hft,"bybit_depth":compact_bybit,
-           "price_technical":compact_price}
+           "price_technical":compact_price,"macro_etf":compact_macro_etf}
 
 def build(source,now):
  feeds={};metrics={};issues=[]
@@ -286,6 +378,12 @@ def build(source,now):
    issues.append(key+":invalid_schema:"+str(exc)[:100]);continue
   if feeds[key]["status"]!="fresh":issues.append(key+":"+feeds[key]["status"])
  coverage_gaps=[]
+ if feeds.get("macro_etf",{}).get("status")!="fresh":
+  coverage_gaps.append("macro_etf:unavailable_or_stale")
+ elif "macro_etf" in metrics:
+  for component in ("fed_rates","treasury_yields","usd_broad_index","ice_dxy_exact","spot_etf_flow"):
+   if val(metrics,"macro_etf","quality",component) is not True:
+    coverage_gaps.append("macro_etf:"+component+"_unavailable")
  if feeds.get("price_technical",{}).get("status")!="fresh":
   coverage_gaps.append("btc_technicals:unavailable_or_stale")
  if "spot_cvd" in metrics:
@@ -302,6 +400,11 @@ def build(source,now):
  usable={family:any(row.get("status")=="fresh" and row.get("family")==family for row in feeds.values())
          for family in sorted({x[2] for x in SOURCES.values()})}
  usable["current_orderbook"]=feeds.get("live_depth",{}).get("status")=="fresh"
+ usable["macro_fed_rates"]=feeds.get("macro_etf",{}).get("status")=="fresh" and val(metrics,"macro_etf","quality","fed_rates") is True
+ usable["macro_treasury_yields"]=feeds.get("macro_etf",{}).get("status")=="fresh" and val(metrics,"macro_etf","quality","treasury_yields") is True
+ usable["macro_usd_broad_not_dxy"]=feeds.get("macro_etf",{}).get("status")=="fresh" and val(metrics,"macro_etf","quality","usd_broad_index") is True
+ usable["macro_exact_ice_dxy"]=feeds.get("macro_etf",{}).get("status")=="fresh" and val(metrics,"macro_etf","quality","ice_dxy_exact") is True
+ usable["us_spot_btc_etf_flows"]=feeds.get("macro_etf",{}).get("status")=="fresh" and val(metrics,"macro_etf","quality","spot_etf_flow") is True
  usable["price_technical_verified"]=feeds.get("price_technical",{}).get("status")=="fresh"
  usable["price_technical_cross_venue"]=usable["price_technical_verified"] and val(metrics,"price_technical","confidence")=="cross_venue_verified"
  usable["onchain_independent_cost_basis"]=feeds.get("onchain",{}).get("status")=="fresh" and val(metrics,"onchain","cost_basis_all_three_usable") is True
@@ -344,6 +447,12 @@ def make_brief(report):
                    "CVD longer windows are null until 100% complete",
                    "Options RR25 is call-minus-put; CFTC futures shorts may be hedges",
                    "If important independent factors are unavailable reduce confidence; never infer no risk"]}
+ if good("macro_etf"):
+  macro=metrics["macro_etf"]
+  summary["macro"]={"fred":macro["fred"],"treasury_curve":macro["treasury_curve"],
+       "dxy_exact":macro["dxy_exact"],"usd_broad_index_is_NOT_dxy":True,
+       "quality":macro["quality"]}
+  summary["us_spot_bitcoin_etf"]=macro["us_spot_bitcoin_etf"]
  if good("price_technical"):
   summary["btc_technicals"]=metrics["price_technical"]
  if good("spot_cvd"):
