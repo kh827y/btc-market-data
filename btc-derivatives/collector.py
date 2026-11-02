@@ -9,7 +9,7 @@ from collections import defaultdict
 UTC=dt.timezone.utc
 ROOT=pathlib.Path("btc-derivatives/data")
 SHARPE="https://www.sharpe.ai/api"
-EXCHANGES=["Binance","Bybit","OKX","Gate","Hyperliquid"]
+EXCHANGES=["Binance","Bybit","OKX","Gate.io","Hyperliquid"]
 FUNDING={
     "Binance":("binance","BTCUSDT"),
     "Bybit":("bybit","BTCUSDT"),
@@ -28,7 +28,7 @@ def dateparse(v):
 def status(source,ts,now,max_hours):
     try:age=(now-dateparse(ts)).total_seconds()/3600
     except Exception:return {"source":source,"status":"unknown","age_h":None}
-    return {"source":source,"status":"fresh" if 0<=age<=max_hours else "stale","age_h":round(age,2)}
+    return {"source":source,"status":"fresh" if -0.1<=age<=max_hours else "stale","age_h":round(age,2)}
 
 def fetch_oi(now):
     url=SHARPE+"/futures/data?chart=oi-stacked&coin=BTC&timeframe=1M"
@@ -164,6 +164,7 @@ def fetch_basis(now):
     curve=get(base+"annualized-basis&coin=BTC&timeframe=1W")
     wanted=("Binance","Bybit","OKX","Deribit")
     snap={}
+    by_expiry=defaultdict(dict)
     for row in snapshot.get("data",[]):
         ex=row.get("exchange")
         if ex not in wanted:continue
@@ -175,11 +176,16 @@ def fetch_basis(now):
             spot=number(row["spot_price"]);futures=number(row["futures_price"])
             if days<7 or spot<=0 or futures<=0:continue
         except (ValueError,TypeError,KeyError):continue
-        if ex not in snap or days<snap[ex]["days_to_expiry"]:
-            snap[ex]={"timestamp":t.isoformat(),"expiry":expiry.date().isoformat(),
+        one={"timestamp":t.isoformat(),"expiry":expiry.date().isoformat(),
                   "contract":row.get("contract_symbol"),"days_to_expiry":round(days,3),
                   "spot_usd":spot,"futures_usd":futures,
                   "annualized_basis_pct_vendor":annual}
+        by_expiry[expiry.date().isoformat()][ex]=one
+        if ex not in snap or days<snap[ex]["days_to_expiry"]:
+            snap[ex]=one
+    common=[date for date,v in by_expiry.items() if set(wanted).issubset(v)]
+    shared_date=min(common) if common else None
+    matched=by_expiry[shared_date] if shared_date else None
     history=defaultdict(dict)
     for row in curve.get("data",[]):
         if row.get("exchange") not in wanted:continue
@@ -194,7 +200,9 @@ def fetch_basis(now):
     return {"source":"Sharpe term-structure / annualized-basis history",
       "markets":"dated futures (NOT perpetual funding)",
       "cme_basis":{"status":"missing","reason":"Verified CME matched-settlement futures-vs-spot annualized basis not yet available"},
-      "dated_basis_latest_by_venue":snap,"daily_by_venue_and_contract":dict(history),
+      "dated_basis_latest_by_venue":snap,
+      "matched_four_venue_expiry":shared_date,"matched_four_venue_basis":matched,
+      "daily_by_venue_and_contract":dict(history),
       "source_meta":status("Sharpe basis",(snapshot.get("meta") or {}).get("as_of"),now,3)}
 
 def main():
@@ -221,7 +229,8 @@ def main():
             "dated_futures_basis":"expiry-aware non-CME futures/spot basis, not funding; CME basis missing"},
         "results":results,"errors":errors,
         "coverage":{"obtained":len(results),"expected":len(checks),
-                    "complete":len(results)==len(checks),
+                    "core_feeds_available":len(results)==len(checks),
+                    "complete":False,
                     "cme_basis_available":False},
         "limitations":[
             "CME price basis is not provided by CFTC positions; do not relabel non-CME basis as CME.",
