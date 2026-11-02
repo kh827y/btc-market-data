@@ -57,7 +57,15 @@ def compact_spot(j):
   scoped_ok=(subset.get("available") is True and len(subset.get("venues") or [])>=3
              and all((row.get("by_venue") or {}).get(v,{}).get("complete") is True
                      for v in subset.get("venues",[])))
+  alt=row.get("fixed_five_ex_coinbase") or {}
+  alt_ok=(alt.get("complete") is True and
+          alt.get("venues")==["binance","okx","bybit","kraken","bitget"] and
+          all((row.get("by_venue") or {}).get(n,{}).get("complete") is True for n in alt.get("venues",[])) and
+          num(alt.get("net")) is not None)
   windows[k]={"complete":ok,"net_usd_approx":num(row.get("net")) if ok else None,
+              "fixed_five_ex_coinbase":{"complete":alt_ok,"venues":alt.get("venues",[]) if alt_ok else [],
+                                       "net_usd_approx":num(alt.get("net")) if alt_ok else None,
+                                       "scope":"fixed selected five spot venues; does not include Coinbase"},
               "complete_venue_subset":{"available":scoped_ok,
                   "venues":subset.get("venues",[]) if scoped_ok else [],
                   "venue_count":len(subset.get("venues",[])) if scoped_ok else 0,
@@ -206,6 +214,7 @@ def build(source,now):
  usable["current_orderbook"]=feeds.get("live_depth",{}).get("status")=="fresh"
  usable["spot_cvd_24h_complete"]=feeds.get("spot_cvd",{}).get("status")=="fresh" and val(metrics,"spot_cvd","windows","24h","complete") is True
  usable["spot_cvd_24h_covered_subset"]=feeds.get("spot_cvd",{}).get("status")=="fresh" and val(metrics,"spot_cvd","windows","24h","complete_venue_subset","available") is True
+ usable["spot_cvd_24h_fixed_five_ex_coinbase"]=feeds.get("spot_cvd",{}).get("status")=="fresh" and val(metrics,"spot_cvd","windows","24h","fixed_five_ex_coinbase","complete") is True
  return {"schema":1,"as_of_utc":now.isoformat(),
          "feed_contract":"Source-level UTC quality bridge; not a standalone reversal signal",
          "audit":{"sources_total":len(SOURCES),"sources_parsed":len(metrics),
@@ -244,7 +253,8 @@ def make_brief(report):
   j=metrics["spot_cvd"]
   summary["spot_cvd"]={"last_complete_hour":j.get("last_complete_hour"),
      "windows":{k:{"complete":v["complete"],"net_usd_approx":v["net_usd_approx"],
-                "complete_venue_subset":v.get("complete_venue_subset")}
+                "complete_venue_subset":v.get("complete_venue_subset"),
+                "fixed_five_ex_coinbase":v.get("fixed_five_ex_coinbase")}
                 for k,v in j["windows"].items()}}
  if good("derivatives"):
   j=metrics["derivatives"]
