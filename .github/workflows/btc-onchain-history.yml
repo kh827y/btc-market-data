@@ -26,6 +26,9 @@ jobs:
         run: |
           python -m unittest discover -s btc-onchain/tests -p test_primary_selection.py -v
       - name: Update and persist verified onchain history from newest checkpoint
+        # Code-push CI validates logic only; it must not repeatedly consume
+        # the free API quota. Genuine data collection is daily/dispatch.
+        if: ${{ github.event_name != 'push' }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
