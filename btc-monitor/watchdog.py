@@ -168,6 +168,13 @@ def assess(name, record, now):
         if observation_age is None or not (-0.2 <= observation_age <= 4.5):
             result.update(status="stale_observation", reason="no_new_verified_taker_hour",
                           needs_recovery=True)
+        # Critical: a newly published CVD file is not enough if the last
+        # completed 1h ORIGINAL FIVE VENUE window is missing actual trades.
+        if get(record, "windows", "1h", "complete") is not True:
+            result["coverage_gaps"].append("five_venue_cvd_1h_incomplete")
+            result.update(status="incomplete_current_hour",
+                          reason="newest_spot_cvd_hour_missing_executed_trades",
+                          needs_recovery=True)
         for window in ("24h", "168h", "720h"):
             if get(record, "windows", window, "complete") is not True:
                 result["coverage_gaps"].append(f"five_venue_cvd_{window}_incomplete")
