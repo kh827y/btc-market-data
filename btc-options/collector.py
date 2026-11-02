@@ -105,8 +105,9 @@ def fixed_tenor(surfaces,days_target):
     after=[row for row in arr if row["days"]>=days_target]
     if not before or not after:return {"status":"unavailable","reason":"tenor outside observed maturities"}
     left=before[-1];right=after[0]
-    if right["days"]-left["days"]>50:
-        return {"status":"unavailable","reason":"expiry interpolation gap >50 days"}
+    gap_limit=110 if days_target>=90 else 50
+    if right["days"]-left["days"]>gap_limit:
+        return {"status":"unavailable","reason":"expiry interpolation gap exceeds quality limit"}
     if left["days"]==right["days"]:
         values={key:left[key] for key in ("atm_iv_pct","call25_iv_pct","put25_iv_pct")}
     else:
@@ -120,6 +121,8 @@ def fixed_tenor(surfaces,days_target):
             values[key]=round(vol,4)
     values.update({"status":"available","target_days":days_target,
                    "expiry_left":left["expiration"],"expiry_right":right["expiration"],
+                   "expiry_gap_days":round(right["days"]-left["days"],2),
+                   "quality":"wide_expiry_bracket" if right["days"]-left["days"]>50 else "standard",
                    "rr25_call_minus_put_volpts":round(values["call25_iv_pct"]-values["put25_iv_pct"],4),
                    "bf25_volpts":round((values["call25_iv_pct"]+values["put25_iv_pct"])/2-values["atm_iv_pct"],4),
                    "method":"variance-time interpolation of 25d option mark IV and ATM; forward delta approximated analytically"})
@@ -216,7 +219,7 @@ def fetch_research(now):
             if len(metrics)==3:series[key][day]=metrics
     summary={}
     for tenor,records in series.items():
-        if last not in records:continue
+        if tenor!="1M" or last not in records:continue
         obs=records[last]
         days=sorted(records)
         metrics={}
@@ -229,7 +232,7 @@ def fetch_research(now):
                            "change_7d_volpts":round(value-records[prev7][field],4) if prev7 in records else None,
                            "change_30d_volpts":round(value-records[prev30][field],4) if prev30 in records else None}
         summary[tenor]={"last_report_day":last,"n_published_observations":len(records),"metrics":metrics}
-    # Do not copy vendor's whole daily data into a public GitHub repo.
+    # Quote only a limited single-tenor excerpt; do not republish vendor data.
     return {"source":"Derivasys published research; permitted limited excerpts with attribution",
         "source_url":"https://api.derivasys.com/api/v1/data/BTC/latest",
         "history_api":"https://api.derivasys.com/api/v1/data/BTC/observations",
