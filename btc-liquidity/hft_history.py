@@ -482,7 +482,7 @@ def main():
     enough_spot=sum(anchor_keys[v] for v in MARKETS if MARKETS[v][1]=="spot")>=2
     enough_perp=sum(anchor_keys[v] for v in MARKETS if MARKETS[v][1]=="perpetual")>=1
     latest={
-        "schema_version":2,"generated_at":now.isoformat(),
+        "schema_version":3,"generated_at":now.isoformat(),
         "status":"ok" if enough_spot and enough_perp else "partial" if any(verified_markets.values()) else "unavailable",
         "source":"CryptoHFTData historical L2 /download; real observed vendor checkpoint",
         "archive_start":ARCHIVE_START.isoformat(),
