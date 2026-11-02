@@ -93,7 +93,12 @@ def measure(obj,day,venue,depth,source):
     stamp=dt.datetime.fromtimestamp(ts/1000,UTC)
     start=dt.datetime.combine(day,dt.time(0),UTC)
     age=(stamp-start).total_seconds()
-    if age<0 or age>180:
+    # Bybit's native archive occasionally timestamps the first genuine
+    # 00:00 book 1–3 milliseconds BEFORE the calendar boundary. This is a
+    # clock/serialization boundary artifact, not a previous-day observation.
+    # Admit at most 10 ms of negative skew, preserve the raw source timestamp
+    # and NEVER reinterpret snapshots hours away from midnight as valid.
+    if age < -0.010 or age > 180:
         raise ValueError("initial snapshot not near midnight UTC")
     data=obj["data"]
     levels={}
