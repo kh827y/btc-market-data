@@ -244,8 +244,9 @@ def targets(through, existing, failures=None, now=None):
         for venue in MARKETS:
             day_key=day.isoformat()
             previous_entry=existing.get(venue,{}).get(day_key,{})
-            if verified_entry(previous_entry,venue,day_key):
-                continue  # Strict source snapshot verified; no need to redownload.
+            if (verified_entry(previous_entry,venue,day_key)
+                and "0.01" in previous_entry["data"]["bands"]):
+                continue  # Native snapshot and all modern bands already present.
             # Legacy "hour-start checkpoint" rows may be inferred from
             # unanchored updates. Retain for audit but do NOT treat as verified.
             for hour in SEARCH_HOURS:
@@ -346,8 +347,10 @@ def main():
     for venue,day,hour in targets(through,markets,failures,now):
         if files>=limit or time.monotonic()-start>700:break
         key=day.isoformat()
-        if verified_entry(markets[venue].get(key,{}),venue,key):
-            continue  # Genuine snapshot already verified.
+        existing_entry=markets[venue].get(key,{})
+        if (verified_entry(existing_entry,venue,key)
+            and "0.01" in existing_entry["data"]["bands"]):
+            continue  # Genuine snapshot already verified with modern bands.
         symbol,kind,mul,quote=MARKETS[venue]
         name=f"{venue}/{key}/{hour:02d}/{symbol}_orderbook.parquet"
         url=API+"?"+urllib.parse.urlencode({"file":name})
