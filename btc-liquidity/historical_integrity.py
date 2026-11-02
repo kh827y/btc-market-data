@@ -94,8 +94,22 @@ def audit_hft(history,latest):
         current=latest["source_date_audit"][venue]
         actual=recomputed[venue]
         for key in ("eligible_days","verified_days","explicit_error_days",
-                    "not_fully_checked_days","all_source_dates_accounted_for"):
+                    "not_fully_checked_days","all_source_dates_accounted_for",
+                    "verified_date_intervals","explicit_error_date_intervals",
+                    "explicit_error_intervals_by_reason","unchecked_date_intervals"):
             require(current[key]==actual[key],"HFT calendar mismatch "+venue+"."+key)
+        # Independent partition arithmetic prevents any calendar day from being
+        # silently counted as a zero book, duplicated, or omitted.
+        def interval_days(intervals):
+            return sum(item["days"] for item in intervals)
+        require(interval_days(current["verified_date_intervals"])==current["verified_days"]
+                and interval_days(current["explicit_error_date_intervals"])==current["explicit_error_days"]
+                and interval_days(current["unchecked_date_intervals"])==current["not_fully_checked_days"]
+                and sum(interval_days(group) for group in
+                        current["explicit_error_intervals_by_reason"].values())==current["explicit_error_days"]
+                and sum((current[key] for key in
+                         ("verified_days","explicit_error_days","not_fully_checked_days")))==current["eligible_days"],
+                "HFT calendar interval partition mismatch "+venue)
         require(latest["coverage_days"][venue]==len(verified[venue]),
                 "HFT source verified count mismatch "+venue)
         for width in ("7d","30d","90d","365d"):
