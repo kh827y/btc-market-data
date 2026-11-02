@@ -1,0 +1,37 @@
+name: BTC options volatility and 25delta skew
+on:
+  push:
+    paths:
+      - "btc-options/collector.py"
+      - ".github/workflows/btc-options-history.yml"
+  workflow_dispatch:
+  schedule:
+    - cron: "13 * * * *"
+permissions:
+  contents: write
+concurrency:
+  group: btc-options-history
+  cancel-in-progress: false
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify Python collector
+        run: python -m py_compile btc-options/collector.py
+      - name: Collect independent Deribit chain and Derivasys comparison
+        run: python btc-options/collector.py
+      - name: Save derived options risk data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add btc-options/data/latest.json btc-options/data/derived_history.json
+          if ! git diff --cached --quiet; then
+            git commit -m "data: verified BTC ATM IV and RR25"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
