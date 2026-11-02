@@ -41,7 +41,8 @@ def live():
         payload[n]={"market":market,
             "symbol":"BTCUSD" if n=="coinbase_spot" else "BTCUSDT",
             "captured_at":"2026-11-02T20:41:00Z",
-            "source_timestamp":"2026-11-02T20:40:58Z" if n in q.WS_TRANSPORTS else None,
+            "source_timestamp":"2026-11-02T20:40:58Z"
+                if n in q.WS_TRANSPORTS or n in q.NATIVE_BOOK_TIMESTAMPS else None,
             "transport":t,"bands":{"0.01":{
                 "bid_coverage_complete":True,"ask_coverage_complete":True,
                 "bid_usd":1000,"ask_usd":1200,"imbalance_bid_share":0.454545}}}
@@ -192,5 +193,25 @@ class QualityTests(unittest.TestCase):
         r=q.assess({"macro_etf":{}},fresh("macro_etf"),derived,NOW)
         self.assertEqual(r["checks"]["macro.ice_dxy_exact"]["status"],"unverified")
         self.assertEqual(r["checks"]["macro.usd_broad_index"]["status"],"usable")
+
+
+    def test_live_rest_native_timestamp_and_transport_fail_closed(self):
+        for venue in q.NATIVE_BOOK_TIMESTAMPS:
+            data=live()
+            data[venue]["source_timestamp"]="2026-11-02T15:00:00Z"
+            transformed={"live_depth":{"venues":{venue:{"market":q.EXPECTED_LIVE[venue],
+                      "bands":{"0.01":{"complete":True,"bid_usd":1000,"ask_usd":1200}}}}}}
+            r=q.assess({"live_depth":{"current":{"venues":data}}},
+                       fresh("live_depth"),transformed,NOW)
+            self.assertEqual(r["checks"]["live_depth."+venue]["status"],"incomplete",venue)
+            self.assertNotIn(venue,transformed["live_depth"]["venues"])
+        # Timestamp by itself is not enough: a data feed falsely labeled
+        # as a native official source must also fail the provenance gate.
+        data=live()
+        data["gate_spot"]["transport"]="unverified_third_party_proxy"
+        transformed={"live_depth":{"venues":{}}}
+        r=q.assess({"live_depth":{"current":{"venues":data}}},
+                   fresh("live_depth"),transformed,NOW)
+        self.assertEqual(r["checks"]["live_depth.gate_spot"]["status"],"incomplete")
 
 if __name__=="__main__":unittest.main()
