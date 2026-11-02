@@ -40,3 +40,25 @@ def fetch_series(slug, start, end):
     if len(rows) < 360:
         raise ValueError("insufficient dates")
     return rows
+
+def main():
+    now = dt.datetime.now(dt.timezone.utc)
+    today = now.date()
+    start = dt.date(2022, 11, 1)
+    history = {}
+    latest = {}
+    errors = []
+    for name, slug in SERIES.items():
+        try:
+            observations = fetch_series(slug, start, today)
+            history[name] = observations
+            day = max(observations)
+            latest[name] = {
+                "date": day,
+                "value": observations[day],
+                "rows": len(observations),
+                "lag_days": (today - dt.date.fromisoformat(day)).days,
+            }
+        except Exception as exc:
+            errors.append({"metric": name, "reason": str(exc)[:170]})
+            latest[name] = {"date": None, "value": None, "rows": 0}
