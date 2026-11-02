@@ -37,10 +37,13 @@ def range_bytes(url,length=524288):
     with urllib.request.urlopen(req,timeout=40) as resp:
         if resp.status!=206:raise ValueError("source did not honor byte-range request")
         rng=resp.headers.get("Content-Range","")
-        if not re.match(r"^bytes 0-\d+/\d+$",rng):
-            raise ValueError("invalid Content-Range: "+rng)
+        match=re.fullmatch(r"bytes 0-(\\d+)/(\\d+)",rng)
+        if not match:raise ValueError("invalid Content-Range: "+rng)
+        final,total=map(int,match.groups())
+        expected=min(length,total)
+        if final+1!=expected:raise ValueError("invalid range end")
         body=resp.read(length+1)
-        if len(body)!=length:raise ValueError("short or oversized HTTP range")
+        if len(body)!=expected:raise ValueError("short or oversized HTTP range")
     return body
 
 def first_zip_snapshot(prefix,expected_symbol="BTCUSDT"):
