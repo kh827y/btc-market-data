@@ -21,7 +21,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   monitor-and-recover:
-    if: \${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 9
     steps:
@@ -37,7 +37,7 @@ jobs:
           python -m unittest discover -s btc-monitor/tests -p test_watchdog.py -v
       - name: Check actual timestamps, workflow runs and recover outages
         env:
-          GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -eu
           git config user.name "github-actions[bot]"
