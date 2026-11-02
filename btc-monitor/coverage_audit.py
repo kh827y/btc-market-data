@@ -110,6 +110,7 @@ def build(brief,source,original_onchain,hft,bybit,deep):
            "binance_usdm_max_1000":"https://developers.binance.com/en/docs/derivatives/usds-margined-futures/market-data/websocket-api",
            "bitget_max_1000":"https://www.bitget.com/docs/catalog/market/market-data",
            "okx_books_max_400":"https://www.okx.com/docs-v5/en/",
+           "okx_full_books_max_5000":"https://www.okx.com/docs-v5/en/",
            "gate_futures":"https://www.gate.com/docs/developers/apiv4/en/futures/",
            "gate_ws_v2_public_400":"https://www.gate.com/docs/developers/futures/ws/en/#order-book-v2-api"},
         "official_deeper_snapshot_probe":{
@@ -117,6 +118,18 @@ def build(brief,source,original_onchain,hft,bybit,deep):
           "bybit_spot_full_http_code":(deep.get("markets") or {}).get("bybit_spot_full",{}).get("http_error_code"),
           "bybit_perpetual_full_http_code":(deep.get("markets") or {}).get("bybit_usdt_perp_full",{}).get("http_error_code"),
           "gate_300_result":(deep.get("markets") or {}).get("gate_usdt_perp_300",{}).get("status"),
+          "okx_spot_5000_actual_live":(
+              markets["okx_spot"].get("native_depth_levels_requested")==5000
+              and (markets["okx_spot"].get("levels") or {}).get("bid")>=5000
+              and (markets["okx_spot"].get("levels") or {}).get("ask")>=5000
+              and markets["okx_spot"].get("source_url")=="https://www.okx.com/api/v5/market/books-full"
+              and bool(markets["okx_spot"].get("source_timestamp"))),
+          "okx_perpetual_5000_actual_live":(
+              markets["okx_usdt_perp"].get("native_depth_levels_requested")==5000
+              and (markets["okx_usdt_perp"].get("levels") or {}).get("bid")>=5000
+              and (markets["okx_usdt_perp"].get("levels") or {}).get("ask")>=5000
+              and markets["okx_usdt_perp"].get("source_url")=="https://www.okx.com/api/v5/market/books-full"
+              and bool(markets["okx_usdt_perp"].get("source_timestamp"))),
           "gate_live_400_verified":(
               markets["gate_usdt_perp"].get("transport")=="gate_official_ws_v2_full_snapshot"
               and (markets["gate_usdt_perp"].get("levels") or {}).get("bid")>=400
