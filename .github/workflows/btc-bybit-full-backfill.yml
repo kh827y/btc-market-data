@@ -1,0 +1,101 @@
+name: BTC historical Bybit L2 parallel source backfill
+on:
+  push:
+    paths:
+      - "btc-liquidity/bybit_parallel_backfill.py"
+      - "btc-liquidity/tests/test_bybit_parallel.py"
+      - ".github/workflows/btc-bybit-full-backfill.yml"
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: btc-historical-bybit-parallel
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: |
+          python -m unittest discover -s btc-liquidity/tests -p test_bybit_independent.py -v
+          python -m unittest discover -s btc-liquidity/tests -p test_bybit_parallel.py -v
+  bulk-shards:
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        include:
+          - { category: linear, shard: 0 }
+          - { category: linear, shard: 1 }
+          - { category: linear, shard: 2 }
+          - { category: linear, shard: 3 }
+          - { category: linear, shard: 4 }
+          - { category: linear, shard: 5 }
+          - { category: linear, shard: 6 }
+          - { category: linear, shard: 7 }
+          - { category: spot, shard: 0 }
+          - { category: spot, shard: 1 }
+          - { category: spot, shard: 2 }
+          - { category: spot, shard: 3 }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify historical native Bybit snapshot for each assigned date
+        run: |
+          python -u btc-liquidity/bybit_parallel_backfill.py --category "${{ matrix.category }}" --shard ${{ matrix.shard }} --out out/result.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bybit-${{ matrix.category }}-${{ matrix.shard }}
+          path: out/result.json
+          if-no-files-found: error
+          retention-days: 3
+  merge:
+    needs: bulk-shards
+    if: ${{ always() && needs.bulk-shards.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: bybit-*
+          path: /tmp/bybit-workers
+      - name: Reorganize verified per-shard outputs
+        shell: bash
+        run: |
+          mkdir -p /tmp/bybit-merge
+          for i in 0 1 2 3 4 5 6 7; do
+            mkdir -p "/tmp/bybit-merge/linear-$i"
+            cp "/tmp/bybit-workers/bybit-linear-$i/result.json" "/tmp/bybit-merge/linear-$i/result.json"
+          done
+          for i in 0 1 2 3; do
+            mkdir -p "/tmp/bybit-merge/spot-$i"
+            cp "/tmp/bybit-workers/bybit-spot-$i/result.json" "/tmp/bybit-merge/spot-$i/result.json"
+          done
+      - name: Merge exactly verified records; recompute provenance and completeness
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in 1 2 3 4; do
+            git fetch origin main
+            git reset --hard origin/main
+            python -u btc-liquidity/bybit_parallel_backfill.py --merge /tmp/bybit-merge
+            git add btc-liquidity/data/bybit_independent_latest.json btc-liquidity/data/bybit_independent_history.json btc-liquidity/data/bybit_full_backfill_status.json
+            if git diff --cached --quiet; then exit 0; fi
+            git commit -m "data: verified full published Bybit L2 first-snapshot coverage"
+            if git push origin HEAD:main; then exit 0; fi
+            sleep 4
+          done
+          exit 1
