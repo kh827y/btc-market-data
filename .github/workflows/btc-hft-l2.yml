@@ -29,6 +29,8 @@ jobs:
         run: |
           python -m py_compile btc-liquidity/hft_history.py btc-liquidity/historical_integrity.py
           python -m unittest discover -s btc-liquidity/tests -p test_hft_history.py -v
+          python -m unittest discover -s btc-liquidity/tests -p test_bybit_independent.py -v
+          python -m unittest discover -s btc-liquidity/tests -p test_bybit_parallel.py -v
       - name: Build and safely commit dated historical BTC L2 liquidity
         env:
           # Bounded serial fetches (1.1s minimum pacing) within the script 700s cap.
@@ -43,7 +45,22 @@ jobs:
           # Independent source-date audit must match the exact newly built
           # history; do not publish a stale 7d/30d or global coverage audit.
           python -u btc-liquidity/historical_integrity.py
-          git add btc-liquidity/data/hft_latest.json btc-liquidity/data/hft_history.json btc-liquidity/data/historical_integrity_status.json
+          # Only after all three unit suites and the independent live-history
+          # integrity audit have succeeded, publish a timestamped test receipt.
+          python - <<'PY'
+          import datetime, json, os, pathlib
+          status={
+            "tested_commit":os.environ.get("GITHUB_SHA"),
+            "test_completed_utc":datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "bybit_snapshot_tests_ok":True,
+            "bybit_parallel_merge_tests_ok":True,
+            "hft_history_tests_ok":True,
+            "independent_historical_integrity_ok":True,
+            "scope":"source parser/unit tests and published-source-date integrity; not full historical completeness or delivery proof",
+          }
+          pathlib.Path("btc-liquidity/data/historical_test_status.json").write_text(json.dumps(status,indent=2)+"\n")
+          PY
+          git add btc-liquidity/data/hft_latest.json btc-liquidity/data/hft_history.json btc-liquidity/data/historical_integrity_status.json btc-liquidity/data/historical_test_status.json
           if git diff --cached --quiet; then exit 0; fi
           git commit -m "data: verified historical BTC spot/perpetual L2 depth"
           # Other independent BTC workflows frequently push to main during the
