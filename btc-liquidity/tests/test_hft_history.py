@@ -110,6 +110,29 @@ class HistoricL2Tests(unittest.TestCase):
         bad=dict(data);bad["sample_utc_hour"]=11
         self.assertFalse(m.verified_entry({"status":"ok","data":bad},"binance_spot",str(day)))
 
+    def test_noncomparable_11h_native_book_can_upgrade_to_noon(self):
+        day=dt.date(2026,10,31)
+        rec=m.parse_checkpoint(fixture(),"binance_spot","BTCUSDT","spot",1.0,"USDT",day)
+        rec["time"]="2026-10-31T11:05:00+00:00"
+        rec["sample_utc_hour"]=11
+        rec["file_path"]="binance_spot/2026-10-31/11/BTCUSDT_orderbook.parquet"
+        existing={v:{} for v in m.MARKETS}
+        existing["binance_spot"][day.isoformat()]={"status":"ok","data":rec}
+        self.assertTrue(m.verified_entry(existing["binance_spot"][day.isoformat()],
+                                         "binance_spot",day.isoformat()))
+        self.assertFalse(m.noon_comparable_entry(existing["binance_spot"][day.isoformat()],
+                                                  day.isoformat()))
+        now=dt.datetime(2026,11,2,tzinfo=dt.timezone.utc)
+        pending=[h for venue,d,h in m.targets(day,existing,now=now)
+                 if venue=="binance_spot" and d==day]
+        self.assertEqual(pending,[12])
+        rec["time"]="2026-10-31T11:40:00+00:00"
+        self.assertTrue(m.noon_comparable_entry(existing["binance_spot"][day.isoformat()],
+                                                 day.isoformat()))
+        pending=[h for venue,d,h in m.targets(day,existing,now=now)
+                 if venue=="binance_spot" and d==day]
+        self.assertEqual(pending,[])
+
     def test_failure_for_one_hour_does_not_blacklist_adjacent_hours(self):
         now=dt.datetime(2026,11,2,8,tzinfo=dt.timezone.utc)
         records={name:{} for name in m.MARKETS}

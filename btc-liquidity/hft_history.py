@@ -234,6 +234,15 @@ def verified_entry(entry,venue,day):
     except (ValueError,KeyError,TypeError):
         return False
 
+def noon_comparable_entry(entry,day):
+    """A genuine 11/13 UTC book is not necessarily within 30m of noon."""
+    try:
+        stamp=dt.datetime.fromisoformat(entry["data"]["time"]).astimezone(UTC)
+        anchor=dt.datetime.combine(dt.date.fromisoformat(day),dt.time(12),UTC)
+        return abs((stamp-anchor).total_seconds())<=1800
+    except (KeyError,TypeError,ValueError):
+        return False
+
 def targets(through, existing, failures=None, now=None):
     """Search real 12:00, 11:00, 13:00 UTC anchors; retry gaps after source updates.
 
@@ -259,7 +268,12 @@ def targets(through, existing, failures=None, now=None):
             # 12/11/13 UTC after their source-specific retry timers expire,
             # allowing later native snapshots to upgrade the date to 12 UTC.
             if verified and previous_entry["data"]["sample_utc_hour"] in PRIMARY_SEARCH_HOURS:
-                continue
+                # An 11/13 UTC native book outside the noon tolerance must
+                # not permanently suppress a later, more comparable 12 UTC file.
+                if noon_comparable_entry(previous_entry,day_key):
+                    continue
+                if previous_entry["data"]["sample_utc_hour"]==12 or hour!=12:
+                    continue
             # Legacy "hour-start checkpoint" rows may be inferred from
             # unanchored updates. Retain for audit but do NOT treat as verified.
             for hour in SEARCH_HOURS:
@@ -509,16 +523,26 @@ def main():
         key=day.isoformat()
         existing_entry=markets[venue].get(key,{})
         if (verified_entry(existing_entry,venue,key)
-            and "0.01" in existing_entry["data"]["bands"]
-            and (existing_entry["data"]["sample_utc_hour"] in PRIMARY_SEARCH_HOURS
-                 or hour in FALLBACK_SEARCH_HOURS)):
-            continue  # Do not overwrite 12 UTC with an incompatible 00 UTC book.
+            and "0.01" in existing_entry["data"]["bands"]):
+            if (noon_comparable_entry(existing_entry,key)
+                or hour in FALLBACK_SEARCH_HOURS
+                or existing_entry["data"]["sample_utc_hour"]==12
+                or hour!=12):
+                continue  # Only retry noon for a non-comparable 11/13 UTC book.
         symbol,kind,mul,quote=MARKETS[venue]
         name=f"{venue}/{key}/{hour:02d}/{symbol}_orderbook.parquet"
         url=API+"?"+urllib.parse.urlencode({"file":name})
         files+=1
         try:
             record=parse_checkpoint(download(url),venue,symbol,kind,mul,quote,day,hour=hour)
+            if verified_entry(existing_entry,venue,key):
+                anchor=dt.datetime.combine(day,dt.time(12),UTC)
+                old_time=dt.datetime.fromisoformat(existing_entry["data"]["time"]).astimezone(UTC)
+                new_time=dt.datetime.fromisoformat(record["time"]).astimezone(UTC)
+                if abs((new_time-anchor).total_seconds())>=abs((old_time-anchor).total_seconds()):
+                    # A valid but less comparable noon file must not downgrade
+                    # the already verified day. Recheck if the vendor revises it.
+                    continue
             markets[venue][key]={"status":"ok","data":record}
             # Preserve failed primary-hour probes when 00 UTC fallback succeeds.
             # After their retry timers expire, seek a better 12 UTC checkpoint.
