@@ -23,7 +23,7 @@ ROOT=pathlib.Path("btc-liquidity/data")
 API="https://api.cryptohftdata.com/v1/download"
 ARCHIVE_START=dt.date(2025,6,28)
 DAYS=(dt.datetime.now(UTC).date()-ARCHIVE_START).days
-BANDS=(0.05,0.2,1.0)
+BANDS=(0.01,0.05,0.2,1.0)
 SEARCH_HOURS=(12,11,13)  # Keep comparable daily observations within the 11-14 UTC window.
 SOURCE_RECHECK_DAYS=7
 MARKETS={
@@ -184,7 +184,12 @@ def targets(through, existing, failures=None, now=None):
     for day in days:
         for venue in MARKETS:
             day_key=day.isoformat()
-            if day_key in existing.get(venue,{}):continue
+            if day_key in existing.get(venue,{}):
+                previous=existing[venue][day_key].get("data",{})
+                # Upgrade 50-level Bybit books to the genuinely observable
+                # 0.01% band; legacy 0.05% measurements are mostly null.
+                if venue not in ("bybit","bybit_spot") or "0.01" in previous.get("bands",{}):
+                    continue
             for hour in SEARCH_HOURS:
                 key=f"{venue}:{day_key}:{hour:02d}"
                 failure=failures.get(key,{})
@@ -219,8 +224,9 @@ def make_comparisons(records):
             deltas={}
             for band in BANDS:
                 k=str(band)
-                a,b=latest["bands"][k],item["bands"][k]
-                if a["bid_share"] is None or b["bid_share"] is None:continue
+                a,b=latest["bands"].get(k),item["bands"].get(k)
+                if not a or not b or a["bid_share"] is None or b["bid_share"] is None:
+                    continue
                 deltas[k]={"bid_change_pct":round(100*(a["bid_usd"]/b["bid_usd"]-1),2) if b["bid_usd"] else None,
                            "ask_change_pct":round(100*(a["ask_usd"]/b["ask_usd"]-1),2) if b["ask_usd"] else None,
                            "bid_share_change_pp":round(100*(a["bid_share"]-b["bid_share"]),3)}
@@ -233,7 +239,8 @@ def make_comparisons(records):
             row={"days":period,"available":len(sub),"required":minimum,"bands":{}}
             for band in BANDS:
                 k=str(band)
-                values=[v["bands"][k] for v in sub if v["bands"][k]["bid_share"] is not None]
+                values=[v["bands"][k] for v in sub
+                        if v["bands"].get(k,{}).get("bid_share") is not None]
                 if len(values)>=minimum:
                     row["bands"][k]={"median_bid_usd":round(statistics.median(v["bid_usd"] for v in values),2),
                                      "median_ask_usd":round(statistics.median(v["ask_usd"] for v in values),2),
@@ -263,7 +270,10 @@ def main():
     for venue,day,hour in targets(through,markets,failures,now):
         if files>=limit or time.monotonic()-start>430:break
         key=day.isoformat()
-        if key in markets[venue]:continue  # a fallback hour already succeeded
+        if key in markets[venue]:
+            prev=markets[venue][key].get("data",{})
+            if venue not in ("bybit","bybit_spot") or "0.01" in prev.get("bands",{}):
+                continue  # previously verified and already has all required bands
         symbol,kind,mul,quote=MARKETS[venue]
         name=f"{venue}/{key}/{hour:02d}/{symbol}_orderbook.parquet"
         url=API+"?"+urllib.parse.urlencode({"file":name})
@@ -325,6 +335,7 @@ def main():
             "One real checkpoint per date, typically around 12:00 UTC; not a daily median nor 24h continuous depth.",
             "Daily observations used in comparisons are required to be within 2 hours of the same UTC clock time.",
             "Missing checkpoint or insufficient coverage is NOT interpreted as no liquidity; null values are intentional.",
+            "Bybit 50-level snapshots are usually too shallow for 0.05%: 0.01% is separately measured and only same-band metrics are comparable.",
             "Market is venue/instrument specific; spot and perpetuals are never pooled or called global.",
             "OKX perpetual 0.01 BTC/contract is assumed historically constant; contract-value history remains unverified.",
             "Provider's archives may have gaps and revisions; negative checks retried after 7 days."
