@@ -142,3 +142,101 @@ def fetch_chain(now):
             "rr_convention":"25delta call IV - 25delta put IV (negative=put premium)",
             "formula":"Black forward-delta approximation, interpolation to 25d and forward ATM; source delta convention may differ",
             "quality_limit":"Not a calibrated professional SVI surface; spread/illiquidity can distort nearest strikes."}
+
+def fetch_dvol(now):
+    start=now-dt.timedelta(days=366)
+    data=fetch_deribit("get_volatility_index_data",{
+        "currency":"BTC","start_timestamp":int(start.timestamp()*1000),
+        "end_timestamp":int(now.timestamp()*1000),"resolution":"1D"})
+    candles=data.get("data",[])
+    if len(candles)<80:raise ValueError("Deribit DVOL daily history unexpectedly short")
+    history={}
+    today=now.date()
+    for candle in candles:
+        try:
+            when=dt.datetime.fromtimestamp(int(candle[0])/1000,UTC)
+            if when.date()>=today:continue
+            o,h,l,c=map(float,candle[1:5])
+            if not all(math.isfinite(x) and 0<x<300 for x in (o,h,l,c)):continue
+            history[when.date().isoformat()]=round(c,4)
+        except (ValueError,IndexError,TypeError,OverflowError):continue
+    if len(history)<80:raise ValueError("Deribit DVOL history has <80 valid full days")
+    days=sorted(history)
+    last=days[-1]
+    recent=history[last]
+    allv=list(history.values())
+    previous_30=[history[d] for d in days if (dt.date.fromisoformat(last)-dt.date.fromisoformat(d)).days<=30]
+    return {"source":"Deribit BTC DVOL volatility index (30d expectation); NOT ATM IV",
+        "history_closed_days":len(history),"first":days[0],"last":last,
+        "last_dvol_pct":recent,"percentile_all":round(sum(v<=recent for v in allv)/len(allv)*100,2),
+        "mean_last_30d_pct":round(sum(previous_30)/len(previous_30),4),
+        "last_date_lag_days":(today-dt.date.fromisoformat(last)).days,
+        "scope":"DVOL index distinct from 1M ATM IV; no current partial-day candle published"}
+def fetch_research(now):
+    start="2026-04-22";end=now.date().isoformat()
+    items=[]
+    cursor=None
+    for page_count in range(18):
+        query={"start":start,"end":end,"limit":31}
+        if cursor:query["cursor"]=cursor
+        url=RESEARCH+"/observations?"+urllib.parse.urlencode(query)
+        obj=get(url)
+        records=obj.get("observations",[])
+        if not isinstance(records,list):raise ValueError("Derivasys observations schema invalid")
+        items.extend(records)
+        if not obj.get("hasMore"):break
+        next_cursor=obj.get("nextCursor")
+        if not next_cursor or next_cursor==cursor:raise ValueError("stalled Derivasys pagination")
+        cursor=next_cursor
+    else:raise ValueError("Derivasys history exceeded expected pages")
+    if len(items)<30:raise ValueError("Derivasys history insufficient")
+    byday={}
+    for observation in items:
+        day=observation.get("reportDate")
+        if not day:continue
+        byday[day]=observation
+    last=max(byday)
+    row=byday[last]
+    if (row.get("provenance") or {}).get("rrConvention")!="25-delta call IV minus 25-delta put IV":
+        raise ValueError("RR25 convention unexpectedly changed")
+    series=defaultdict(dict)
+    for day,observation in byday.items():
+        for tenor in observation.get("tenors",[]):
+            key=tenor.get("tenor")
+            if tenor.get("availability")!="available" or key not in TENORS:continue
+            metrics={}
+            for field in ("atmIv","rr25","bf25"):
+                value=(tenor.get(field) or {}).get("current")
+                if value is None:continue
+                try:
+                    val=float(value)
+                    if not math.isfinite(val):continue
+                    metrics[field]=val
+                except (TypeError,ValueError):continue
+            if len(metrics)==3:series[key][day]=metrics
+    summary={}
+    for tenor,records in series.items():
+        if last not in records:continue
+        obs=records[last]
+        days=sorted(records)
+        metrics={}
+        for field in ("atmIv","rr25","bf25"):
+            vals=[v[field] for v in records.values()]
+            value=obs[field]
+            prev7=(dt.date.fromisoformat(last)-dt.timedelta(days=7)).isoformat()
+            prev30=(dt.date.fromisoformat(last)-dt.timedelta(days=30)).isoformat()
+            metrics[field]={"current":round(value,4),"percentile_available":round(sum(x<=value for x in vals)/len(vals)*100,2),
+                           "change_7d_volpts":round(value-records[prev7][field],4) if prev7 in records else None,
+                           "change_30d_volpts":round(value-records[prev30][field],4) if prev30 in records else None}
+        summary[tenor]={"last_report_day":last,"n_published_observations":len(records),"metrics":metrics}
+    # Do not copy vendor's whole daily data into a public GitHub repo.
+    return {"source":"Derivasys published research; permitted limited excerpts with attribution",
+        "source_url":"https://api.derivasys.com/api/v1/data/BTC/latest",
+        "history_api":"https://api.derivasys.com/api/v1/data/BTC/observations",
+        "research_report":"https://www.derivasys.com/reports/"+last,
+        "license":"https://www.derivasys.com/research-artifact-license/v1",
+        "report_date":last,"snapshot_at":row.get("timestamps",{}).get("currentSnapshotAt"),
+        "published_days":len(byday),
+        "sign_convention":"RR25 25Δ call minus 25Δ put; negative=put wing richer",
+        "standard_tenors":summary,
+        "raw_daily_republication":False}
