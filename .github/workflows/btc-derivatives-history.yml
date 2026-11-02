@@ -23,15 +23,28 @@ jobs:
           python-version: "3.12"
       - name: Verify syntax
         run: python -m py_compile btc-derivatives/collector.py
-      - name: Collect independent futures venue data
-        run: python btc-derivatives/collector.py
-      - name: Save derivatives summary
+      - name: Refresh canonical main, collect and commit with bounded race-safe retry
         run: |
+          set -eu
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add btc-derivatives/data/latest.json
-          if ! git diff --cached --quiet; then
+          for attempt in 1 2 3 4 5 6 7 8; do
+            # A detached stale checkout must never overwrite newer collectors.
+            git fetch origin main
+            git reset --hard origin/main
+            python -u btc-derivatives/collector.py
+            git add btc-derivatives/data/latest.json
+            if git diff --cached --quiet; then
+              echo "Canonical derivatives data unchanged"
+              exit 0
+            fi
             git commit -m "data: BTC multi-market derivatives history"
-            git pull --rebase origin main
-            git push origin HEAD:main
-          fi
+            if git push origin HEAD:main; then
+              echo "Verified derivative observation persisted"
+              exit 0
+            fi
+            echo "Concurrent GitHub push ($attempt); recalculate from latest canonical data"
+            sleep 3
+          done
+          echo "Could not persist derivative observation after bounded retries" >&2
+          exit 1
