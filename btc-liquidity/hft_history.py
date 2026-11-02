@@ -415,6 +415,8 @@ def main():
             "eligible_days":len(dates),
             "verified_days":len(observed),
             "explicit_error_days":len(bad),
+            "error_scope":"no usable verified checkpoint in sampled 11/12/13 UTC hours; NOT proof entire day has no native snapshot",
+            "attempted_hours_utc":list(SEARCH_HOURS),
             "not_fully_checked_days":len(pending),
             "all_source_dates_accounted_for":not pending,
             "error_date_examples":bad[:8],
