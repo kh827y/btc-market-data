@@ -62,3 +62,28 @@ def main():
         except Exception as exc:
             errors.append({"metric": name, "reason": str(exc)[:170]})
             latest[name] = {"date": None, "value": None, "rows": 0}
+    if "lth_supply_150d" in history and "lth_change_30d_150d" in history:
+        a = history["lth_supply_150d"]
+        delta = history["lth_change_30d_150d"]
+        end = (today - dt.timedelta(days=1)).isoformat()
+        before = (today - dt.timedelta(days=31)).isoformat()
+        if end in a and before in a and end in delta:
+            disagreement = abs(a[end] - a[before] - delta[end])
+            if disagreement > 2000:
+                errors.append({"metric": "lth_change_30d_150d", "reason": "30d change disagrees with same-provider supply by " + str(round(disagreement, 2)) + " BTC"})
+    output = {
+        "generated_utc": now.isoformat(),
+        "complete": not errors and len(history) == len(SERIES),
+        "source": "https://bitview.space/api/",
+        "methodology": "UTXO based >=150 days; not Glassnode entity-weighted 155 days",
+        "last_closed_utc_day": (today - dt.timedelta(days=1)).isoformat(),
+        "latest": latest,
+        "errors": errors,
+    }
+    folder = pathlib.Path("btc-onchain/data")
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / "bitview_history.json").write_text(json.dumps(history, separators=(",", ":")) + "\n")
+    (folder / "bitview_latest.json").write_text(json.dumps(output, indent=2) + "\n")
+    print(json.dumps({"complete": output["complete"], "latest": latest, "errors": errors}))
+if __name__ == "__main__":
+    main()
