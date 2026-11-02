@@ -353,6 +353,32 @@ TRANSFORM={"spot_cvd":compact_spot,"derivatives":compact_deriv,"options":compact
            "live_depth":compact_live_depth,"hft_depth":compact_hft,"bybit_depth":compact_bybit,
            "price_technical":compact_price,"macro_etf":compact_macro_etf}
 
+def observation_time(key,record):
+ # Reference end-times of verified windows, not data file creation times.
+ if key=="spot_cvd":
+  t=timeparse(record.get("last_complete_hour"))
+  return t+dt.timedelta(hours=1) if t else None
+ if key=="live_depth":
+  return timeparse(val(record,"current","time"))
+ if key=="price_technical":
+  t=timeparse(record.get("last_closed_day_utc"))
+  return t+dt.timedelta(days=1) if t else None
+ if key=="hft_depth":
+  t=timeparse(record.get("target_anchor_date"))
+  return t+dt.timedelta(hours=12) if t else None
+ if key=="bybit_depth":
+  return timeparse(record.get("target_day"))
+ return None
+
+def live_book_usable_counts(metrics):
+ counts={"spot":0,"perpetual":0}
+ venues=val(metrics,"live_depth","venues") or {}
+ for venue,row in venues.items():
+  market=row.get("market")
+  if market in counts and any(b.get("complete") is True for b in (row.get("bands") or {}).values()):
+   counts[market]+=1
+ return counts
+
 def build(source,now):
  feeds={};metrics={};issues=[]
  for key,(path,max_age,family) in SOURCES.items():
@@ -371,14 +397,11 @@ def build(source,now):
     status="partial"
   # A freshly rebuilt file is NOT proof that its underlying hour is new:
   # CVD trades are published ~2 hours late by design; reject stalled data.
-  sampled_at=(timeparse(j.get("last_complete_hour")) if key=="spot_cvd"
-              else timeparse(val(j,"current","time")) if key=="live_depth"
-              else (timeparse(j.get("last_closed_day_utc"))+dt.timedelta(days=1)
-                    if timeparse(j.get("last_closed_day_utc")) else None) if key=="price_technical"
-              else None)
+  sampled_at=observation_time(key,j)
   sample_age=dt_age(now,sampled_at)
   if status=="fresh" and sample_age is not None:
-   if (key=="spot_cvd" and sample_age>5.0) or (key=="live_depth" and sample_age>3.0):
+   if (key=="spot_cvd" and sample_age>5.0) or (key=="live_depth" and sample_age>3.0) or (
+      key in ("hft_depth","bybit_depth") and sample_age>72.0):
     status="stale_observation"
   # A candle is dated by its OPEN. Validate the actual UTC CLOSE separately.
   # BTC trades every day; a completed day's indicators are usable throughout
@@ -405,7 +428,9 @@ def build(source,now):
               "spot_quote_age_h":quote_age if key=="price_technical" else None,
               "age_h":age,"max_age_h":max_age,"family":family,
               "source_status":j.get("status"),
-              "source_errors":len(j.get("errors") or j.get("errors_recent_run") or [])}
+              "source_errors":len(j.get("errors") or j.get("errors_recent_run") or []),
+              "collector_health":("errors_present" if j.get("errors") or j.get("errors_recent_run")
+                                  else "partial" if j.get("status")=="partial" else "ok")}
   try:
    metrics[key]=compact_onchain(j,now) if key=="onchain" else compact_macro_etf(j,now) if key=="macro_etf" else TRANSFORM[key](j)
    if key=="price_technical":
@@ -443,7 +468,12 @@ def build(source,now):
   coverage_gaps.append("derivatives:cme_front_basis_unavailable")
  usable={family:any(row.get("status")=="fresh" and row.get("family")==family for row in feeds.values())
          for family in sorted({x[2] for x in SOURCES.values()})}
- usable["current_orderbook"]=feeds.get("live_depth",{}).get("status")=="fresh"
+ book_counts=live_book_usable_counts(metrics)
+ usable["current_orderbook"]=feeds.get("live_depth",{}).get("status")=="fresh" and sum(book_counts.values())>0
+ usable["current_spot_orderbook"]=feeds.get("live_depth",{}).get("status")=="fresh" and book_counts["spot"]>0
+ usable["current_perp_orderbook"]=feeds.get("live_depth",{}).get("status")=="fresh" and book_counts["perpetual"]>0
+ usable["current_spot_orderbook_venues"]=book_counts["spot"] if usable["current_spot_orderbook"] else 0
+ usable["current_perp_orderbook_venues"]=book_counts["perpetual"] if usable["current_perp_orderbook"] else 0
  usable["macro_fed_rates"]=feeds.get("macro_etf",{}).get("status")=="fresh" and val(metrics,"macro_etf","quality","fed_rates") is True
  usable["macro_treasury_yields"]=feeds.get("macro_etf",{}).get("status")=="fresh" and val(metrics,"macro_etf","quality","treasury_yields") is True
  usable["macro_usd_broad_not_dxy"]=feeds.get("macro_etf",{}).get("status")=="fresh" and val(metrics,"macro_etf","quality","usd_broad_index") is True
@@ -484,7 +514,7 @@ def make_brief(report):
           "sources":{k:{"status":v["status"],"age_h":v.get("age_h"),
                          "original":v.get("source"),"measurement_age_h":v.get("measurement_age_h"),
                          "spot_quote_status":v.get("spot_quote_status"),"spot_quote_age_h":v.get("spot_quote_age_h"),
-                         "source_errors":v.get("source_errors",0)} for k,v in feeds.items()},
+                         "source_errors":v.get("source_errors",0),"collector_health":v.get("collector_health")} for k,v in feeds.items()},
           "family_readiness":report["audit"]["family_readiness"],
           "issues":report["audit"]["issues"],"coverage_gaps":report["audit"].get("coverage_gaps",[]),
           "rules":["Only fresh source + complete original window/band can support current risk",
