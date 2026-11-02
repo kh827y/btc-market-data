@@ -374,7 +374,7 @@ def build(source,now):
               "age_h":age,"max_age_h":max_age,"family":family,
               "source_status":j.get("status"),
               "source_errors":len(j.get("errors") or j.get("errors_recent_run") or [])}
-  try:metrics[key]=compact_onchain(j,now) if key=="onchain" else TRANSFORM[key](j)
+  try:metrics[key]=compact_onchain(j,now) if key=="onchain" else compact_macro_etf(j,now) if key=="macro_etf" else TRANSFORM[key](j)
   except (ValueError,KeyError,TypeError) as exc:
    feeds[key]["status"]="invalid_schema"
    issues.append(key+":invalid_schema:"+str(exc)[:100]);continue
