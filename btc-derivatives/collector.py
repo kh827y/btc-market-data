@@ -127,6 +127,44 @@ def fetch_liquidations(now):
           "venues":venues,"data_freshness":status("Edge liquidations",updated,now,3)}
     return out
 
+def fetch_monthly_liquidations(now):
+    obj=get(SHARPE+"/futures/data?chart=liquidations&coin=BTC&timeframe=1M")
+    rows=obj.get("data",[])
+    if not isinstance(rows,list) or len(rows)<200:
+        raise ValueError("Sharpe liquidation history unavailable")
+    timeseries=defaultdict(dict)
+    first=None
+    last=None
+    for row in rows:
+        try:
+            ex=row.get("exchange")
+            side=row.get("side")
+            if ex not in ("Binance","Bybit") or side not in ("long","short"):
+                continue
+            t=dateparse(row["timestamp"])
+            if t>now+dt.timedelta(minutes=6):continue
+            qty=number(row["quantity"])
+            if qty<0:continue
+            day=t.strftime("%Y-%m-%d")
+        except (KeyError,TypeError,ValueError):
+            continue
+        record=timeseries[day].setdefault(ex,{"long":0.0,"short":0.0,"rows":0})
+        record[side]+=qty
+        record["rows"]+=1
+        iso=t.isoformat()
+        first=min(first,iso) if first else iso
+        last=max(last,iso) if last else iso
+    output={}
+    for day,venues in sorted(timeseries.items()):
+        output[day]={ex:{"long_vendor_quantity":round(v["long"],2),
+                             "short_vendor_quantity":round(v["short"],2),
+                             "rows":v["rows"]} for ex,v in venues.items()}
+    return {"source":"Sharpe Terminal futures/liquidations, underlying provider velo",
+        "venue_scope":["Binance","Bybit"],
+        "unit_warning":"Vendor 'quantity' scales approximately as USD liquidation notional; not a separately audited USD guarantee. Do not add to Edge observed USD without a method match.",
+        "series":output,"days_observed":len(output),"first":first,"last":last,
+        "source_meta":status("Sharpe liquidation 30d",(obj.get("meta") or {}).get("as_of"),now,3)}
+
 def fetch_cme_cot(now):
     url=("https://publicreporting.cftc.gov/resource/gpe5-46if.json?"
       "$where=cftc_contract_market_code%3D%27133741%27%20and%20"
@@ -269,7 +307,7 @@ def fetch_cme_basis(now):
 def main():
     now=dt.datetime.now(UTC)
     checks=(("open_interest",fetch_oi),("funding",fetch_funding),
-            ("liquidations",fetch_liquidations),("cme_cot",fetch_cme_cot),
+            ("liquidations",fetch_liquidations),("liquidations_30d_vendor",fetch_monthly_liquidations),("cme_cot",fetch_cme_cot),
             ("dated_futures_basis",fetch_basis),("cme_basis",fetch_cme_basis))
     results={};errors=[]
     for key,fn in checks:
@@ -287,6 +325,7 @@ def main():
             "open_interest":"multi-venue USD notional; 5-venue fixed set",
             "funding":"actually settled contract rates; converted to a common 8h settlement basis",
             "liquidations":"reported USD forced liquidations from Binance and Bybit only",
+            "liquidations_30d_vendor":"30 days of observed Binance+Bybit liquidation vendor quantity, not mixed with Edge",
             "cme_cot":"weekly BTC CME standard futures only, positions in 5 BTC contracts",
             "dated_futures_basis":"expiry-aware non-CME futures/spot basis, not funding",
             "cme_basis":"historical verified CME dated futures premium against matched spot from Boros, not proxy"},
@@ -298,7 +337,8 @@ def main():
         "limitations":[
             "CME basis from independently labelled Boros CME price history, NOT CFTC. When source stale or a contract is close to expiration mark unavailable.",
             "Binance/Bybit direct REST API were blocked from GitHub; Sharpe verified exchange data is used instead.",
-            "Liquidations from only two exchanges are NOT world totals.",
+            "Liquidations from only two exchanges are NOT world totals. Binance sampling may undercount forced orders.",
+            "Sharpe 30d liquidation quantity has no explicit USD unit in this endpoint; do not blindly sum with Edge USD numbers.",
             "OI changes compare same five venues, fixed USD definitions; raw linear BTC OI must not be summed with coin-margined contract counts.",
             "Funding settlement rates are periodic fractions, not APR; compare aligned 8h normalizations.",
             "Futures contract rolls break a continuous dated basis curve unless expiry is retained.",
