@@ -1,0 +1,40 @@
+name: BTC spot CVD Kraken historical gap diagnostics
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "btc-spot-cvd/kraken_gap_probe.py"
+      - ".github/workflows/btc-spot-cvd-kraken-gap-probe.yml"
+permissions:
+  contents: write
+concurrency:
+  group: btc-cvd-kraken-gap-diagnostic
+  cancel-in-progress: false
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Probe Kraken BTC/USD missing hourly archives and Kraken REST
+        run: |
+          BTC_CVD_KRAKEN_PROBE_OUTPUT=/tmp/kraken_gap_probe.json python -u btc-spot-cvd/kraken_gap_probe.py
+      - name: Publish provenance and error statuses without altering CVD
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in 1 2 3 4; do
+            git fetch origin main
+            git reset --hard origin/main
+            cp /tmp/kraken_gap_probe.json btc-spot-cvd/data/kraken_gap_probe.json
+            git add btc-spot-cvd/data/kraken_gap_probe.json
+            if git diff --cached --quiet; then exit 0; fi
+            git commit -m "data: diagnose Kraken BTC/USD 23-hour missing trade archive"
+            if git push origin HEAD:main; then exit 0; fi
+            sleep 3
+          done
+          exit 1
