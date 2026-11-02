@@ -526,6 +526,12 @@ def main():
                          if verified_entry(row,v,day)} for v in MARKETS}
     legacy_unverified={v:len(markets[v])-len(verified_markets[v]) for v in MARKETS}
     comparisons,baselines=make_comparisons(verified_markets)
+    # 00 UTC fallback and 12 UTC snapshots must remain disjoint series.
+    # make_comparisons itself enforces same venue/band and ±30m clock.
+    alternate_00_records={venue:{day:row for day,row in rows.items()
+                        if row["data"]["sample_utc_hour"]==0}
+                        for venue,rows in verified_markets.items()}
+    alternate_00_comparisons,alternate_00_baselines=make_comparisons(alternate_00_records)
     source_days=(through-ARCHIVE_START).days+1
     recent_windows=recent_coverage(verified_markets,through)
     fallback_00_coverage={}
@@ -578,6 +584,8 @@ def main():
         "verified_this_run":good,
         "comparison":comparisons,
         "baseline":baselines,
+        "alternate_00utc_comparison":alternate_00_comparisons,
+        "alternate_00utc_baseline":alternate_00_baselines,
         "errors_recent_run":errors[-20:],
         "caveats":[
             "One real checkpoint per date, preferably around 12:00 UTC; 00 UTC fallback is separately labelled, never a daily median or 24h continuous depth.",
