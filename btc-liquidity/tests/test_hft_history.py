@@ -206,16 +206,16 @@ class HistoricL2Tests(unittest.TestCase):
         start=m.ARCHIVE_START
         days=[(start+dt.timedelta(days=i)).isoformat() for i in range(3)]
         observed={v:{d:{} for d in days} for v in m.MARKETS}
-        observed["bitget_spot"]={days[0]:{}}
+        observed["binance_spot"]={days[0]:{}}
         failures={}
         for hour in m.SEARCH_HOURS:
-            failures[f"bitget_spot:{days[1]}:{hour:02d}"]={
+            failures[f"binance_spot:{days[1]}:{hour:02d}"]={
                 "last_error":"HTTPError: HTTP Error 404: Not Found",
                 "retry_after":"2026-11-09T00:00:00+00:00"}
-            failures[f"bitget_spot:{days[2]}:{hour:02d}"]={
+            failures[f"binance_spot:{days[2]}:{hour:02d}"]={
                 "last_error":"HTTPError: HTTP Error 429: Too Many Requests",
                 "retry_after":"2026-11-03T00:00:00+00:00"}
-        row=m.audit_source_dates(observed,failures,start+dt.timedelta(days=2))["bitget_spot"]
+        row=m.audit_source_dates(observed,failures,start+dt.timedelta(days=2))["binance_spot"]
         self.assertEqual(row["verified_days"],1)
         self.assertEqual(row["explicit_error_days"],2)
         self.assertEqual(row["not_fully_checked_days"],0)
@@ -264,6 +264,36 @@ class HistoricL2Tests(unittest.TestCase):
         self.assertEqual(row["eligible_days"],5)
         self.assertEqual(row["verified_days"]+row["explicit_error_days"]+
                          row["not_fully_checked_days"],5)
+
+
+    def test_source_eligibility_does_not_count_bitget_prelaunch_dates_as_missing(self):
+        through=dt.date(2025,7,16)
+        observed={v:{} for v in m.MARKETS}
+        audit=m.audit_source_dates(observed,{},through)
+        self.assertEqual(m.MARKET_START["bitget_spot"],dt.date(2025,7,15))
+        self.assertEqual(audit["bitget_spot"]["source_market_start"],"2025-07-15")
+        self.assertEqual(audit["bitget_spot"]["eligible_days"],2)
+        self.assertEqual(audit["bitget_spot"]["not_fully_checked_days"],2)
+        self.assertEqual(audit["binance_spot"]["eligible_days"],19)
+        # The scheduler never probes Bitget before its actual archive launch.
+        targets=list(m.targets(dt.date(2025,7,14),observed,
+                              now=dt.datetime(2026,11,2,tzinfo=dt.timezone.utc)))
+        self.assertFalse(any(v=="bitget_spot" for v,day,h in targets))
+        self.assertEqual(m.recent_coverage(observed,through)["30d"]["bitget_spot"]["eligible_days"],2)
+
+    def test_obsolete_45mb_failures_reopened_only_when_safety_cap_increased(self):
+        self.assertEqual(m.MAX_COMPRESSED_BYTES,128_000_000)
+        self.assertEqual(m.download.__defaults__[0],m.MAX_COMPRESSED_BYTES)
+        failures={
+          "binance_futures:2026-09-11:12":{"last_error":"ValueError: File exceeds 45 MB cap; not silently truncated",
+                                              "retry_after":"2026-11-09T00:00:00+00:00"},
+          "binance_futures:2026-09-11:13":{"last_error":"ValueError: File exceeds 128 MB cap; not silently truncated"},
+          "binance_futures:2026-09-11:11":{"last_error":"HTTPError: HTTP Error 429: Too Many Requests"},
+        }
+        self.assertEqual(m.invalidate_obsolete_size_cap_failures(failures),1)
+        self.assertNotIn("binance_futures:2026-09-11:12",failures)
+        self.assertIn("binance_futures:2026-09-11:13",failures)
+        self.assertIn("binance_futures:2026-09-11:11",failures)
 
 if __name__=="__main__":
     unittest.main()
