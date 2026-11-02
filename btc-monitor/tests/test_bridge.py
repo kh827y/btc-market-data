@@ -71,4 +71,13 @@ class BridgeTests(unittest.TestCase):
   self.assertFalse(report["metrics"]["spot_cvd"]["windows"]["24h"]["complete_venue_subset"]["available"])
   self.assertIsNone(report["metrics"]["spot_cvd"]["windows"]["24h"]["complete_venue_subset"]["net_usd_approx"])
 
+ def test_fresh_json_with_old_spot_observation_is_rejected(self):
+  source={"generated_utc":"2026-11-02T07:25:00Z",
+          "last_complete_hour":"2026-11-01T18:00:00Z",
+          "windows":{"1h":{"complete":True,"net":100}}}
+  out=m.build({"spot_cvd":source},NOW)
+  self.assertEqual(out["feeds"]["spot_cvd"]["status"],"stale_observation")
+  self.assertNotIn("spot_cvd",m.make_brief(out))
+  self.assertFalse(out["audit"]["family_readiness"]["spot_execution"])
+
 if __name__=="__main__":unittest.main()
