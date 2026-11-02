@@ -105,7 +105,7 @@ def archives(state, now, errors, batch=24):
             errors.append(f"{name}: {str(e)[:120]}")
 
 
-def coinbase(state,now,errors,pages=70):
+def coinbase(state,now,errors,pages=130):
     # Coinbase returns descending IDs; 'after' walks older transactions.
     # Only closed hours with a fully observed subsequent older hour are published.
     cp=state.setdefault("coinbase_cursor",{"after":None,"pending":None,"bucket":None})
@@ -150,6 +150,25 @@ def coinbase(state,now,errors,pages=70):
             errors.append("coinbase: "+str(e)[:150]);break
 
 
+def coinbase_recent(state,now,errors,pages=40):
+    """Refresh the latest fully closed Coinbase hours independently of deep backfill.
+
+    A single continuing historical cursor crawls backwards for 30 days and
+    otherwise stops seeing NEW Coinbase hours. Re-scan a bounded head window
+    every run without destroying the persistent long-history cursor.
+    Only wholly traversed source hours are committed by coinbase().
+    """
+    saved=state.get("coinbase_cursor")
+    state["coinbase_cursor"]={"after":None,"pending":None,"bucket":None}
+    try:
+        coinbase(state,now,errors,pages=pages)
+    finally:
+        if saved is None:
+            state.pop("coinbase_cursor",None)
+        else:
+            state["coinbase_cursor"]=saved
+
+
 def summarise(state,now,errors):
     end=now.replace(minute=0,second=0,microsecond=0)-dt.timedelta(hours=2)
     out={"generated_utc":now.isoformat(),"last_complete_hour":key(end),"units":"quote-USD or USDT approximately USD; no stablecoin FX adjustment","source":"actual BTC spot trades","errors":errors[:30],"windows":{}}
@@ -183,6 +202,7 @@ def main():
     state=json.loads(path.read_text()) if path.exists() else {}
     errors=[]
     archives(state,now,errors)
+    coinbase_recent(state,now,errors)
     coinbase(state,now,errors)
     cutoff=now-dt.timedelta(days=31)
     for records in state.get("hourly",{}).values():
