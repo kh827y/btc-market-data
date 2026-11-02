@@ -57,6 +57,15 @@ def verify(root="."):
                     (venue!="kraken" or rec.get("hour_basis")!="trade_time"))):
                 report["invalid_records"].append(venue+":"+hour)
         report["missing_hours"][venue]=sorted(absent)
+    # The provider published a partial Kraken file at the first hour after
+    # the 2026-10-24/25 archive outage (independent REST gross differs 43.9%).
+    # Its existence and 'complete' flag are not proof of full executions.
+    partial="2026-10-25T14:00:00Z"
+    if key(start)<=partial<=key(end):
+        rec=state.get("hourly",{}).get("kraken",{}).get(partial,{})
+        if rec.get("source")!="Kraken official public REST Trades":
+            tag="kraken:"+partial
+            if tag not in report["invalid_records"]:report["invalid_records"].append(tag)
     for size in WINDOWS:
         label=str(size)+"h"
         times=[key(end-dt.timedelta(hours=i)) for i in range(size)]
