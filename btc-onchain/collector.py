@@ -28,21 +28,22 @@ def parse_rows(data):
     if not out:raise ValueError("no numerical dated observations")
     return out
 def selected_metrics(data,today):
-    """Stay under the published 15/day free API limit.
-    
-    The missing LTH cost basis gets ONE additional collection to seed its
-    actual primary history; no paid endpoint or error-dependent infinite loop.
-    Once seeded, resume the standard rotation (10 requests/day).
+    """Budget exactly nine core and one optional call per scheduled day.
+
+    The LTH primary series is prioritized until a genuine dated observation
+    is saved; never consume a further 11th request against the 10/hour cap.
+    The original rotating schedule resumes after that genuine seeding.
     """
     required=["mvrv","mvrv_zscore","nupl","sth_sopr","lth_sopr",
               "lth_realized_profit","lth_realized_loss",
               "sth_realized_profit","sth_realized_loss"]
     optional=["sth_realized_price","lth_realized_price","realized_price"]
     rotation=optional[today.toordinal()%len(optional)]
-    selected=required+[rotation]
-    if not data.get("lth_realized_price") and rotation!="lth_realized_price":
-        selected.append("lth_realized_price")
-    return selected
+    # Only 10 free calls/hour. Do NOT issue an 11th request to bootstrap LTH:
+    # prioritize the missing original series in the existing optional slot.
+    if not data.get("lth_realized_price"):
+        rotation="lth_realized_price"
+    return required+[rotation]
 
 def main():
     ROOT.mkdir(parents=True,exist_ok=True)
@@ -50,8 +51,9 @@ def main():
     previous=ROOT/"history.json"
     data=json.loads(previous.read_text()) if previous.exists() else {}
     errors=[]
-    # Free BGeometrics 15/day. Temporarily seed the documented, genuinely
-    # available LTH price endpoint (11 calls), then return to 10/day.
+    # Free BGeometrics has BOTH an hourly (10) and daily (15) limit.
+    # Bootstrap missing original LTH using the existing optional slot.
+    # Never exceed 10 source requests in a single daily collection.
     for name in selected_metrics(data,now.date()):
         slug=METRICS[name]
         try:
