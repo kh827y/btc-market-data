@@ -190,6 +190,68 @@ def build(source,now):
                   "Missing or stale groups REDUCE conviction, never imply no risk",
                   "No risk/news alert unless genuinely material change; cite source and key indicators"]}
 
+
+def make_brief(report):
+ """Compact monitor-facing payload; never upgrade stale inputs to fresh."""
+ metrics=report["metrics"]; feeds=report["feeds"]
+ good=lambda k:feeds.get(k,{}).get("status")=="fresh"
+ summary={"schema":1,"as_of_utc":report["as_of_utc"],
+          "sources":{k:{"status":v["status"],"age_h":v.get("age_h"),
+                         "original":v.get("source")} for k,v in feeds.items()},
+          "family_readiness":report["audit"]["family_readiness"],
+          "issues":report["audit"]["issues"],
+          "rules":["Only fresh source + complete original window/band can support current risk",
+                   "Orderbook resting orders are NOT executed purchases; not a world-wide book",
+                   "Compare historical orderbook same venue/market/band/UTC clock only",
+                   "Bybit 00:00 UTC vs HFT 12:00 UTC cannot be merged",
+                   "CVD longer windows are null until 100% complete",
+                   "Options RR25 is call-minus-put; CFTC futures shorts may be hedges",
+                   "If important independent factors are unavailable reduce confidence; never infer no risk"]}
+ if good("spot_cvd"):
+  j=metrics["spot_cvd"]
+  summary["spot_cvd"]={"last_complete_hour":j.get("last_complete_hour"),
+     "windows":{k:{"complete":v["complete"],"net_usd_approx":v["net_usd_approx"]}
+                for k,v in j["windows"].items()}}
+ if good("derivatives"):
+  j=metrics["derivatives"]
+  summary["derivatives"]={k:j.get(k) for k in ("oi_latest_hour","oi_five_venue_usd",
+       "oi_1d_7d_30d_pct","funding_settled","forced_liquidations_24h","cftc_cme_weekly",
+       "dated_futures_matched_expiry","cme_front_basis")}
+ if good("options"):
+  j=metrics["options"]
+  summary["options"]={"deribit_as_of":j.get("deribit_as_of"),
+    "one_month":val(j,"deribit_term","1M"),
+    "dvol":j.get("dvol"),"derivasys_1m":j.get("derivasys_1m")}
+ if good("onchain"):
+  j=metrics["onchain"]["groups"]
+  summary["onchain"]={group:{name:{"value":v["value"],"date":v["date"],"status":v["status"]}
+          for name,v in item["metrics"].items()} for group,item in j.items()}
+ if good("live_depth"):
+  j=metrics["live_depth"]
+  summary["orderbook_live"]={"spot_venues":j["spot_usable_venues"],
+    "perpetual_venues":j["perp_usable_venues"],
+    "venues":{venue:{"market":item["market"],"captured_at":item["captured_at"],
+                     "bands":{k:v for k,v in item["bands"].items()
+                              if k in ("0.05","0.2") and v["complete"]}}
+              for venue,item in j["venues"].items()}}
+ hist={}
+ for src,key,names in (("hft_depth","hft_12utc",("binance_spot","okx_spot","binance_futures","bybit","bybit_spot")),
+                       ("bybit_depth","bybit_00utc",("bybit_independent_spot","bybit_independent_linear"))):
+  if not good(src):continue
+  hist[key]={}
+  for venue in names:
+   row=val(metrics,src,"markets",venue) or {}
+   output={}
+   for lag,record in (row.get("lookback") or {}).items():
+    if lag not in ("1d","7d","30d","90d","365d","1095d") or not record:continue
+    bands={name:value for name,value in record.get("bands",{}).items()
+           if name in ("0.01","0.05")}
+    if bands:output[lag]={"baseline_day":record.get("baseline_date") or record.get("baseline_day"),
+                          "bands":bands}
+   hist[key][venue]={"latest_day":row.get("latest_day"),"comparisons":output}
+ if hist:summary["orderbook_history"]=hist
+ return summary
+
 def main():
  now=timeparse(os.environ.get("BTC_MONITOR_TEST_NOW")) or dt.datetime.now(UTC)
  source={}
@@ -200,6 +262,8 @@ def main():
  report=build(source,now)
  out=Path("btc-monitor/data/latest.json");out.parent.mkdir(parents=True,exist_ok=True)
  out.write_text(json.dumps(report,indent=2,sort_keys=True,ensure_ascii=False,allow_nan=False)+"\n",encoding="utf8")
+ brief_path=Path("btc-monitor/data/brief.json")
+ brief_path.write_text(json.dumps(make_brief(report),indent=2,sort_keys=True,ensure_ascii=False,allow_nan=False)+"\n",encoding="utf8")
  print(json.dumps({"as_of":report["as_of_utc"],"feed_status":{k:v["status"] for k,v in report["feeds"].items()},
                    "audit":report["audit"],"file_bytes":out.stat().st_size},ensure_ascii=False),flush=True)
  if len(report["metrics"])<5:raise SystemExit("Risk bridge insufficient parsed feeds: expected at least five")
