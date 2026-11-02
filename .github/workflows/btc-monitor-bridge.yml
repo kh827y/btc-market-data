@@ -5,6 +5,7 @@ on:
     paths:
       - "btc-monitor/build_feed.py"
       - "btc-monitor/metric_quality.py"
+      - "btc-monitor/quality_acceptance.py"
       - "btc-monitor/automation_prompt_v2.md"
       - "btc-monitor/policy_test_scenarios.md"
       - "btc-monitor/tests/**"
@@ -41,7 +42,7 @@ jobs:
           python-version: "3.12"
       - name: Verify data quality and stale/missing indicator unit tests
         run: |
-          python -m py_compile btc-monitor/build_feed.py btc-monitor/metric_quality.py
+          python -m py_compile btc-monitor/build_feed.py btc-monitor/metric_quality.py btc-monitor/quality_acceptance.py
           python -m unittest discover -s btc-monitor/tests -p "test_*.py" -v
       - name: Publish validated source bridge
         run: |
@@ -51,6 +52,9 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
             python -u btc-monitor/build_feed.py
+            # Verify the FULL and BRIEF outputs agree before they can reach
+            # the scheduled ChatGPT risk monitor.
+            python -u btc-monitor/quality_acceptance.py
             python - <<'PY'
           import datetime
           import json
@@ -68,7 +72,7 @@ jobs:
           path=Path("btc-monitor/data/policy_test_status.json")
           path.write_text(json.dumps(status,ensure_ascii=False,indent=2)+"\n")
           PY
-            git add btc-monitor/data/latest.json btc-monitor/data/brief.json btc-monitor/data/policy_test_status.json
+            git add btc-monitor/data/latest.json btc-monitor/data/brief.json btc-monitor/data/policy_test_status.json btc-monitor/data/metric_quality_acceptance.json
             if git diff --cached --quiet; then exit 0; fi
             git commit -m "data: BTC risk monitor source freshness and metric snapshot"
             if git push origin HEAD:main; then exit 0; fi
