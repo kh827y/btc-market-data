@@ -72,3 +72,55 @@ def fetch_oi(now):
         "daily_history":daily,"available_daily_complete":len(daily),"changes_pct":changes,
         "source_meta":status("Sharpe OI",asof,now,3),
         "provider_warnings":meta.get("warnings",[])}
+
+def fetch_funding(now):
+    out={}
+    for venue,(slug,symbol) in FUNDING.items():
+        url=SHARPE+"/funding/rates?type=history&coin=BTC&exchange="+slug+"&days=30&limit=400"
+        raw=get(url)
+        if not isinstance(raw,list):raise ValueError("unexpected funding schema for "+venue)
+        series={}
+        for record in raw:
+            if record.get("symbol")!=symbol:continue
+            try:
+                when=dateparse(record["settled_at"])
+                hours=number(record["interval_hours"])
+                if not 0<hours<=24:continue
+                rate=number(record["rate"])
+            except (ValueError,KeyError,TypeError):continue
+            series[when.isoformat()]={"raw_rate":rate,"hours":hours,"rate_8h":rate*8/hours}
+        records=sorted(series.items())
+        dates=[dateparse(t) for t,_ in records]
+        gap=max([(b-a).total_seconds()/3600 for a,b in zip(dates,dates[1:])],default=None)
+        latest_date=records[-1][0] if records else None
+        out[venue]={"symbol":symbol,"source":"Sharpe settled funding history","count":len(records),
+            "first":records[0][0] if records else None,"last":latest_date,
+            "max_gap_hours":round(gap,2) if gap is not None else None,
+            "settlements":series,
+            "latest_raw_rate":records[-1][1]["raw_rate"] if records else None,
+            "latest_rate_8h":records[-1][1]["rate_8h"] if records else None,
+            "mean_rate_8h_30d":round(sum(v["rate_8h"] for _,v in records)/len(records),9) if len(records)>=60 and gap is not None and gap<=16 else None,
+            "freshness":status("Sharpe "+venue+" funding",latest_date,now,13)}
+    return out
+
+def fetch_liquidations(now):
+    out={}
+    for window in (24,168):
+        obj=get("https://edgeornot.com/api/liquidations?hours="+str(window)+"&coin=btc")
+        total=obj.get("total") or {}
+        by=obj.get("by_exchange") or {}
+        long=number(total["long"]);short=number(total["short"])
+        venues={}
+        for ex in ("binance","bybit"):
+            if ex in by:
+                row=by[ex]
+                venues[ex]={"long_usd":round(number(row["long"]),2),
+                            "short_usd":round(number(row["short"]),2),"events":row.get("n")}
+        if not all(ex in venues for ex in ("binance","bybit")):raise ValueError("missing liquidation venue")
+        timestamp=obj.get("updated")
+        updated=dt.datetime.fromtimestamp(timestamp/1000,UTC).isoformat() if isinstance(timestamp,(float,int)) else None
+        out[str(window)+"h"]={"source":"Edge or Not; Binance+Bybit reported forced liquidations",
+          "units":"USD; observed venue records; not all global exchange liquidations",
+          "updated":updated,"long_usd":round(long,2),"short_usd":round(short,2),
+          "venues":venues,"data_freshness":status("Edge liquidations",updated,now,3)}
+    return out
