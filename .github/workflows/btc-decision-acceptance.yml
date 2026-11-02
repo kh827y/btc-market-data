@@ -1,0 +1,55 @@
+name: BTC trend alert decision regression and 7-day operational acceptance
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "btc-monitor/decision_gate.py"
+      - "btc-monitor/decision_observations.py"
+      - "btc-monitor/tests/test_decision_*.py"
+      - ".github/workflows/btc-decision-acceptance.yml"
+  schedule:
+    - cron: "49 * * * *"
+permissions:
+  contents: write
+concurrency:
+  group: btc-decision-acceptance-7day
+  cancel-in-progress: false
+jobs:
+  verify-and-record:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Test decision correctness guard and 7-day observation invariants
+        run: |
+          python -m py_compile btc-monitor/decision_gate.py btc-monitor/decision_observations.py
+          python -m unittest discover -s btc-monitor/tests -p "test_decision_*.py" -v
+      - name: Record only actual current UTC hour; never fabricate gaps
+        run: |
+          set -eu
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          git reset --hard origin/main
+          python -m unittest discover -s btc-monitor/tests -p "test_decision_*.py" -q
+          python -u btc-monitor/decision_observations.py
+          git add btc-monitor/data/decision_7day_observations.json
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "audit: one genuine UTC hour of BTC monitor decision readiness"
+          for n in 1 2 3 4 5 6 7 8; do
+            if git push origin HEAD:main; then exit 0; fi
+            git fetch origin main
+            if ! git rebase origin/main; then
+              git rebase --abort || true
+              echo "UTC decision audit write conflict; do not forge a receipt" >&2
+              exit 1
+            fi
+            sleep 2
+          done
+          echo "Could not persist real UTC decision checkpoint" >&2
+          exit 1
