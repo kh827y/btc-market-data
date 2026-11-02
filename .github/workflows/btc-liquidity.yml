@@ -26,15 +26,28 @@ jobs:
         run: |
           python -m py_compile btc-liquidity/collector.py
           cd btc-liquidity && python -m unittest discover -s tests -v
-      - name: Download free spot/perpetual snapshots and verified historical depth
-        run: python btc-liquidity/collector.py
-      - name: Commit only compact derived data
+      - name: Collect and persist with race-safe latest-state retry
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add btc-liquidity/data/latest.json btc-liquidity/data/history.json
-          if ! git diff --cached --quiet; then
+          for attempt in 1 2 3 4; do
+            # Never rebase a generated time-series over concurrently changed JSON:
+            # restart from the canonical latest main and derive forward from it.
+            git fetch origin main
+            git reset --hard origin/main
+            python btc-liquidity/collector.py
+            git add btc-liquidity/data/latest.json btc-liquidity/data/history.json
+            if git diff --cached --quiet; then
+              echo "Data unchanged"
+              exit 0
+            fi
             git commit -m "data: BTC orderbook liquidity and validated history"
-            git pull --rebase origin main
-            git push origin HEAD:main
-          fi
+            if git push origin HEAD:main; then
+              echo "Persisted independent BTC liquidity time-series"
+              exit 0
+            fi
+            echo "Concurrent repository update; refresh and retry ($attempt)"
+            sleep 3
+          done
+          echo "Exhausted retry attempts" >&2
+          exit 1
