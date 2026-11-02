@@ -202,5 +202,31 @@ class HistoricL2Tests(unittest.TestCase):
         self.assertEqual(sum([row["verified_days"],row["explicit_error_days"],
                               row["not_fully_checked_days"]]),row["eligible_days"])
 
+    def test_missing_archive_404_is_explicit_not_zero_or_transient(self):
+        start=m.ARCHIVE_START
+        days=[(start+dt.timedelta(days=i)).isoformat() for i in range(3)]
+        observed={v:{d:{} for d in days} for v in m.MARKETS}
+        observed["bitget_spot"]={days[0]:{}}
+        failures={}
+        for hour in m.SEARCH_HOURS:
+            failures[f"bitget_spot:{days[1]}:{hour:02d}"]={
+                "last_error":"HTTPError: HTTP Error 404: Not Found",
+                "retry_after":"2026-11-09T00:00:00+00:00"}
+            failures[f"bitget_spot:{days[2]}:{hour:02d}"]={
+                "last_error":"HTTPError: HTTP Error 429: Too Many Requests",
+                "retry_after":"2026-11-03T00:00:00+00:00"}
+        row=m.audit_source_dates(observed,failures,start+dt.timedelta(days=2))["bitget_spot"]
+        self.assertEqual(row["verified_days"],1)
+        self.assertEqual(row["explicit_error_days"],2)
+        self.assertEqual(row["not_fully_checked_days"],0)
+        self.assertEqual(row["error_reason_counts"],{
+            "source_file_404_in_sampled_hours":1,"transient_or_other_error":1})
+        self.assertEqual(row["transient_or_other_error_days"],1)
+        self.assertTrue(row["all_source_dates_accounted_for"])
+        self.assertEqual(m.retry_delay_days("HTTPError: HTTP Error 404: Not Found"),7)
+        self.assertEqual(m.retry_delay_days("ValueError: no verified checkpoint snapshot"),7)
+        self.assertEqual(m.retry_delay_days("HTTPError: HTTP Error 429"),1)
+        self.assertEqual(m.retry_delay_days("TimeoutError: timed out"),1)
+
 if __name__=="__main__":
     unittest.main()
