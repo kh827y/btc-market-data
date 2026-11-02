@@ -63,6 +63,36 @@ def evaluate_data(brief,health,quality,policy,now):
             "selected_required_families":len(REQUIRED),
             "metric_checks":quality.get("individual_metric_checks")}
 
+def real_brief_counterfactual_smoke(brief,now):
+    """Exercise gate on REAL metric proofs, with explicitly FAKE direction.
+
+    This checks the plumbing only: materiality/direction flags are invented
+    test inputs, NEVER a BTC market assessment or notification to the user.
+    """
+    from decision_gate import evaluate
+    names=("spot_cvd.original_five.24h","derivatives.oi_five")
+    checks=(brief.get("metric_quality") or {}).get("checks") or {}
+    evidence=[]
+    for key in names:
+        record=checks.get(key) or {}
+        raw=record.get("observed_at")
+        if not isinstance(raw,str) or "T" not in raw:
+            return {"status":"failed","reason":"undated_actual_metric_proof",
+                    "metric_key":key,"probe_type":"counterfactual_not_actual_risk"}
+        evidence.append({"metric_key":key,"direction":"down",
+                         "observed_at":raw,"material":True})
+    test={"kind":"trend","event_key":"counterfactual-production-bridge-smoke",
+          "new_change":True,"direction":"down","time_horizon":"days_weeks",
+          "confirmation_condition":"synthetic only",
+          "invalidation_condition":"synthetic only",
+          "evidence":evidence}
+    r=evaluate(brief,test,now=now)
+    return {"status":"passed" if r["action"]=="review" else "failed",
+            "gate_action":r["action"],"gate_reason":r["reason"],
+            "proof_metric_keys":list(names),
+            "probe_type":"counterfactual_not_actual_market_event",
+            "does_not_send_alert":True}
+
 def update_ledger(prior,verdict,now):
     if now.tzinfo is None:raise ValueError("aware UTC required")
     now=now.astimezone(UTC)
@@ -110,9 +140,15 @@ def load(name):
 
 def main():
     now=dt.datetime.now(UTC)
-    verdict=evaluate_data(load("brief.json"),load("health_latest.json"),
+    brief=load("brief.json")
+    verdict=evaluate_data(brief,load("health_latest.json"),
                           load("metric_quality_acceptance.json"),
                           load("policy_test_status.json"),now)
+    smoke=real_brief_counterfactual_smoke(brief,now)
+    verdict["real_source_gate_smoke"]=smoke
+    if smoke["status"]!="passed":
+        verdict["status"]="degraded"
+        verdict["reasons"].append("candidate_gate_cannot_validate_real_metric_proof")
     prior=load("decision_7day_observations.json")
     result=update_ledger(prior,verdict,now)
     ROOT.mkdir(parents=True,exist_ok=True)
