@@ -142,17 +142,23 @@ def gate_spot(g,raw,metrics):
                     else fresh if fresh!="usable" else "incomplete" if not complete or not native or not coin_proof
                     else "invalid")
             name=f"spot_cvd.{group}.{span}"
-            key=f"BTC spot taker executed|{','.join(venues)}|{span}|USD~USDT|{end_at}"
+            key=f"BTC spot taker executed|{','.join(venues)}|{span}|USD~USDT|exchange-trade-or-received-UTC-hours"
             good=g.add(name,"spot_cvd",status,"approx USD net taker notional",
                        "executed BTC spot on the fixed named venue set only",
                        end_at.isoformat() if end_at else None,
                        reason="source_window_hour_sum_set_or_coinbase_proof_disagrees",
                        comparison_key=key,required=(group=="original_five"))
-            if not good and group=="original_five":
-                m=nested(metrics,"spot_cvd","windows",span)
-                if isinstance(m,dict):
-                    m["complete"]=False
-                    m["net_usd_approx"]=None
+            if not good:
+                if group=="original_five":
+                    m=nested(metrics,"spot_cvd","windows",span)
+                    if isinstance(m,dict):
+                        m["complete"]=False
+                        m["net_usd_approx"]=None
+                elif group=="fixed_ex_coinbase":
+                    m=nested(metrics,"spot_cvd","windows",span,"fixed_five_ex_coinbase")
+                    if isinstance(m,dict):
+                        m["complete"]=False
+                        m["net_usd_approx"]=None
     # Separate subset: changing venue names => cannot compare net across runs.
     for span in SPANS:
         r=windows.get(span) or {}
@@ -171,7 +177,7 @@ def gate_spot(g,raw,metrics):
         key="spot_cvd.subset."+span
         good=g.add(key,"spot_cvd",status,"approx USD executed taker net",
                    "changing explicitly named venue subset",end_at.isoformat() if end_at else None,
-                   comparison_key=f"spot_executed|{','.join(venues)}|{span}|{end_at}")
+                   comparison_key=f"spot_executed|{','.join(venues)}|{span}|USD~USDT|same_UTC_window")
         if not good:
             m=nested(metrics,"spot_cvd","windows",span,"complete_venue_subset")
             if isinstance(m,dict):
