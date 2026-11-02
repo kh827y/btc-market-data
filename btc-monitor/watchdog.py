@@ -123,6 +123,8 @@ LIVE_BOOK_MARKETS={
     "gate_usdt_perp":"perpetual",
 }
 WS_REQUIRED=("bybit_spot","bybit_usdt_perp","binance_usdm_perp")
+NATIVE_TIME_REQUIRED=("okx_spot","okx_usdt_perp","bitget_spot",
+                      "bitget_usdt_perp","gate_spot","gate_usdt_perp")
 
 def assess(name, record, now):
     """Return machine-verifiable freshness; historical gaps are separate."""
@@ -148,9 +150,36 @@ def assess(name, record, now):
         # Do not return: the observation may separately be stale or valid.
     if name == "monitor_bridge":
         result["coverage_gaps"] = record.get("coverage_gaps") or []
-        if not isinstance(record.get("sources"), dict):
+        sources=record.get("sources")
+        if not isinstance(sources,dict):
             result.update(status="invalid_schema", reason="bridge_sources_missing",
                           needs_recovery=True)
+        # A fresh wrapper can conceal stale upstream inputs or failed
+        # required metric proofs. Show degraded quality without retrying
+        # the bridge for an upstream failure (upstream has own watchdog).
+        quality=record.get("metric_quality")
+        if not isinstance(quality,dict) or not isinstance(quality.get("checks"),dict) or not quality["checks"]:
+            result.update(status="invalid_schema", reason="bridge_metric_quality_missing",
+                          needs_recovery=True)
+        else:
+            critical=quality.get("critical_issues") or []
+            essential=("price_technical","spot_cvd","derivatives",
+                       "options","macro_etf","live_depth","onchain")
+            bad=[key for key in essential
+                 if not isinstance(sources,dict) or
+                 (sources.get(key) or {}).get("status")!="fresh"]
+            result["critical_metric_issues"]=critical[:20]
+            result["stale_or_missing_critical_families"]=bad
+            if critical or bad:
+                result["coverage_gaps"].extend(
+                    ["critical_metric:"+str(v)[:120] for v in critical[:20]]
+                    + ["critical_family_not_fresh:"+key for key in bad])
+                if not result["needs_recovery"]:
+                    result.update(status="degraded_critical_inputs",
+                                  reason="underlying_source_or_metric_unusable")
+            elif not isinstance(record.get("family_readiness"),dict):
+                result.update(status="invalid_schema",reason="bridge_readiness_missing",
+                              needs_recovery=True)
     if name == "price_technical":
         day = parse_time(record.get("last_closed_day_utc"))
         week = parse_time(record.get("last_closed_week_monday_utc"))
@@ -231,11 +260,12 @@ def assess(name, record, now):
                 if book.get("transport")!=expected:
                     market_health[market]="unverified_official_ws_transport"
                     continue
-                # Exchange source time must be within 120 sec of local capture;
-                # a wrapper's newer generated_at is never proof of a new book.
-                source=age_h(parse_time(book["captured_at"]),book.get("source_timestamp"))
-                if source is None or source < -0.003 or source > 120/3600:
-                    market_health[market]="stale_native_ws_timestamp"
+            if market in WS_REQUIRED or market in NATIVE_TIME_REQUIRED:
+                # Source-native timestamps prevent a fresh JSON wrapper
+                # from laundering stale REST or WebSocket observations.
+                native=age_h(parse_time(book["captured_at"]),book.get("source_timestamp"))
+                if native is None or native < -0.003 or native > 120/3600:
+                    market_health[market]="stale_native_source_timestamp"
                     continue
             market_health[market]="verified"
         bad=[venue for venue,st in market_health.items() if st!="verified"]
@@ -474,16 +504,19 @@ def run(dry_run=False, now=None):
         if value["status"] == "healthy":
             source.pop("first_unhealthy_utc", None)
     unavailable = [k for k,v in states.items() if v["needs_recovery"]]
+    degraded_inputs=[k for k,v in states.items()
+                     if v["status"]!="healthy" and not v["needs_recovery"]]
     api_errors = [k for k,v in states.items() if v.get("workflow_api_error")]
     report = {
         "schema": 1, "checked_utc": now.isoformat(), "dry_run": dry_run,
         "status": ("monitoring_blind" if len(api_errors)==len(FEEDS) else
-                   "degraded" if unavailable or api_errors else "healthy"),
+                   "degraded" if unavailable or degraded_inputs or api_errors else "healthy"),
         "sources_checked": len(FEEDS),
         "workflow_api_checked": True,
         "workflow_api_reachable": len(api_errors)==0,
         "workflow_api_errors": api_errors,
         "unavailable_or_stale": unavailable,
+        "degraded_input_quality_no_duplicate_recovery": degraded_inputs,
         "separate_l2_backfill_managed": ["hft_depth", "bybit_depth"],
         "auto_recovery": {
             "dispatched": [k for k,v in states.items() if get(v,"recovery","action")=="dispatched"],
