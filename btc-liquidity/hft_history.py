@@ -213,7 +213,8 @@ def verified_entry(entry,venue,day):
         or data.get("market")!=MARKETS[venue][1]
         or data.get("snapshot_rows",0)<20
         or not isinstance(data.get("bands"),dict)
-        or not all(k in data["bands"] for k in ("0.01","0.05","0.2","1.0"))):
+        or not any(isinstance(b,dict) and b.get("bid_share") is not None
+                   for b in data["bands"].values())):
         return False
     try:
         stamp=dt.datetime.fromisoformat(data["time"])
