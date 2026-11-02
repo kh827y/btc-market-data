@@ -99,3 +99,9 @@ At 2026-11-02 21:22 UTC the real collector published a successful Gate **400/400
 
 These conditions allow **closing tested source capability and safe-integration work for the current named markets**, not claiming exhaustive worldwide markets, complete free 1% book depth
 or removal of genuine provider publication lag.
+
+### Additional independent access probe on 2026-11-02 21:31 UTC
+
+A separate actual GitHub runner tested the **two documented, official Bybit mainnet REST hosts**, `api.bybit.com` and `api.bytick.com`, for BOTH native BTCUSDT spot and linear perpetual `/v5/market/full_orderbook`. All four returned **HTTP 403 CloudFront country restriction** from that runner. The per-host evidence is committed in [`btc-liquidity/data/bybit_official_full_access_probe.json`](../btc-liquidity/data/bybit_official_full_access_probe.json). Changing between these two legitimate hosts does not recover deep books under the currently deployed runner; the working official 1000-depth public WebSockets remain safe. No repeated hourly probes, synthetic depth, or geolocation workarounds.
+
+The free Bitget public WebSocket `books` initial snapshot has a documented `maxDepth` bounded by 1000, so it does not solve the missing ±1% outer band. Bybit full WebSocket is delta-only and explicitly requires the inaccessible full REST initial snapshot. Binance USD-M WebSocket API `depth` is documented as maximum 1000 levels, and OKX `books-full` is maximum 5000. Those are honest source limits, not missing-data zeros. Future approved runner infrastructure outside restricted regions or new native endpoints can improve coverage later but cannot be represented as available today.
