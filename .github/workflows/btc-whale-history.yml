@@ -21,6 +21,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Load latest main data before writing new observations
+        run: |
+          git fetch origin main
+          git reset --hard origin/main
       - run: python -m py_compile btc-onchain/whale_collector.py
       - run: python btc-onchain/whale_collector.py
       - name: Save snapshots
