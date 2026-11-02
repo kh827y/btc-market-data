@@ -9,6 +9,7 @@ from __future__ import annotations
 import datetime as dt
 import json
 import os
+import subprocess
 from pathlib import Path
 import sys
 import urllib.error
@@ -206,24 +207,63 @@ def assess(name, record, now):
     return result
 
 
-def api(method, path, payload=None):
-    if not TOKEN:
-        raise RuntimeError("GITHUB_TOKEN_missing")
-    data = json.dumps(payload).encode("utf-8") if payload is not None else None
-    request = urllib.request.Request(
-        BASE+path, data=data, method=method,
-        headers={"Authorization": "Bearer "+TOKEN,
-                 "Accept": "application/vnd.github+json",
-                 "X-GitHub-Api-Version": "2022-11-28",
-                 "User-Agent": "btc-collector-watchdog/1.0",
-                 "Content-Type": "application/json"})
+def checkout_auth_header():
+    """Use Git checkout's already configured credential without exposing it.
+
+    In some workflow environments the passed GITHUB_TOKEN is not the token
+    actually used by actions/checkout for authenticated Git operations.
+    """
     try:
-        with urllib.request.urlopen(request, timeout=22) as response:
-            raw = response.read(1_500_000)
-            return json.loads(raw) if raw else {}
-    except urllib.error.HTTPError as error:
-        detail = error.read(500).decode("utf-8", "replace")
-        raise RuntimeError(f"GitHub_HTTP_{error.code}: {detail[:260]}") from error
+        line = subprocess.check_output(
+            ["git", "config", "--local", "--get",
+             "http.https://github.com/.extraheader"],
+            text=True, timeout=5).strip()
+        if line.lower().startswith("authorization: basic "):
+            return line.split(":", 1)[1].strip()
+    except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        pass
+    return None
+
+
+def api(method, path, payload=None):
+    data = json.dumps(payload).encode("utf-8") if payload is not None else None
+    shared = {"Accept": "application/vnd.github+json",
+              "X-GitHub-Api-Version": "2022-11-28",
+              "User-Agent": "btc-collector-watchdog/1.1",
+              "Content-Type": "application/json"}
+    auths = []
+    if TOKEN:
+        auths.append("Bearer "+TOKEN)
+    checkout_auth = checkout_auth_header()
+    if checkout_auth and checkout_auth not in auths:
+        auths.append(checkout_auth)
+    # Unauthenticated public reads can diagnose failures even when token
+    # permissions are broken; they cannot dispatch recovery actions.
+    if method == "GET":
+        auths.append(None)
+    last_error = "No GitHub API credential available"
+    for auth in auths:
+        headers = dict(shared)
+        if auth is not None:
+            headers["Authorization"] = auth
+        request = urllib.request.Request(
+            BASE+path, data=data, method=method, headers=headers)
+        try:
+            with urllib.request.urlopen(request, timeout=22) as response:
+                raw = response.read(1_500_000)
+                return json.loads(raw) if raw else {}
+        except urllib.error.HTTPError as error:
+            detail = error.read(300).decode("utf-8", "replace")
+            last_error = f"GitHub_HTTP_{error.code}: {detail[:120]}"
+            # Only invalid credentials are grounds to try the next supported
+            # credential. A 403/429 resource or rate-limit failure must not
+            # trigger multiple retries with different identities.
+            if error.code != 401:
+                break
+        except (urllib.error.URLError, TimeoutError, OSError) as error:
+            last_error = type(error).__name__+":"+str(error)[:140]
+            break
+    raise RuntimeError(last_error)
 
 
 def latest_workflow_run(workflow):
@@ -332,11 +372,15 @@ def run(dry_run=False, now=None):
         if value["status"] == "healthy":
             source.pop("first_unhealthy_utc", None)
     unavailable = [k for k,v in states.items() if v["needs_recovery"]]
-    failures = [k for k in unavailable if not FEEDS[k].get("repair", True)]
+    api_errors = [k for k,v in states.items() if v.get("workflow_api_error")]
     report = {
         "schema": 1, "checked_utc": now.isoformat(), "dry_run": dry_run,
-        "status": "healthy" if not unavailable else "degraded",
-        "sources_checked": len(FEEDS), "workflow_api_checked": True,
+        "status": ("monitoring_blind" if len(api_errors)==len(FEEDS) else
+                   "degraded" if unavailable or api_errors else "healthy"),
+        "sources_checked": len(FEEDS),
+        "workflow_api_checked": True,
+        "workflow_api_reachable": len(api_errors)==0,
+        "workflow_api_errors": api_errors,
         "unavailable_or_stale": unavailable,
         "separate_l2_backfill_managed": ["hft_depth", "bybit_depth"],
         "auto_recovery": {
@@ -354,7 +398,7 @@ def run(dry_run=False, now=None):
         (ROOT/"health_latest.json").write_text(json.dumps(report,indent=2,ensure_ascii=False)+"\n")
     print(json.dumps({"checked_utc":report["checked_utc"],"status":report["status"],
         "unavailable":unavailable,"dispatched":report["auto_recovery"]["dispatched"],
-        "actions_api_issues":[k for k,v in states.items() if v.get("workflow_api_error")]},
+        "actions_api_issues":api_errors},
         ensure_ascii=False))
     return report
 
