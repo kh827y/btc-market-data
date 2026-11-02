@@ -1,0 +1,37 @@
+name: BTC official Bybit full orderbook source access probe
+on:
+  push:
+    paths:
+      - "btc-liquidity/probe_bybit_full_official.py"
+      - ".github/workflows/btc-bybit-official-full-access-probe.yml"
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: btc-bybit-official-full-access-oneoff
+  cancel-in-progress: false
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Official mainnet host probe; no proxy or third-party source
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for n in 1 2 3 4; do
+            git fetch origin main
+            git reset --hard origin/main
+            python -m py_compile btc-liquidity/probe_bybit_full_official.py
+            python -u btc-liquidity/probe_bybit_full_official.py
+            git add btc-liquidity/data/bybit_official_full_access_probe.json
+            if git diff --cached --quiet; then exit 0; fi
+            git commit -m "probe: verified official Bybit full depth host access results"
+            if git push origin HEAD:main; then exit 0; fi
+            sleep 3
+          done
+          exit 1
