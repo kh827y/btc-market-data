@@ -162,5 +162,31 @@ class LiquidityTests(unittest.TestCase):
         self.assertEqual(value["transport"],"gate_official_ws_v2_full_snapshot")
         self.assertEqual(errors,[])
 
+
+    def test_okx_official_full_5000_verified_and_400_fallback(self):
+        from unittest.mock import patch
+        now=dt.datetime.now(m.UTC)
+        ts=str(int(now.timestamp()*1000))
+        def snap(n):
+            return {"code":"0","data":[{"bids":[[str(77000-i*.2),"2","1"] for i in range(n)],
+                 "asks":[[str(77000.1+i*.2),"3","1"] for i in range(n)],"ts":ts}]}
+        self.assertIn("books-full",m.VENUES["okx_spot"][2])
+        self.assertIn("sz=5000",m.VENUES["okx_usdt_perp"][2])
+        only={"okx_spot":m.VENUES["okx_spot"]}
+        with patch.object(m,"VENUES",only),patch.object(m,"fetch",return_value=snap(5000)):
+            errs=[]
+            full=m.collect_live(now,errs)
+        self.assertFalse(errs)
+        self.assertEqual(full["venues"]["okx_spot"]["levels"]["bid"],5000)
+        self.assertTrue(full["venues"]["okx_spot"]["bands"]["1.0"]["bid_coverage_complete"])
+        def fake(url):
+            return snap(20) if "/books-full?" in url else snap(400)
+        with patch.object(m,"VENUES",only),patch.object(m,"fetch",side_effect=fake):
+            errs=[]
+            fallback=m.collect_live(now,errs)
+        self.assertEqual(fallback["venues"]["okx_spot"]["native_depth_levels_requested"],400)
+        self.assertEqual(fallback["venues"]["okx_spot"]["source_url"],"https://www.okx.com/api/v5/market/books")
+        self.assertTrue(any("truncated sides" in e for e in errs))
+
 if __name__ == "__main__":
     unittest.main()
