@@ -43,6 +43,24 @@ class BybitIndependentTests(unittest.TestCase):
         r=m.measure(obj,day,"bybit_independent_spot",200,"src")
         self.assertFalse(r["bands"]["1.0"]["bid_coverage_complete"])
         self.assertIsNone(r["bands"]["1.0"]["bid_usd"])
+    def test_true_midnight_snapshot_with_negative_three_ms_is_accepted(self):
+        day=dt.date(2025,5,14)
+        obj=m.first_zip_snapshot(archive(day))
+        start=dt.datetime.combine(day,dt.time(),dt.timezone.utc)
+        obj["ts"]=int(start.timestamp()*1000)-3
+        r=m.measure(obj,day,"bybit_independent_linear",500,"src")
+        self.assertEqual(r["source_received_seconds_after_utc_midnight"],-0.003)
+        self.assertEqual(dt.datetime.fromisoformat(r["time"]).date(),day-dt.timedelta(days=1))
+        self.assertTrue(r["bands"]["0.01"]["bid_coverage_complete"])
+
+    def test_previous_day_snapshot_more_than_ten_ms_is_rejected(self):
+        day=dt.date(2025,5,14)
+        obj=m.first_zip_snapshot(archive(day))
+        start=dt.datetime.combine(day,dt.time(),dt.timezone.utc)
+        obj["ts"]=int(start.timestamp()*1000)-11
+        with self.assertRaisesRegex(ValueError,"not near midnight"):
+            m.measure(obj,day,"bybit_independent_linear",500,"src")
+
     def test_invalid_date_rejected(self):
         obj=m.first_zip_snapshot(archive())
         with self.assertRaisesRegex(ValueError,"not near midnight"):
