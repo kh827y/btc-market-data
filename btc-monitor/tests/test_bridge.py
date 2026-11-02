@@ -45,4 +45,30 @@ class BridgeTests(unittest.TestCase):
   o=m.build({"options":{"generated_utc":"2026-11-03T07:30:00Z"}},NOW)
   self.assertEqual(o["feeds"]["options"]["status"],"future_timestamp")
 
+ def test_source_verified_scoped_cvd_never_becomes_global_total(self):
+  bands={"binance":{"complete":True,"hours":24,"required":24,"net":100},
+         "okx":{"complete":True,"hours":24,"required":24,"net":-20},
+         "bybit":{"complete":True,"hours":24,"required":24,"net":30},
+         "coinbase":{"complete":False,"hours":2,"required":24,"net":None},
+         "kraken":{"complete":False,"hours":0,"required":24,"net":None}}
+  row={"complete":False,"net":None,"by_venue":bands,
+       "complete_venue_subset":{"available":True,"venues":["binance","okx","bybit"],
+                                "net":110,"venue_count":3}}
+  out=m.build({"spot_cvd":{"generated_utc":"2026-11-02T07:15:00Z",
+                            "windows":{"24h":row}}},NOW)
+  res=out["metrics"]["spot_cvd"]["windows"]["24h"]
+  self.assertIsNone(res["net_usd_approx"])
+  self.assertEqual(res["complete_venue_subset"]["net_usd_approx"],110)
+  self.assertFalse(out["audit"]["family_readiness"]["spot_cvd_24h_complete"])
+  self.assertTrue(out["audit"]["family_readiness"]["spot_cvd_24h_covered_subset"])
+  self.assertEqual(m.make_brief(out)["spot_cvd"]["windows"]["24h"]["complete_venue_subset"]["venue_count"],3)
+ def test_reject_fabricated_complete_venue_subset(self):
+  bogus={"generated_utc":"2026-11-02T07:15:00Z",
+         "windows":{"24h":{"complete":False,"net":None,
+                   "by_venue":{"binance":{"complete":False,"net":None}},
+                   "complete_venue_subset":{"available":True,"venues":["binance","coinbase","bybit"],"net":9999}}}}
+  report=m.build({"spot_cvd":bogus},NOW)
+  self.assertFalse(report["metrics"]["spot_cvd"]["windows"]["24h"]["complete_venue_subset"]["available"])
+  self.assertIsNone(report["metrics"]["spot_cvd"]["windows"]["24h"]["complete_venue_subset"]["net_usd_approx"])
+
 if __name__=="__main__":unittest.main()
