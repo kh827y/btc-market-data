@@ -32,14 +32,34 @@ def main():
                 stale.append(name+":"+metric+": "+str(lag)+" days")
         for issue in group["errors"]:
             missing.append(name+":"+str(issue.get("metric",issue.get("name","unknown"))))
+    whale_coverage = {}
+    try:
+        whale_rows = json.loads((ROOT/"whale_history.json").read_text())
+        for metric, dated in whale_rows.items():
+            dates = sorted(dated)
+            whale_coverage[metric] = {
+                "daily_observations": len(dates),
+                "first_utc_day": dates[0] if dates else None,
+                "last_utc_day": dates[-1] if dates else None,
+            }
+    except Exception as error:
+        missing.append("whale_history unavailable: "+str(error)[:100])
+    required_whale_history = ("whale_exchange_deposit_volume_btc","whale_exchange_deposit_count")
+    whale_has_multiyear_history = all(
+        whale_coverage.get(name,{}).get("daily_observations",0)>=730
+        for name in required_whale_history
+    )
     output={
         "generated_utc":now.isoformat(),
         "components":components,
+        "whale_history_coverage":whale_coverage,
+        "exact_multiyear_whale_deposit_history_available":whale_has_multiyear_history,
         "missing":sorted(set(missing)),
         "stale":sorted(set(stale)),
         "known_limits":[
             "Bitview long/short holders use UTXO 150d, not 155d entity-weighted",
-            "Whale deposit raw daily history accumulates only since first successful observation",
+            "CoinGlass entity-classified whale deposit count and volume do not have verified free multi-year raw daily histories; only accumulated dated observations. CoinGlass 1d/7d/30d changes and historical percentiles are vendor-calculated, not self-recomputed.",
+            "Swiss >=50 BTC whale deposit count and concentration are DIFFERENT metrics, with a verified 7-day backfill; never combine with CoinGlass entity-clustered counts.",
             "CoinMetrics exchange transfers are provisional and entity attribution incomplete"
         ]
     }
