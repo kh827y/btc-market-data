@@ -1,9 +1,17 @@
-import json,urllib.request
-base="https://bitview.space/api/series/lth_supply/day1/data?"
-for a,b in [("2026-10-31","2026-11-02"),("2026-10-30","2026-11-02"),("2022-11-01","2026-11-02")]:
+import urllib.request
+urls = {
+"volume": "https://www.coinglass.com/pro/onchain/bitcoin-whale-exchange-deposit-volume",
+"count": "https://www.coinglass.com/pro/onchain/bitcoin-whale-exchange-deposit-count",
+"ratio": "https://swisswhaleintelligence.com/glossary/exchange_whale_ratio/"
+}
+for k,url in urls.items():
  try:
-  with urllib.request.urlopen(urllib.request.Request(base+"start="+a+"&end="+b,headers={"User-Agent":"BTC-Onchain-Public-Research/1.0","Accept":"application/json"}),timeout=35) as r:
-   v=json.load(r)
-   print(a,b,len(v),v[:2],v[-2:])
+  req = urllib.request.Request(url,headers={"User-Agent":"Mozilla/5.0","Accept":"text/html"})
+  with urllib.request.urlopen(req,timeout=20) as r:
+   text = r.read(300000).decode("utf-8",errors="replace")
+  print(k,"size",len(text))
+  for term in ("2,454.5273","Whale Exchange Deposit Volume","Whale deposits counted","Latest complete day"):
+   i=text.find(term)
+   print(k,term,"found",i,"sample",text[max(0,i-50):i+160] if i>=0 else "")
  except Exception as e:
-  print(a,b,str(e))
+  print(k,"FAILED",str(e)[:140])
