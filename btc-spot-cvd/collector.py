@@ -15,7 +15,7 @@ VENUES = {
     "binance": ("binance_spot", ["BTCUSDT","BTCUSD"]),
     "okx": ("okx_spot", ["BTC-USDT","BTC-USD"]),
     "bybit": ("bybit_spot", ["BTCUSDT","BTCUSD"]),
-    "kraken": ("kraken_spot", ["XBTUSD","XBT/USD","BTCUSD","BTC/USD"]),
+    "kraken": ("kraken_spot", ["BTC_USD","BTC/USD","XBTUSD","XBT/USD","BTCUSD"]),
 }
 ALL = ["binance","coinbase","okx","bybit","kraken"]
 
@@ -48,13 +48,14 @@ def symbol(exchange, desired):
 
 
 def calculate_parquet(blob, hour):
-    tab = pd.read_parquet(io.BytesIO(blob), columns=["price","quantity","is_buyer_maker","trade_time"])
+    tab = pd.read_parquet(io.BytesIO(blob), columns=["price","quantity","is_buyer_maker","received_time"])
     if tab.empty: raise ValueError("No trades; completeness not verified")
     if tab.isna().any().any(): raise ValueError("Null trade")
-    ts = pd.to_numeric(tab.trade_time)
-    ts = ts / (1e9 if ts.max()>1e17 else 1e6 if ts.max()>1e14 else 1e3 if ts.max()>1e11 else 1)
+    # CryptoHFTData partitions files by RECEIVED hour; trade_time can cross
+    # hour boundaries when the exchange publication arrives late.
+    ts = pd.to_numeric(tab.received_time) / 1e9
     if not ((ts>=hour.timestamp()) & (ts<hour.timestamp()+3600)).all():
-        raise ValueError("Trades outside expected UTC hour")
+        raise ValueError("Received timestamps outside source file UTC hour")
     p = pd.to_numeric(tab.price); q=pd.to_numeric(tab.quantity)
     if not ((p>0)&(q>0)).all(): raise ValueError("Invalid trade prices/sizes")
     # is_buyer_maker=True means SELL taker
@@ -98,7 +99,7 @@ def coinbase(state,now,errors,pages=35):
     # Only closed hours with a fully observed subsequent older hour are published.
     cp=state.setdefault("coinbase_cursor",{"after":None,"pending":None,"bucket":None})
     known=state.setdefault("hourly",{}).setdefault("coinbase",{})
-    end=now.replace(minute=0,second=0,microsecond=0)-dt.timedelta(hours=1)
+    end=now.replace(minute=0,second=0,microsecond=0)-dt.timedelta(hours=2)
     cutoff=end-dt.timedelta(hours=719)
     if cp.get("complete") and cp.get("cutoff") != key(cutoff):
         cp.update({"after":None,"pending":None,"bucket":None,"complete":False})
@@ -139,7 +140,7 @@ def coinbase(state,now,errors,pages=35):
 
 
 def summarise(state,now,errors):
-    end=now.replace(minute=0,second=0,microsecond=0)-dt.timedelta(hours=1)
+    end=now.replace(minute=0,second=0,microsecond=0)-dt.timedelta(hours=2)
     out={"generated_utc":now.isoformat(),"last_complete_hour":key(end),"units":"quote-USD or USDT approximately USD; no stablecoin FX adjustment","source":"actual BTC spot trades","errors":errors[:30],"windows":{}}
     for h in (1,24,168,720):
         times=[key(end-dt.timedelta(hours=i)) for i in range(h)]
