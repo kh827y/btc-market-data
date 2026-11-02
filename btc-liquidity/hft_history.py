@@ -273,6 +273,14 @@ def recent_coverage(markets,through,windows=(7,30,90,365)):
                   "coverage_pct":round(100*observed/len(dates),2) if dates else 0}
     return result
 
+def retry_delay_days(reason):
+    """Negative source-file and native-checkpoint checks are revisited weekly.
+
+    Temporary 429/5xx/network errors get another chance the following day.
+    An HTTP 404 is not proof of zero liquidity or that other hours lack data.
+    """
+    return SOURCE_RECHECK_DAYS if ("no verified checkpoint" in reason or "HTTP Error 404" in reason) else 1
+
 def audit_source_dates(verified_markets, failures, through):
     """Classify every source calendar date without treating retries as genuine books.
 
@@ -295,10 +303,12 @@ def audit_source_dates(verified_markets, failures, through):
             bad.append(day)
             reasons=[str(x.get("last_error","unknown")) for x in attempts]
             native_absent=all("no verified checkpoint snapshot" in x for x in reasons)
-            classification=("no_native_snapshot_in_sampled_hours"
-                            if native_absent else "transient_or_other_error")
+            file_404=all("HTTP Error 404" in x for x in reasons)
+            classification=("no_native_snapshot_in_sampled_hours" if native_absent
+                            else "source_file_404_in_sampled_hours" if file_404
+                            else "transient_or_other_error")
             reason_counts[classification]+=1
-            if not native_absent:retryable+=1
+            if classification=="transient_or_other_error":retryable+=1
             if len(details)<12:
                 details.append({"day":day,"classification":classification,
                     "hours_utc":list(SEARCH_HOURS),
@@ -412,10 +422,9 @@ def main():
             failure=failures.setdefault(failure_key,{"attempts":0})
             failure["attempts"]+=1
             failure["checked_at"]=now.isoformat()
-            no_snapshot=("no verified checkpoint" in reason)
-            # Source may revise old archives. Re-test once per week after a
-            # negative completeness check, rather than permanently blacklisting.
-            failure["retry_after"]=(now+dt.timedelta(days=SOURCE_RECHECK_DAYS if no_snapshot else 1)).isoformat()
+            # Missing native snapshots and 404 source files are checked weekly,
+            # not hammered every hour; transient rate limits remain retryable.
+            failure["retry_after"]=(now+dt.timedelta(days=retry_delay_days(reason))).isoformat()
             failure["last_error"]=reason
             errors.append(venue+" "+key+f" {hour:02d}h "+reason)
             exclusions+=1
