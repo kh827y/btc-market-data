@@ -159,6 +159,22 @@ class HistoricL2Tests(unittest.TestCase):
                  if venue=="binance_spot" and d==day]
         self.assertEqual(pending,[12,11,13])
 
+    def test_separate_00_utc_same_clock_history_can_be_compared(self):
+        day=dt.date(2026,10,31)
+        record=m.parse_checkpoint(fixture(),"binance_spot","BTCUSDT",
+                                  "spot",1.0,"USDT",day)
+        current={**record,"time":"2026-10-31T00:13:20+00:00","sample_utc_hour":0,
+                 "file_path":"binance_spot/2026-10-31/00/BTCUSDT_orderbook.parquet"}
+        old={**current,"time":"2026-10-30T00:12:40+00:00",
+             "file_path":"binance_spot/2026-10-30/00/BTCUSDT_orderbook.parquet"}
+        rows={"2026-10-30":{"status":"ok","data":old},
+              "2026-10-31":{"status":"ok","data":current}}
+        self.assertTrue(m.verified_entry(rows["2026-10-30"],"binance_spot","2026-10-30"))
+        comparisons,baselines=m.make_comparisons({"binance_spot":rows})
+        self.assertEqual(comparisons["binance_spot"]["previous_days"]["1d"]["baseline_day"],"2026-10-30")
+        self.assertEqual(comparisons["binance_spot"]["previous_days"]["1d"]["clock_offset_hours"],0.011)
+        self.assertEqual(baselines["binance_spot"]["7d"]["available"],2)
+
     def test_legacy_audit_explicitly_uses_original_three_hour_scope(self):
         day=m.ARCHIVE_START
         found={v:{} for v in m.MARKETS}
