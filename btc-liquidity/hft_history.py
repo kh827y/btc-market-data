@@ -25,8 +25,10 @@ BANDS=(0.05,0.2,1.0)
 MARKETS={
     "binance_spot":("BTCUSDT","spot",1.0,"USDT"),
     "bybit_spot":("BTCUSDT","spot",1.0,"USDT"),
+    "bitget_spot":("BTCUSDT","spot",1.0,"USDT"),
     "okx_spot":("BTC-USDT","spot",1.0,"USDT"),
     "binance_futures":("BTCUSDT","perpetual",1.0,"USDT"),
+    "bybit":("BTCUSDT","perpetual",1.0,"USDT"),
     "okx_futures":("BTC-USDT-SWAP","perpetual",0.01,"USDT"),
 }
 
