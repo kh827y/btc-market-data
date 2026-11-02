@@ -84,9 +84,27 @@ def main():
         sources[name] = "Swiss Whale Intelligence: top-10 deposits / whale-size inflow only, not total inflow"
     except Exception as exc:
         errors.append({"metric":"whale_only_top10_deposit_ratio","reason":str(exc)[:180]})
+    try:
+        dashboard = download("https://swisswhaleintelligence.com/dashboard/btc")
+        seven_days = extract_swiss_week(dashboard)
+        for day, (value, count) in seven_days.items():
+            history.setdefault("whale_only_top10_deposit_ratio", {})[day] = value
+            history.setdefault("swiss_whale_deposit_count_ge50", {})[day] = count
+        most_recent = max(seven_days)
+        latest["swiss_whale_deposit_count_ge50"] = {
+            "date": most_recent,
+            "value": seven_days[most_recent][1],
+            "lag_days": (now.date() - dt.date.fromisoformat(most_recent)).days,
+        }
+        sources["swiss_whale_deposit_count_ge50"] = "Swiss Whale Intelligence; >=50 BTC tagged exchange deposits; NOT CoinGlass entity-labelled deposit count"
+        if latest.get("whale_only_top10_deposit_ratio", {}).get("date") == most_recent:
+            if abs(latest["whale_only_top10_deposit_ratio"]["value"] - seven_days[most_recent][0]) > 0.001:
+                raise ValueError("Swiss dashboard / glossary disagreement")
+    except Exception as exc:
+        errors.append({"metric": "swiss_whale_deposit_count_ge50", "reason": str(exc)[:180]})
     result = {
         "generated_utc":now.isoformat(),
-        "complete_for_latest":not errors and len(latest)==3,
+        "complete_for_latest":not errors and len(latest)==4,
         "history_is_complete":False,
         "history_note":"Only daily observations collected since first run; no fabricated historical points",
         "latest":latest,"source":sources,"errors":errors,
