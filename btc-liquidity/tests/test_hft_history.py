@@ -86,6 +86,17 @@ class HistoricL2Tests(unittest.TestCase):
             "2026-10-30":{"status":"ok","data":earlier},
             "2026-10-31":{"status":"ok","data":later}}})
         self.assertIsNone(c["binance_spot"]["previous_days"]["1d"])
+    def test_nearby_hour_is_not_same_clock_baseline(self):
+        current=m.parse_checkpoint(fixture(),"binance_spot","BTCUSDT",
+            "spot",1.0,"USDT",dt.date(2026,10,31))
+        old=dict(current)
+        old["time"]="2026-10-30T11:00:00+00:00"
+        c,b=m.make_comparisons({"binance_spot":{
+            "2026-10-30":{"status":"ok","data":old},
+            "2026-10-31":{"status":"ok","data":current}}})
+        self.assertIsNone(c["binance_spot"]["previous_days"]["1d"])
+        self.assertEqual(b["binance_spot"]["7d"]["available"],1)
+
     def test_zstd_outer_frame_recovered(self):
         raw=fixture()
         packed=zstd.ZstdCompressor().compress(raw)
