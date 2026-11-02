@@ -168,7 +168,12 @@ def collect_live(now, errors):
                 # Never interpret delta-only updates as a complete book.
                 from official_ws import read_gate_v2_book
                 try:
-                    raw = read_gate_v2_book()
+                    candidate = read_gate_v2_book()
+                    # A timestamped full=true payload can still be malformed:
+                    # fail over before accepting any invalid or crossed book.
+                    candidate_bids, candidate_asks, _ = normalize_book(name, candidate)
+                    summarize_orderbook(candidate_bids, candidate_asks)
+                    raw = candidate
                 except Exception as ws_exc:
                     errors.append("gate_v2_400_unavailable; native REST 300 fallback: " + str(ws_exc)[:120])
                     raw = fetch(url)
