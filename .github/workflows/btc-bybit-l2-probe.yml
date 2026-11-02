@@ -1,0 +1,19 @@
+name: Probe independent Bybit L2 historical archive
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "btc-liquidity/probe_bybit_archive.py"
+      - ".github/workflows/btc-bybit-l2-probe.yml"
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -u btc-liquidity/probe_bybit_archive.py
