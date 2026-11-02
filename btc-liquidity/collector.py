@@ -29,7 +29,7 @@ VENUES = {
     # Distinct real exchanges, NOT substitutes presented as Bybit/Binance.
     "bitget_spot": ("spot", "BTCUSDT", "https://api.bitget.com/api/v3/market/orderbook?category=SPOT&symbol=BTCUSDT&limit=1000"),
     "bitget_usdt_perp": ("perpetual", "BTCUSDT", "https://api.bitget.com/api/v3/market/orderbook?category=USDT-FUTURES&symbol=BTCUSDT&limit=1000"),
-    "gate_spot": ("spot", "BTCUSDT", "https://api.gateio.ws/api/v4/spot/order_book?currency_pair=BTC_USDT&limit=1000"),
+    "gate_spot": ("spot", "BTCUSDT", "https://api.gateio.ws/api/v4/spot/order_book?currency_pair=BTC_USDT&interval=0&limit=5000&with_id=true"),
     "gate_usdt_perp": ("perpetual", "BTCUSDT", "https://api.gateio.ws/api/v4/futures/usdt/order_book?contract=BTC_USDT&limit=300&with_id=true"),
 }
 
@@ -72,8 +72,13 @@ def normalize_book(venue, raw):
         bids, asks = item["b"], item["a"]
         source_ms = int(item["ts"])
     elif venue == "gate_spot":
+        # Native Gate spot 5000-deep REST book requires source identity.
+        if isinstance(raw.get("id"),bool) or not isinstance(raw.get("id"),int) or raw["id"]<1:
+            raise ValueError("Gate spot native update ID missing")
         bids, asks = raw["bids"], raw["asks"]
-        source_ms = None
+        source_ms = int(raw["current"]) # Spot is milliseconds (futures seconds)
+        if source_ms < 10**12:
+            raise ValueError("Gate spot book timestamp is not milliseconds")
     elif venue == "gate_usdt_perp":
         # Native 300-level snapshot (verified max via actual HTTP 400
         # `TOO_BIG: limit 300` on 500). Require true exchange update ID.
@@ -183,6 +188,23 @@ def collect_live(now, errors):
                 # venue/instrument. No proxies or different exchanges.
                 from official_ws import read_official_book
                 raw=read_official_book(name)
+            elif name == "gate_spot":
+                # Native 5000 depth, only if complete, fresh and same book ID;
+                # otherwise the separately verified REST 1000 is used.
+                try:
+                    candidate=fetch(url)
+                    cb, ca, ct=normalize_book(name,candidate)
+                    if ct is None or abs(dt.datetime.now(UTC).timestamp()*1000-ct)>120_000:
+                        raise ValueError("stale Gate native spot timestamp")
+                    summarize_orderbook(cb,ca)
+                    if len(cb)<1000 or len(ca)<1000:
+                        raise ValueError("Gate deep spot book truncated")
+                    raw=candidate
+                except Exception as deep_exc:
+                    errors.append("gate_spot_5000_unavailable; native REST 1000 fallback: "+str(deep_exc)[:115])
+                    raw=fetch(url.replace("&limit=5000","&limit=1000"))
+                    raw["_transport"]="gate_official_rest_1000_fallback"
+                    raw["_source_url"]="https://api.gateio.ws/api/v4/spot/order_book"
             elif name in ("okx_spot", "okx_usdt_perp"):
                 # New official FREE full book: 5000 native levels/side, same
                 # instrument and organic liquidity as 400-depth books.
@@ -227,6 +249,11 @@ def collect_live(now, errors):
                 record["quantity_conversion"] = ("Gate contracts times quanto_multiplier into BTC"
                                                 if name == "gate_usdt_perp" else
                                                 "OKX contracts times ctVal times ctMult into BTC")
+            if name == "gate_spot":
+                record["exchange_update_id"]=raw["id"]
+                record["native_depth_levels_requested"]=(
+                    1000 if raw.get("_transport")=="gate_official_rest_1000_fallback" else 5000
+                )
             if name in ("okx_spot", "okx_usdt_perp"):
                 record["native_depth_levels_requested"] = (
                     400 if raw.get("_transport") == "okx_official_rest_400_fallback" else 5000
