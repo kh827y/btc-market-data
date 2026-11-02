@@ -99,5 +99,19 @@ class HistoricL2Tests(unittest.TestCase):
         c,b=m.make_comparisons({"binance_spot":{"2026-10-31":{"status":"ok","data":r}}})
         self.assertIsNone(c["binance_spot"]["previous_days"]["7d"])
         self.assertIsNone(b["binance_spot"]["7d"]["bands"]["0.05"])
+    def test_30_day_actual_coverage_is_not_492_day_global_ratio(self):
+        through=dt.date(2026,11,1)
+        found={("2026-11-01" if d==0 else (through-dt.timedelta(days=d)).isoformat()):{}
+               for d in range(25)}
+        cov=m.recent_coverage({"binance_spot":found},through)
+        self.assertEqual(cov["30d"]["binance_spot"]["verified_days"],25)
+        self.assertEqual(cov["30d"]["binance_spot"]["eligible_days"],30)
+        self.assertEqual(cov["30d"]["binance_spot"]["coverage_pct"],83.33)
+        self.assertEqual(cov["7d"]["binance_spot"]["coverage_pct"],100.0)
+    def test_recent_window_coverage_empty_is_zero_not_global_missing_history(self):
+        cov=m.recent_coverage({"bybit_spot":{}},dt.date(2026,11,1))
+        self.assertEqual(cov["30d"]["bybit_spot"]["verified_days"],0)
+        self.assertEqual(cov["30d"]["bybit_spot"]["coverage_pct"],0)
+
 if __name__=="__main__":
     unittest.main()
