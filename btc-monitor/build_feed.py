@@ -45,7 +45,7 @@ def guard_bands(book):
   ok=v.get("bid_coverage_complete") is True and v.get("ask_coverage_complete") is True
   out[band]={"complete":ok,"bid_usd":num(v.get("bid_usd")) if ok else None,
              "ask_usd":num(v.get("ask_usd")) if ok else None,
-             "bid_share":(num(v.get("bid_share")) or num(v.get("imbalance_bid_share"))) if ok else None}
+             "bid_share":(num(v.get("bid_share")) if num(v.get("bid_share")) is not None else num(v.get("imbalance_bid_share"))) if ok else None}
  return out
 
 def compact_spot(j):
@@ -84,7 +84,7 @@ def compact_deriv(j):
          "cftc_cme_weekly": {"as_of":cot.get("latest_date"),"positions":cot.get("latest")},
          "dated_futures_matched_expiry":basis.get("matched_four_venue_expiry"),
          "dated_futures_basis":basis.get("matched_four_venue_basis"),
-         "cme_front_basis":cme.get("front_recent_contract") if cme.get("status")=="ok" else None,
+         "cme_front_basis":cme.get("front_recent_contract") if cme.get("status") in ("ok","recent_observed") else None,
          "warnings":["CFTC contracts are 5 BTC; leveraged fund shorts can hedge spot",
                      "CME and dated futures basis are not perp funding; expiry matters"]}
 
@@ -189,6 +189,18 @@ def build(source,now):
    feeds[key]["status"]="invalid_schema"
    issues.append(key+":invalid_schema:"+str(exc)[:100]);continue
   if feeds[key]["status"]!="fresh":issues.append(key+":"+feeds[key]["status"])
+ coverage_gaps=[]
+ if "spot_cvd" in metrics:
+  for window in ("24h","168h","720h"):
+   if val(metrics,"spot_cvd","windows",window,"complete") is not True:
+    coverage_gaps.append("spot_cvd:"+window+"_five_venue_incomplete")
+ if "live_depth" in feeds and feeds["live_depth"].get("source_errors",0):
+  coverage_gaps.append("live_depth:failed_venues="+str(feeds["live_depth"]["source_errors"]))
+ if "onchain" in metrics:
+  delayed=sum(v.get("status")!="usable" for g in metrics["onchain"]["groups"].values() for v in g["metrics"].values())
+  if delayed:coverage_gaps.append("onchain:missing_or_delayed_metrics="+str(delayed))
+ if "derivatives" in metrics and val(metrics,"derivatives","cme_front_basis") is None:
+  coverage_gaps.append("derivatives:cme_front_basis_unavailable")
  usable={family:any(row.get("status")=="fresh" and row.get("family")==family for row in feeds.values())
          for family in sorted({x[2] for x in SOURCES.values()})}
  usable["current_orderbook"]=feeds.get("live_depth",{}).get("status")=="fresh"
@@ -198,7 +210,7 @@ def build(source,now):
          "feed_contract":"Source-level UTC quality bridge; not a standalone reversal signal",
          "audit":{"sources_total":len(SOURCES),"sources_parsed":len(metrics),
                   "fresh":sum(x.get("status")=="fresh" for x in feeds.values()),
-                  "issues":issues,"family_readiness":usable,
+                  "issues":issues,"coverage_gaps":coverage_gaps,"family_readiness":usable,
                   "WARNING":"Bridge generation success DOES NOT imply source freshness or all-market coverage"},
          "feeds":feeds,"metrics":metrics,
          "rules":["Trust only source rows with status=fresh for current conditions",
@@ -218,9 +230,9 @@ def make_brief(report):
  good=lambda k:feeds.get(k,{}).get("status")=="fresh"
  summary={"schema":1,"as_of_utc":report["as_of_utc"],
           "sources":{k:{"status":v["status"],"age_h":v.get("age_h"),
-                         "original":v.get("source")} for k,v in feeds.items()},
+                         "original":v.get("source"),"measurement_age_h":v.get("measurement_age_h"),"source_errors":v.get("source_errors",0)} for k,v in feeds.items()},
           "family_readiness":report["audit"]["family_readiness"],
-          "issues":report["audit"]["issues"],
+          "issues":report["audit"]["issues"],"coverage_gaps":report["audit"].get("coverage_gaps",[]),
           "rules":["Only fresh source + complete original window/band can support current risk",
                    "Orderbook resting orders are NOT executed purchases; not a world-wide book",
                    "Compare historical orderbook same venue/market/band/UTC clock only",
