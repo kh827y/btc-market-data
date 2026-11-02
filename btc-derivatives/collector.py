@@ -124,3 +124,75 @@ def fetch_liquidations(now):
           "updated":updated,"long_usd":round(long,2),"short_usd":round(short,2),
           "venues":venues,"data_freshness":status("Edge liquidations",updated,now,3)}
     return out
+
+def fetch_cme_cot(now):
+    url=("https://publicreporting.cftc.gov/resource/gpe5-46if.json?"
+      "$where=cftc_contract_market_code%3D%27133741%27%20and%20"
+      "report_date_as_yyyy_mm_dd%20%3E%3D%20%272022-01-01%27&"
+      "$limit=350&$order=report_date_as_yyyy_mm_dd%20DESC")
+    obj=get(url)
+    if not isinstance(obj,list) or len(obj)<180:raise ValueError("CFTC history unexpectedly short")
+    series={}
+    for row in obj:
+        if row.get("cftc_contract_market_code")!="133741":continue
+        date=row["report_date_as_yyyy_mm_dd"][:10]
+        oi=int(row["open_interest_all"])
+        if oi<=0:continue
+        series[date]={
+            "open_interest_contracts":oi,
+            "open_interest_btc_equivalent":oi*5,
+            "dealer_long":int(row["dealer_positions_long_all"]),
+            "dealer_short":int(row["dealer_positions_short_all"]),
+            "asset_manager_long":int(row["asset_mgr_positions_long"]),
+            "asset_manager_short":int(row["asset_mgr_positions_short"]),
+            "leveraged_long":int(row["lev_money_positions_long"]),
+            "leveraged_short":int(row["lev_money_positions_short"])}
+    dates=sorted(series)
+    latest=dates[-1]
+    return {"source":"CFTC TFF futures-only BTC CME contract 133741 (5 BTC per contract)",
+        "frequency":"weekly Tuesday observation, published later",
+        "unit":"CME standard BTC futures CONTRACTS, multiplied by 5 for equivalent BTC",
+        "latest_date":latest,"latest":series[latest],
+        "weeks":len(series),"history":series,
+        "freshness":{"lag_calendar_days":(now.date()-dt.date.fromisoformat(latest)).days,
+                     "normal_report_lag":"Friday report of Tuesday position"},
+        "futures_only":True,"micro_btc_contracts_not_included":True}
+
+def fetch_basis(now):
+    base=SHARPE+"/futures/data?chart="
+    snapshot=get(base+"term-structure&coin=BTC&timeframe=1W")
+    curve=get(base+"annualized-basis&coin=BTC&timeframe=1W")
+    wanted=("Binance","Bybit","OKX","Deribit")
+    snap={}
+    for row in snapshot.get("data",[]):
+        ex=row.get("exchange")
+        if ex not in wanted:continue
+        try:
+            expiry=dateparse(row["expiry_date"])
+            t=dateparse(row["timestamp"])
+            days=number(row["days_to_expiry"])
+            annual=number(row["annualized_basis_pct"])
+            spot=number(row["spot_price"]);futures=number(row["futures_price"])
+            if days<7 or spot<=0 or futures<=0:continue
+        except (ValueError,TypeError,KeyError):continue
+        if ex not in snap or days<snap[ex]["days_to_expiry"]:
+            snap[ex]={"timestamp":t.isoformat(),"expiry":expiry.date().isoformat(),
+                  "contract":row.get("contract_symbol"),"days_to_expiry":round(days,3),
+                  "spot_usd":spot,"futures_usd":futures,
+                  "annualized_basis_pct_vendor":annual}
+    history=defaultdict(dict)
+    for row in curve.get("data",[]):
+        if row.get("exchange") not in wanted:continue
+        try:
+            day=dateparse(row["timestamp"]).strftime("%Y-%m-%d")
+            ap=number(row["annualized_basis_pct"])
+            contract=row.get("contract_symbol","")
+            if not contract:continue
+            # Calendar contract roll changes the basis; history is contract-labelled.
+            history[day][row["exchange"]+"|"+contract]=round(ap,5)
+        except (KeyError,ValueError,TypeError):continue
+    return {"source":"Sharpe term-structure / annualized-basis history",
+      "markets":"dated futures (NOT perpetual funding)",
+      "cme_basis":{"status":"missing","reason":"Verified CME matched-settlement futures-vs-spot annualized basis not yet available"},
+      "dated_basis_latest_by_venue":snap,"daily_by_venue_and_contract":dict(history),
+      "source_meta":status("Sharpe basis",(snapshot.get("meta") or {}).get("as_of"),now,3)}
