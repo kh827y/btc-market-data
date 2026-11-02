@@ -273,6 +273,51 @@ def recent_coverage(markets,through,windows=(7,30,90,365)):
                   "coverage_pct":round(100*observed/len(dates),2) if dates else 0}
     return result
 
+def audit_source_dates(verified_markets, failures, through):
+    """Classify every source calendar date without treating retries as genuine books.
+
+    The archive is probed only in 11/12/13 UTC. Exhausting these hours does
+    NOT prove the source lacks all other hours, and HTTP failures are not
+    equivalent to a confirmed absence of native snapshots.
+    """
+    total=(through-ARCHIVE_START).days+1
+    dates=[(ARCHIVE_START+dt.timedelta(days=n)).isoformat() for n in range(max(0,total))]
+    audit={}
+    for venue in MARKETS:
+        observed=verified_markets.get(venue,{})
+        bad=[];pending=[];reason_counts=defaultdict(int);details=[];retryable=0
+        for day in dates:
+            if day in observed:continue
+            attempts=[failures.get(f"{venue}:{day}:{hour:02d}") for hour in SEARCH_HOURS]
+            if any(x is None for x in attempts):
+                pending.append(day)
+                continue
+            bad.append(day)
+            reasons=[str(x.get("last_error","unknown")) for x in attempts]
+            native_absent=all("no verified checkpoint snapshot" in x for x in reasons)
+            classification=("no_native_snapshot_in_sampled_hours"
+                            if native_absent else "transient_or_other_error")
+            reason_counts[classification]+=1
+            if not native_absent:retryable+=1
+            if len(details)<12:
+                details.append({"day":day,"classification":classification,
+                    "hours_utc":list(SEARCH_HOURS),
+                    "reasons":dict(zip((str(h) for h in SEARCH_HOURS),reasons)),
+                    "retry_after":max((str(x.get("retry_after","")) for x in attempts),default="")})
+        audit[venue]={
+            "eligible_days":len(dates),"verified_days":len(set(observed)&set(dates)),
+            "explicit_error_days":len(bad),
+            "error_scope":"no usable verified checkpoint in sampled 11/12/13 UTC hours; NOT proof entire day has no native snapshot",
+            "attempted_hours_utc":list(SEARCH_HOURS),
+            "not_fully_checked_days":len(pending),
+            "all_source_dates_accounted_for":not pending,
+            "error_date_examples":bad[:8],"error_date_details":details,
+            "error_reason_counts":dict(reason_counts),
+            "transient_or_other_error_days":retryable,
+            "unchecked_date_examples":pending[:8],
+        }
+    return audit
+
 def make_comparisons(records):
     comparisons={}
     baselines={}
@@ -396,33 +441,11 @@ def main():
                          "coverage_pct_of_global_window":round(len(rows)/source_days*100,2),
                          "first_verified_day":min(rows,default=None),
                          "latest_verified_day":max(rows,default=None)}
-    # Count every original archive calendar date as verified, explicitly
-    # failed (all three candidate hours tested), or still untested.
-    # No fabricated zero-depth rows or optimistic completion percentages.
-    audit={}
+    # A source date is accounted for only by a verified native snapshot or
+    # explicit failed probes for ALL sampled hours; transient errors are tagged.
+    audit=audit_source_dates(verified_markets,failures,through)
     for venue in MARKETS:
-        dates=[(ARCHIVE_START+dt.timedelta(days=n)).isoformat()
-               for n in range(source_days)]
-        observed=verified_markets[venue]
-        bad=[];pending=[]
-        for day in dates:
-            if day in observed:continue
-            if all(f"{venue}:{day}:{hour:02d}" in failures for hour in SEARCH_HOURS):
-                bad.append(day)
-            else:
-                pending.append(day)
-        audit[venue]={
-            "eligible_days":len(dates),
-            "verified_days":len(observed),
-            "explicit_error_days":len(bad),
-            "error_scope":"no usable verified checkpoint in sampled 11/12/13 UTC hours; NOT proof entire day has no native snapshot",
-            "attempted_hours_utc":list(SEARCH_HOURS),
-            "not_fully_checked_days":len(pending),
-            "all_source_dates_accounted_for":not pending,
-            "error_date_examples":bad[:8],
-            "unchecked_date_examples":pending[:8],
-            "legacy_unverified_records":legacy_unverified[venue],
-        }
+        audit[venue]["legacy_unverified_records"]=legacy_unverified[venue]
     anchor_keys={v:bool(verified_markets[v].get(through.isoformat())) for v in MARKETS}
     enough_spot=sum(anchor_keys[v] for v in MARKETS if MARKETS[v][1]=="spot")>=2
     enough_perp=sum(anchor_keys[v] for v in MARKETS if MARKETS[v][1]=="perpetual")>=1
