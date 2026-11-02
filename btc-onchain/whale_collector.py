@@ -37,6 +37,28 @@ def extract_swiss(markup):
     dt.date.fromisoformat(date.group(1))
     return date.group(1), v
 
+def extract_swiss_week(markup):
+    """Read published UTC day/ratio/count rows; no inference or fake backfill."""
+    values = {}
+    for item in re.findall(r"<tr[^>]*>.*?</tr>", markup, re.S | re.I):
+        cells = re.findall(r"<t[dh][^>]*>(.*?)</t[dh]>", item, re.S | re.I)
+        if len(cells) != 3:
+            continue
+        clean = [re.sub(r"<[^>]*>", "", cell).strip() for cell in cells]
+        day, ratio, count = clean
+        try:
+            date = dt.date.fromisoformat(day)
+            val = float(ratio)
+            n = int(count.replace(",", ""))
+            if not 0 <= val <= 1 or n < 0:
+                continue
+            values[date.isoformat()] = (val, n)
+        except (ValueError, TypeError):
+            continue
+    if len(values) < 5:
+        raise ValueError("fewer than five validated dated whale rows")
+    return values
+
 def main():
     ROOT.mkdir(parents=True, exist_ok=True)
     previous = ROOT / "whale_history.json"
