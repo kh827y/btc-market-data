@@ -16,7 +16,7 @@ for venue in VENUES:
             obj=json.load(response)
         syms=obj.get("symbols",[])
         btc=[x for x in syms if x.upper() in ("BTCUSDT","BTC-USDT","XBT/USD","XBTUSD","BTC/USD","BTC-USD","BTC-USDT-SWAP")]
-        print("SYMBOL",venue,"matches",btc[:10],"n",len(syms),flush=True)
+        print("SYMBOL",venue,"matches",btc[:10],"n",len(syms),"kraken_examples",[x for x in syms if "BTC" in x.upper() or "XBT" in x.upper()][:25] if venue=="kraken_spot" else [],flush=True)
         if not btc:continue
         symbol=("BTC-USDT" if venue == "okx_spot" else btc[0])
         path=f"{venue}/2026-10-31/12/{symbol}_orderbook.parquet"
