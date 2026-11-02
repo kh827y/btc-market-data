@@ -51,10 +51,15 @@ def decode_parquet(blob):
     if blob.startswith(bytes.fromhex("28b52ffd")):
         max_output=350_000_000
         with zstd.ZstdDecompressor().stream_reader(io.BytesIO(blob)) as reader:
-            out=reader.read(max_output+1)
-            if len(out)>max_output:
-                raise ValueError("decompressed Parquet exceeds 350MB safety cap")
-            blob=out
+            parts=[]; size=0
+            while True:
+                chunk=reader.read(2_000_000)
+                if not chunk:break
+                size+=len(chunk)
+                if size>max_output:
+                    raise ValueError("decompressed Parquet exceeds 350MB safety cap")
+                parts.append(chunk)
+            blob=b"".join(parts)
     if not blob.startswith(b"PAR1") or not blob.endswith(b"PAR1"):
         raise ValueError("unsupported historical archive payload (neither Parquet nor Zstandard-wrapped Parquet)")
     return blob
