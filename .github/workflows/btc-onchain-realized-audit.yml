@@ -1,0 +1,42 @@
+name: BTC realized cost basis alternate-source audit
+on:
+  push:
+    paths:
+      - "btc-onchain/realized_audit.py"
+      - "btc-onchain/tests/test_realized_audit.py"
+      - ".github/workflows/btc-onchain-realized-audit.yml"
+  workflow_dispatch:
+  schedule:
+    - cron: "13 6 * * *"
+permissions:
+  contents: write
+concurrency:
+  group: btc-onchain-realized-audit
+  cancel-in-progress: false
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify source-methodology and stale-day checks
+        run: python -m unittest discover -s btc-onchain/tests -p test_realized_audit.py -v
+      - name: Reconcile and publish free-source realized prices
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in 1 2 3 4; do
+            git fetch origin main
+            git reset --hard origin/main
+            python -u btc-onchain/realized_audit.py
+            git add btc-onchain/data/realized_audit.json
+            if git diff --cached --quiet; then exit 0; fi
+            git commit -m "data: reconcile BTC realized prices and 150d holder definitions"
+            if git push origin HEAD:main; then exit 0; fi
+            sleep 3
+          done
+          exit 1
