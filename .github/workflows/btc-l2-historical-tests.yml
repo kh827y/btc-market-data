@@ -1,0 +1,71 @@
+name: BTC L2 historical regression and archive coverage tests
+on:
+  push:
+    paths:
+      - "btc-liquidity/bybit_parallel_backfill.py"
+      - "btc-liquidity/bybit_independent.py"
+      - "btc-liquidity/hft_history.py"
+      - "btc-liquidity/tests/test_bybit_parallel.py"
+      - "btc-liquidity/tests/test_bybit_independent.py"
+      - "btc-liquidity/tests/test_hft_history.py"
+      - ".github/workflows/btc-l2-historical-tests.yml"
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: btc-l2-historical-regression
+  cancel-in-progress: true
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyarrow zstandard
+      - name: Unit tests (verified snapshots, shard completeness, source failures)
+        shell: bash
+        run: |
+          set +e
+          python -m unittest discover -s btc-liquidity/tests -p test_bybit_independent.py -v > /tmp/bybit-base.log 2>&1
+          b=$?
+          python -m unittest discover -s btc-liquidity/tests -p test_bybit_parallel.py -v > /tmp/bybit-shard.log 2>&1
+          p=$?
+          python -m unittest discover -s btc-liquidity/tests -p test_hft_history.py -v > /tmp/hft.log 2>&1
+          h=$?
+          set -e
+          tail -25 /tmp/bybit-base.log
+          tail -25 /tmp/bybit-shard.log
+          tail -25 /tmp/hft.log
+          echo "B=$b" >> "$GITHUB_ENV"
+          echo "P=$p" >> "$GITHUB_ENV"
+          echo "H=$h" >> "$GITHUB_ENV"
+      - name: Commit test evidence without changing historical source files
+        shell: bash
+        run: |
+          cat > /tmp/verified-history-test.json <<EOF
+          {
+            "tested_commit": "${GITHUB_SHA}",
+            "bybit_snapshot_tests_ok": $( [ "$B" = "0" ] && echo true || echo false ),
+            "bybit_parallel_merge_tests_ok": $( [ "$P" = "0" ] && echo true || echo false ),
+            "hft_history_tests_ok": $( [ "$H" = "0" ] && echo true || echo false ),
+            "scope": "unit tests of verified L2 sampling and merge only; not 100 percent historic data coverage"
+          }
+          EOF
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in 1 2 3 4; do
+            git fetch origin main
+            git reset --hard origin/main
+            mkdir -p btc-liquidity/data
+            cp /tmp/verified-history-test.json btc-liquidity/data/historical_test_status.json
+            git add btc-liquidity/data/historical_test_status.json
+            if git diff --cached --quiet; then break; fi
+            git commit -m "test: BTC depth history regression verification"
+            if git push origin HEAD:main; then break; fi
+            if [ "$attempt" -eq 4 ]; then exit 1; fi
+            sleep 3
+          done
+          if [ "$B" -ne 0 ] || [ "$P" -ne 0 ] || [ "$H" -ne 0 ]; then exit 1; fi
