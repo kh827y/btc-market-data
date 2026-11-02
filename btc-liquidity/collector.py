@@ -30,7 +30,7 @@ VENUES = {
     "bitget_spot": ("spot", "BTCUSDT", "https://api.bitget.com/api/v3/market/orderbook?category=SPOT&symbol=BTCUSDT&limit=1000"),
     "bitget_usdt_perp": ("perpetual", "BTCUSDT", "https://api.bitget.com/api/v3/market/orderbook?category=USDT-FUTURES&symbol=BTCUSDT&limit=1000"),
     "gate_spot": ("spot", "BTCUSDT", "https://api.gateio.ws/api/v4/spot/order_book?currency_pair=BTC_USDT&limit=1000"),
-    "gate_usdt_perp": ("perpetual", "BTCUSDT", "https://api.gateio.ws/api/v4/futures/usdt/order_book?contract=BTC_USDT&limit=100"),
+    "gate_usdt_perp": ("perpetual", "BTCUSDT", "https://api.gateio.ws/api/v4/futures/usdt/order_book?contract=BTC_USDT&limit=300&with_id=true"),
 }
 
 def fetch(url, binary=False):
@@ -75,6 +75,10 @@ def normalize_book(venue, raw):
         bids, asks = raw["bids"], raw["asks"]
         source_ms = None
     elif venue == "gate_usdt_perp":
+        # Native 300-level snapshot (verified max via actual HTTP 400
+        # `TOO_BIG: limit 300` on 500). Require true exchange update ID.
+        if not isinstance(raw.get("id"),int) or raw["id"]<1:
+            raise ValueError("Gate 300-level book update ID absent")
         bids = [[item["p"], item["s"]] for item in raw["bids"]]
         asks = [[item["p"], item["s"]] for item in raw["asks"]]
         # Gate's current/update timestamps are expressed in SECONDS.
@@ -170,6 +174,8 @@ def collect_live(now, errors):
             bids, asks, source_ms = normalize_book(name, raw)
             contract_size = None
             if name == "gate_usdt_perp":
+                # Depth is native and not extrapolated: the 300-th level may
+                # still stop short of 0.2% / 1%. Both-side gate stays strict.
                 spec = fetch("https://api.gateio.ws/api/v4/futures/usdt/contracts/BTC_USDT")
                 contract_size = gate_btc_contract_size(spec)
                 bids = [[row[0], str(float(row[1]) * contract_size)] for row in bids]
