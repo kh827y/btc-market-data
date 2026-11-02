@@ -67,6 +67,34 @@ class HistoricL2Tests(unittest.TestCase):
         self.assertEqual(r["snapshot_rows"],24)
         self.assertEqual(r["sample_utc_hour"],12)
         self.assertEqual(dt.datetime.fromisoformat(r["time"]).minute,20)
+    def test_legacy_hour_start_record_is_not_verified_snapshot(self):
+        day=dt.date(2026,10,31)
+        good=m.parse_checkpoint(fixture(),"binance_spot","BTCUSDT",
+                                "spot",1.0,"USDT",day)
+        self.assertTrue(m.verified_entry({"status":"ok","data":good},"binance_spot",str(day)))
+        legacy=dict(good)
+        legacy["source"]="CryptoHFTData historical verified L2 hour-start checkpoint"
+        legacy["method"]="first complete checkpoint from 12:00 UTC hourly L2 file, not trades or interpolated quotes"
+        legacy.pop("sample_utc_hour",None)
+        self.assertFalse(m.verified_entry({"status":"ok","data":legacy},"binance_spot",str(day)))
+        through=day
+        existing={v:{} for v in m.MARKETS}
+        existing["binance_spot"][str(day)]={"status":"ok","data":legacy}
+        picked=[x for x in m.targets(through,existing,now=dt.datetime(2026,11,2,tzinfo=dt.timezone.utc))
+                if x[0]=="binance_spot" and x[1]==day]
+        self.assertEqual([x[2] for x in picked],[12,11,13])
+        valid={v:{d:row for d,row in rows.items() if m.verified_entry(row,v,d)}
+               for v,rows in existing.items()}
+        self.assertEqual(m.recent_coverage(valid,through)["7d"]["binance_spot"]["verified_days"],0)
+
+    def test_native_snapshot_must_match_venue_day_and_utc_hour(self):
+        day=dt.date(2026,10,31)
+        data=m.parse_checkpoint(fixture(),"binance_spot","BTCUSDT","spot",1.0,"USDT",day)
+        self.assertFalse(m.verified_entry({"status":"ok","data":data},"bybit_spot",str(day)))
+        self.assertFalse(m.verified_entry({"status":"ok","data":data},"binance_spot","2026-10-30"))
+        bad=dict(data);bad["sample_utc_hour"]=11
+        self.assertFalse(m.verified_entry({"status":"ok","data":bad},"binance_spot",str(day)))
+
     def test_failure_for_one_hour_does_not_blacklist_adjacent_hours(self):
         now=dt.datetime(2026,11,2,8,tzinfo=dt.timezone.utc)
         records={name:{} for name in m.MARKETS}
