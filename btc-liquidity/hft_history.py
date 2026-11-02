@@ -19,7 +19,8 @@ import pyarrow.parquet as pq
 UTC=dt.timezone.utc
 ROOT=pathlib.Path("btc-liquidity/data")
 API="https://api.cryptohftdata.com/v1/download"
-DAYS=90
+ARCHIVE_START=dt.date(2025,6,28)
+DAYS=(dt.datetime.now(UTC).date()-ARCHIVE_START).days
 BANDS=(0.05,0.2,1.0)
 MARKETS={
     "binance_spot":("BTCUSDT","spot",1.0,"USDT"),
@@ -42,6 +43,8 @@ def download(url, limit=45_000_000):
     return b"".join(chunks)
 
 def parse_checkpoint(blob,venue,symbol,kind,multiplier,quote,day):
+    if not blob.startswith(b"PAR1") or not blob.endswith(b"PAR1"):
+        raise ValueError("response is not a complete Parquet file: "+repr(blob[:100]))
     hour=dt.datetime.combine(day,dt.time(12),tzinfo=UTC)
     with pq.ParquetFile(io.BytesIO(blob)) as f:
         columns=("received_time","event_type","side","price","quantity","final_update_id")
@@ -121,7 +124,7 @@ def write(path,content):
 
 def targets(through, existing):
     # Prioritize meaningful same-hour baselines before filling consecutive 90-day history.
-    priority=(0,1,7,30,90,2,3,4,5,6,8,14,21,60)
+    priority=(0,1,7,30,90,365,180,2,3,4,5,6,8,14,21,60)
     days=list(dict.fromkeys([through-dt.timedelta(days=n) for n in
                              list(priority)+list(range(DAYS+1)) if n<=DAYS]))
     return [(venue,day) for day in days for venue in MARKETS
@@ -136,7 +139,7 @@ def make_comparisons(records):
         newest=dates[-1]
         latest=by_day[newest]["data"]
         comparisons[venue]={"latest_day":newest,"bands":{},"previous_days":{}}
-        for lag in (1,7,30,90):
+        for lag in (1,7,30,90,365):
             base=(dt.date.fromisoformat(newest)-dt.timedelta(days=lag)).isoformat()
             item=by_day.get(base,{}).get("data")
             if item is None:
@@ -151,7 +154,7 @@ def make_comparisons(records):
                            "ask_change_pct":round(100*(a["ask_usd"]/b["ask_usd"]-1),2) if b["ask_usd"] else None,
                            "bid_share_change_pp":round(100*(a["bid_share"]-b["bid_share"]),3)}
             comparisons[venue]["previous_days"][str(lag)+"d"]={"baseline_day":base,"bands":deltas} if deltas else None
-        for period,minimum in ((7,5),(30,20),(90,60)):
+        for period,minimum in ((7,5),(30,20),(90,60),(365,240)):
             sub=[by_day[day]["data"] for day in dates
                  if 0<=(dt.date.fromisoformat(newest)-dt.date.fromisoformat(day)).days<period]
             row={"days":period,"available":len(sub),"required":minimum,"bands":{}}
@@ -199,15 +202,15 @@ def main():
             item["last_error"]=reason
             errors.append(venue+" "+key+" "+reason)
         if files%10==0:print("Processed",files,"historical L2 hours, valid",good,flush=True)
-    # Limit mutable archive to roughly 90 days; retain only verified daily snapshots.
-    floor=(through-dt.timedelta(days=DAYS)).isoformat()
+    # Retain the entire supported source history from 2025-06-28, but only verified daily snapshots.
+    floor=ARCHIVE_START.isoformat()
     for venue in markets:
         markets[venue]={day:x for day,x in sorted(markets[venue].items()) if day>=floor}
     history["updated_at"]=now.isoformat()
     comparisons,baselines=make_comparisons(markets)
-    latest={"generated_at":now.isoformat(),"status":"ok" if good or any(markets[k] for k in markets) else "unavailable",
+    latest={"generated_at":now.isoformat(),"status":"ok" if sum(bool(markets[v].get(through.isoformat())) for v in MARKETS if MARKETS[v][1]=="spot")>=2 and sum(bool(markets[v].get(through.isoformat())) for v in MARKETS if MARKETS[v][1]=="perpetual")>=1 else "partial" if any(markets[k] for k in markets) else "unavailable",
             "source":"CryptoHFTData free historical L2, actual 12:00 UTC orderbook checkpoint",
-            "coverage_days":{v:len(x) for v,x in markets.items()},
+            "archive_start":ARCHIVE_START.isoformat(),"coverage_days":{v:len(x) for v,x in markets.items()},
             "latest_by_venue":{v:max(x,default=None) for v,x in markets.items()},
             "comparison":comparisons,"baseline":baselines,
             "errors_recent_run":errors[-20:],
