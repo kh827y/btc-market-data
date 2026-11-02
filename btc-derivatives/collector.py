@@ -2,6 +2,8 @@
 import datetime as dt
 import json
 import math
+import io
+import zipfile
 import pathlib
 import urllib.request
 from collections import defaultdict
@@ -205,11 +207,70 @@ def fetch_basis(now):
       "daily_by_venue_and_contract":dict(history),
       "source_meta":status("Sharpe basis",(snapshot.get("meta") or {}).get("as_of"),now,3)}
 
+def fetch_cme_basis(now):
+    """Dated CME Bitcoin futures versus timestamp-matched spot/index; Boros."""
+    root="https://historical-data.boros.finance/futures-premium/"
+    series={}
+    for expiry in ("20260626","20260925","20261225","20270326"):
+        url=root+"cme-BTC-"+expiry+".ndjson.zip"
+        req=urllib.request.Request(url,headers={"User-Agent":"Mozilla/5.0 BTC-research/1.0"})
+        with urllib.request.urlopen(req,timeout=45) as resp:
+            blob=resp.read(2500000)
+        with zipfile.ZipFile(io.BytesIO(blob)) as archive:
+            files=archive.namelist()
+            if len(files)!=1:raise ValueError("unexpected CME zipped contents")
+            lines=archive.read(files[0]).splitlines()
+        rows={}
+        for raw in lines:
+            data=json.loads(raw)
+            try:
+                when=dateparse(data["datetime"])
+                duration=number(data["daysToExpiry"])
+                spot=number(data["spotPrice"])
+                future=number(data["futuresPrice"])
+                ap=number(data["premiumApr"])
+                symbol=data["contractSymbol"]
+                if ".CME" not in symbol or duration<=7 or spot<=0 or future<=0:
+                    continue
+                if data.get("isSpotProxy") is True:
+                    continue
+                calculated=((future/spot)-1)*365/duration
+                if abs(calculated-ap)>0.03:
+                    continue
+                day=when.strftime("%Y-%m-%d")
+                # Keep last observed rate of the day per CME expiry.
+                if day not in rows or when.isoformat()>rows[day]["timestamp"]:
+                    rows[day]={"timestamp":when.isoformat(),"contract":symbol,
+                        "expiry":expiry,"days_to_expiry":round(duration,4),
+                        "spot_usd":spot,"futures_usd":future,
+                        "annualized_basis_pct":round(ap*100,5)}
+            except (KeyError,TypeError,ValueError):
+                continue
+        if not rows:raise ValueError("no valid CME matched-price observations for "+expiry)
+        series[expiry]=rows
+    latest={}
+    for expiry,rows in series.items():
+        day=max(rows)
+        last=rows[day]
+        latest[expiry]={"date":day,**last}
+    recent={exp:record for exp,record in latest.items()
+        if 0<=(now.date()-dt.date.fromisoformat(record["date"])).days<=7
+          and dt.datetime.strptime(exp,"%Y%m%d").date()>now.date()}
+    front=min(recent) if recent else None
+    return {"source":"Boros Historical Data / futures-premium CME directly identified contracts",
+        "source_url":"https://historical-data.boros.finance/index.html",
+        "method":"(futuresPrice/spotPrice-1)*365/daysToExpiry; percent; same-row joined spot within ±1h",
+        "series_by_expiry":series,"points":sum(map(len,series.values())),
+        "latest_by_expiry":latest,
+        "front_recent_contract":latest[front] if front else None,
+        "status":"recent_observed" if front else "stale_or_unavailable",
+        "warning":"CME holidays/weekends produce multi-day gaps; near-expiry <7d excluded; not a continuous roll-adjusted series"}
+
 def main():
     now=dt.datetime.now(UTC)
     checks=(("open_interest",fetch_oi),("funding",fetch_funding),
             ("liquidations",fetch_liquidations),("cme_cot",fetch_cme_cot),
-            ("dated_futures_basis",fetch_basis))
+            ("dated_futures_basis",fetch_basis),("cme_basis",fetch_cme_basis))
     results={};errors=[]
     for key,fn in checks:
         try:
@@ -219,6 +280,7 @@ def main():
             errors.append({"dataset":key,"error":str(exc)[:250]})
             print("ERROR",key,str(exc)[:250])
     last_report=ROOT/"latest.json"
+    cme_basis_available=bool((results.get("cme_basis") or {}).get("front_recent_contract"))
     report={
         "generated_utc":now.isoformat(),
         "source_classes":{
@@ -226,14 +288,15 @@ def main():
             "funding":"actually settled contract rates; converted to a common 8h settlement basis",
             "liquidations":"reported USD forced liquidations from Binance and Bybit only",
             "cme_cot":"weekly BTC CME standard futures only, positions in 5 BTC contracts",
-            "dated_futures_basis":"expiry-aware non-CME futures/spot basis, not funding; CME basis missing"},
+            "dated_futures_basis":"expiry-aware non-CME futures/spot basis, not funding",
+            "cme_basis":"historical verified CME dated futures premium against matched spot from Boros, not proxy"},
         "results":results,"errors":errors,
         "coverage":{"obtained":len(results),"expected":len(checks),
                     "core_feeds_available":len(results)==len(checks),
-                    "complete":False,
-                    "cme_basis_available":False},
+                    "complete":len(results)==len(checks) and cme_basis_available,
+                    "cme_basis_available":cme_basis_available},
         "limitations":[
-            "CME price basis is not provided by CFTC positions; do not relabel non-CME basis as CME.",
+            "CME basis from independently labelled Boros CME price history, NOT CFTC. When source stale or a contract is close to expiration mark unavailable.",
             "Binance/Bybit direct REST API were blocked from GitHub; Sharpe verified exchange data is used instead.",
             "Liquidations from only two exchanges are NOT world totals.",
             "OI changes compare same five venues, fixed USD definitions; raw linear BTC OI must not be summed with coin-margined contract counts.",
