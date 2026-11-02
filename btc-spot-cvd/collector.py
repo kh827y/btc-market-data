@@ -201,9 +201,18 @@ def summarise(state,now,errors):
                 "venues":complete_names,
                 "net":round(sum(per[n]["net"] for n in complete_names),2) if subset_usable else None,
                 "scope":"observed complete venues among six tracked sources; not global BTC CVD"}
+        kraken_official_rest_hours=sum(
+            state.get("hourly",{}).get("kraken",{}).get(t,{}).get("source")
+            =="Kraken official public REST Trades" for t in times)
         alt={"complete":alt_full,"venues":ALT_FIVE,
              "net":round(sum(per[n]["net"] for n in ALT_FIVE),2) if alt_full else None,
-             "scope":"fixed five spot venues EXCLUDING Coinbase; not worldwide CVD"}
+             "scope":"fixed five spot venues EXCLUDING Coinbase; not worldwide CVD",
+             "kraken_official_rest_hours":kraken_official_rest_hours,
+             "kraken_hour_basis_mixed":kraken_official_rest_hours>0,
+             "kraken_hour_basis_note":(
+                 "Kraken REST recovered UTC hours use exchange trade time; "
+                 "CryptoHFTData files use collector receive time"
+                 if kraken_official_rest_hours else "CryptoHFTData received-time UTC hours")}
         out["windows"][str(h)+"h"]={"complete":full,"net":round(sum(per[n]["net"] for n in ALL),2) if full else None,
                                       "by_venue":per,"complete_venue_subset":subset,
                                       "fixed_five_ex_coinbase":alt}
