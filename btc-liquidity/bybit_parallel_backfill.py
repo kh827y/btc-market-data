@@ -98,7 +98,7 @@ def merge(artifact_dir,root=".",now=None):
             for day,rec in block["records"].items():
                 timestamp=dt.datetime.fromisoformat(rec["time"])
                 if (rec.get("venue")!=venue or rec.get("market")!=("spot" if category=="spot" else "perpetual")
-                    or timestamp.date().isoformat()!=day
+                    or not (-0.010 <= (timestamp-dt.datetime.combine(dt.date.fromisoformat(day),dt.time(),UTC)).total_seconds() <= 180)
                     or rec.get("source_type")!="independent Bybit daily native snapshot"
                     or "bands" not in rec):
                     raise ValueError("invalid archived book provenance for "+venue+" "+day)
