@@ -311,7 +311,7 @@ def main():
             if dt.datetime.fromisoformat(k.replace("Z","+00:00"))<cutoff: del records[k]
     output=summarise(state,now,errors)
     output["coinbase_recent_repair"]=recent_result
-    output["coinbase_720h_gap_free"]=full_coinbase
+    output["coinbase_720h_gap_free"]=output["windows"]["720h"]["by_venue"]["coinbase"]["complete"]
     path.parent.mkdir(parents=True,exist_ok=True)
     path.write_text(json.dumps(state,separators=(",",":"))+"\n")
     Path("btc-spot-cvd/data/latest.json").write_text(json.dumps(output,indent=2)+"\n")
