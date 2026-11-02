@@ -1,0 +1,40 @@
+name: BTC order book depth and historical liquidity
+on:
+  push:
+    paths:
+      - "btc-liquidity/collector.py"
+      - "btc-liquidity/tests/**"
+      - ".github/workflows/btc-liquidity.yml"
+  workflow_dispatch:
+  schedule:
+    - cron: "19 * * * *"
+permissions:
+  contents: write
+concurrency:
+  group: btc-liquidity-history
+  cancel-in-progress: false
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 17
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Test orderbook accuracy and archive corruption detection
+        run: |
+          python -m py_compile btc-liquidity/collector.py
+          cd btc-liquidity && python -m unittest discover -s tests -v
+      - name: Download free spot/perpetual snapshots and verified historical depth
+        run: python btc-liquidity/collector.py
+      - name: Commit only compact derived data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add btc-liquidity/data/latest.json btc-liquidity/data/history.json
+          if ! git diff --cached --quiet; then
+            git commit -m "data: BTC orderbook liquidity and validated history"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
