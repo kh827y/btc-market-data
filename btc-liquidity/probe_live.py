@@ -22,21 +22,26 @@ def run():
             if multiplier!=1:
                 bids=[[x[0],str(float(x[1])*multiplier)] for x in bids]
                 asks=[[x[0],str(float(x[1])*multiplier)] for x in asks]
-            if source_ms is not None and abs(now.timestamp()*1000-source_ms)>120000:
+            if source_ms is not None and abs(dt.datetime.now(UTC).timestamp()*1000-source_ms)>120000:
                 raise ValueError("stale source timestamp")
             result=summarize_orderbook(bids,asks)
-            checks[name]={"status":"ok","market":market,"symbol":symbol,
+            complete_bands=[band for band,d in result["bands"].items()
+                            if d["bid_coverage_complete"] and d["ask_coverage_complete"]]
+            checks[name]={"status":"ok","usable":bool(complete_bands),"market":market,"symbol":symbol,
                           "mid_usd":result["mid_usd"],
                           "level_count":result["levels"],
-                          "complete_bands":[band for band,d in result["bands"].items()
-                                            if d["bid_coverage_complete"] and d["ask_coverage_complete"]],
+                          "complete_bands":complete_bands,
+                          "captured_at_utc":dt.datetime.now(UTC).isoformat(),
                           "contract_size_btc":multiplier if multiplier!=1 else None,
                           "source_time_utc":dt.datetime.fromtimestamp(source_ms/1000,UTC).isoformat() if source_ms else None}
         except Exception as exc:
             checks[name]={"status":"error","market":market,
                           "error":str(exc)[:250]}
-    output={"tested_utc":now.isoformat(),"tested_endpoints":len(VENUES),
+    output={"tested_utc":now.isoformat(),"finished_utc":dt.datetime.now(UTC).isoformat(),
+            "tested_endpoints":len(VENUES),
             "working":sum(v["status"]=="ok" for v in checks.values()),
+            "spot_usable":sum(v.get("usable",False) for v in checks.values() if v["market"]=="spot"),
+            "perpetual_usable":sum(v.get("usable",False) for v in checks.values() if v["market"]=="perpetual"),
             "markets":checks}
     dest=Path("btc-liquidity/data/live_probe.json")
     dest.parent.mkdir(parents=True,exist_ok=True)
