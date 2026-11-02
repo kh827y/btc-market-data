@@ -134,7 +134,11 @@ class BridgeTests(unittest.TestCase):
   self.assertEqual(full["fixed_five_ex_coinbase"]["net_usd_approx"],50)
   self.assertFalse(result["audit"]["family_readiness"]["spot_cvd_24h_complete"])
   self.assertTrue(result["audit"]["family_readiness"]["spot_cvd_24h_fixed_five_ex_coinbase"])
-  self.assertEqual(m.make_brief(result)["spot_cvd"]["windows"]["24h"]["fixed_five_ex_coinbase"]["venues"],alt)
+  brief=m.make_brief(result)
+  self.assertEqual(brief["spot_cvd"]["windows"]["24h"]["fixed_five_ex_coinbase"]["venues"],alt)
+  self.assertEqual(brief["spot_cvd"]["windows"]["24h"]["venue_coverage_hours"]["bitget"]["hours"],24)
+  self.assertFalse(result["audit"]["family_readiness"]["spot_cvd_168h_fixed_five_ex_coinbase"])
+  self.assertFalse(result["audit"]["family_readiness"]["spot_cvd_720h_fixed_five_ex_coinbase"])
  def test_reject_unsubstantiated_fixed_five(self):
   row={"complete":False,"net":None,"by_venue":{"bitget":{"complete":False}},
        "fixed_five_ex_coinbase":{"complete":True,
