@@ -106,8 +106,28 @@ class BridgeTests(unittest.TestCase):
   self.assertTrue(any(x.startswith("onchain:missing_or_delayed_metrics=") for x in gaps))
   brief=m.make_brief(out)
   self.assertEqual(brief["sources"]["live_depth"]["source_errors"],2)
-  self.assertEqual(brief["sources"]["spot_cvd"]["measurement_age_h"],1.5)
+  self.assertEqual(brief["sources"]["spot_cvd"]["measurement_age_h"],0.5)
   self.assertEqual(brief["coverage_gaps"],gaps)
+
+ def test_fresh_file_with_historical_snapshot_aged_out_not_current(self):
+  source={"generated_at":"2026-11-02T07:20:00Z","status":"ok",
+          "target_anchor_date":"2026-10-20","comparison":{}}
+  out=m.build({"hft_depth":source},NOW)
+  self.assertEqual(out["feeds"]["hft_depth"]["status"],"stale_observation")
+  self.assertGreater(out["feeds"]["hft_depth"]["measurement_age_h"],72)
+  self.assertNotIn("orderbook_history",m.make_brief(out))
+
+ def test_live_book_must_have_real_complete_band_not_only_fresh_file(self):
+  source={"generated_at":"2026-11-02T07:20:00Z","status":"ok",
+          "current":{"time":"2026-11-02T07:20:00Z",
+             "venues":{"coinbase_spot":{"market":"spot",
+               "bands":{"0.05":{"bid_coverage_complete":True,
+                                "ask_coverage_complete":False,"bid_usd":50,"ask_usd":10}}}}}}
+  out=m.build({"live_depth":source},NOW)
+  self.assertEqual(out["feeds"]["live_depth"]["status"],"fresh")
+  self.assertFalse(out["audit"]["family_readiness"]["current_orderbook"])
+  self.assertFalse(out["audit"]["family_readiness"]["current_spot_orderbook"])
+  self.assertEqual(out["audit"]["family_readiness"]["current_spot_orderbook_venues"],0)
 
  def test_zero_bid_share_is_retained(self):
   got=m.guard_bands({"0.05":{"bid_coverage_complete":True,"ask_coverage_complete":True,
