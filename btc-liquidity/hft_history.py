@@ -7,6 +7,7 @@ import json
 import math
 import os
 import pathlib
+import re
 import statistics
 import time
 import urllib.error
@@ -26,6 +27,8 @@ DAYS=(dt.datetime.now(UTC).date()-ARCHIVE_START).days
 BANDS=(0.01,0.05,0.2,1.0)
 SEARCH_HOURS=(12,11,13)  # Keep comparable daily observations within the 11-14 UTC window.
 SOURCE_RECHECK_DAYS=7
+# Historical BTCUSDT futures archives may exceed the previous 45 MB cap.
+MAX_COMPRESSED_BYTES=128_000_000
 MARKETS={
     "binance_spot":("BTCUSDT","spot",1.0,"USDT"),
     "bybit_spot":("BTCUSDT","spot",1.0,"USDT"),
@@ -35,9 +38,13 @@ MARKETS={
     "bybit":("BTCUSDT","perpetual",1.0,"USDT"),
     "okx_futures":("BTC-USDT-SWAP","perpetual",0.01,"USDT"),
 }
+# Vendor exchange-history table: Bitget starts 2025-07-15, unlike
+# the other six tracked markets (2025-06-28).
+MARKET_START={v:(dt.date(2025,7,15) if v=="bitget_spot" else ARCHIVE_START)
+              for v in MARKETS}
 
 _LAST_REQUEST_AT=0.0
-def download(url, limit=45_000_000):
+def download(url, limit=MAX_COMPRESSED_BYTES):
     """Pace anonymous API requests and obey Retry-After on explicit rate limit."""
     global _LAST_REQUEST_AT
     request=urllib.request.Request(url,headers={"User-Agent":"BTC-market-data-independent-historical-L2/1.0"})
@@ -52,7 +59,7 @@ def download(url, limit=45_000_000):
                     chunk=response.read(1024*1024)
                     if not chunk:break
                     total+=len(chunk)
-                    if total>limit:raise ValueError("File exceeds 45 MB cap; not silently truncated")
+                    if total>limit:raise ValueError(f"File exceeds {limit/1_000_000:g} MB cap; not silently truncated")
                     chunks.append(chunk)
                 return b"".join(chunks)
         except urllib.error.HTTPError as err:
@@ -242,6 +249,7 @@ def targets(through, existing, failures=None, now=None):
                              if ARCHIVE_START<=through-dt.timedelta(days=n)<=through]))
     for day in days:
         for venue in MARKETS:
+            if day<MARKET_START[venue]:continue  # No archive before this market launch.
             day_key=day.isoformat()
             previous_entry=existing.get(venue,{}).get(day_key,{})
             if (verified_entry(previous_entry,venue,day_key)
@@ -263,10 +271,10 @@ def recent_coverage(markets,through,windows=(7,30,90,365)):
     """Actual observed date coverage, not percentage of entire vendor history."""
     result={}
     for width in windows:
-        dates={(through-dt.timedelta(days=d)).isoformat()
-               for d in range(width) if through-dt.timedelta(days=d)>=ARCHIVE_START}
         result[str(width)+"d"]={}
         for venue,rows in markets.items():
+            dates={(through-dt.timedelta(days=d)).isoformat()
+                   for d in range(width) if through-dt.timedelta(days=d)>=MARKET_START[venue]}
             observed=len(dates.intersection(rows))
             result[str(width)+"d"][venue]={"verified_days":observed,
                   "eligible_days":len(dates),
@@ -280,6 +288,16 @@ def retry_delay_days(reason):
     An HTTP 404 is not proof of zero liquidity or that other hours lack data.
     """
     return SOURCE_RECHECK_DAYS if ("no verified checkpoint" in reason or "HTTP Error 404" in reason) else 1
+
+def invalidate_obsolete_size_cap_failures(failures):
+    """Retry files rejected solely by a smaller previous download safety cap."""
+    removed=0
+    for key, failure in list(failures.items()):
+        match=re.search(r"File exceeds (\d+(?:\.\d+)?) MB cap",str(failure.get("last_error","")))
+        if match and float(match.group(1))*1_000_000<MAX_COMPRESSED_BYTES:
+            failures.pop(key)
+            removed+=1
+    return removed
 
 def compact_date_intervals(days):
     """Losslessly encode a set of actual calendar days as inclusive UTC ranges.
@@ -304,10 +322,11 @@ def audit_source_dates(verified_markets, failures, through):
     NOT prove the source lacks all other hours, and HTTP failures are not
     equivalent to a confirmed absence of native snapshots.
     """
-    total=(through-ARCHIVE_START).days+1
-    dates=[(ARCHIVE_START+dt.timedelta(days=n)).isoformat() for n in range(max(0,total))]
     audit={}
     for venue in MARKETS:
+        start=MARKET_START[venue]
+        total=(through-start).days+1
+        dates=[(start+dt.timedelta(days=n)).isoformat() for n in range(max(0,total))]
         observed=verified_markets.get(venue,{})
         bad=[];pending=[];reason_counts=defaultdict(int);reason_days=defaultdict(list);details=[];retryable=0
         for day in dates:
@@ -332,6 +351,7 @@ def audit_source_dates(verified_markets, failures, through):
                     "reasons":dict(zip((str(h) for h in SEARCH_HOURS),reasons)),
                     "retry_after":max((str(x.get("retry_after","")) for x in attempts),default="")})
         audit[venue]={
+            "source_market_start":start.isoformat(),
             "eligible_days":len(dates),"verified_days":len(set(observed)&set(dates)),
             "explicit_error_days":len(bad),
             "error_scope":"no usable verified checkpoint in sampled 11/12/13 UTC hours; NOT proof entire day has no native snapshot",
@@ -419,6 +439,8 @@ def main():
         history["failures"]={}
         history["schema_version"]=2
     failures=history.setdefault("failures",{})
+    cap_retries=invalidate_obsolete_size_cap_failures(failures)
+    if cap_retries:print("Reopening",cap_retries,"files rejected by obsolete compressed-size cap",flush=True)
     files=0;good=0;errors=[];exclusions=0
     start=time.monotonic()
     limit=int(os.getenv("HFT_MAX_FILES","70"))
@@ -468,7 +490,11 @@ def main():
     recent_windows=recent_coverage(verified_markets,through)
     coverage={}
     for venue,rows in verified_markets.items():
+        eligible=(through-MARKET_START[venue]).days+1
         coverage[venue]={"verified_days":len(rows),
+                         "source_market_start":MARKET_START[venue].isoformat(),
+                         "eligible_days_since_market_start":eligible,
+                         "coverage_pct_of_eligible_window":round(len(rows)/eligible*100,2) if eligible>0 else 0,
                          "eligible_days_since_global_start":source_days,
                          "coverage_pct_of_global_window":round(len(rows)/source_days*100,2),
                          "first_verified_day":min(rows,default=None),
@@ -496,6 +522,8 @@ def main():
         "recent_window_coverage":recent_windows,
         "latest_by_venue":{v:max(rows,default=None) for v,rows in verified_markets.items()},
         "unverifiable_hour_files_total":len(failures),
+        "obsolete_size_cap_retries":cap_retries,
+        "compressed_file_safety_cap_bytes":MAX_COMPRESSED_BYTES,
         "files_attempted_this_run":files,
         "verified_this_run":good,
         "comparison":comparisons,
@@ -509,7 +537,9 @@ def main():
             "Market is venue/instrument specific; spot and perpetuals are never pooled or called global.",
             "OKX perpetual 0.01 BTC/contract is assumed historically constant; contract-value history remains unverified.",
             "Legacy hour-start checkpoints without native event_type=snapshot proof are excluded until reverified.",
-            "Provider's archives may have gaps and revisions; negative checks retried after 7 days."
+            "Provider's archives may have gaps and revisions; negative checks retried after 7 days.",
+            "Bitget spot history starts 2025-07-15; pre-launch dates are excluded.",
+            "Compressed files up to 128 MB accepted; larger files explicitly unverified."
         ]
     }
     write(ROOT/"hft_history.json",history)
