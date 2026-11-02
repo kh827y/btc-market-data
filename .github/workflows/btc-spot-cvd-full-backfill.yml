@@ -1,0 +1,76 @@
+name: BTC spot CVD one-shot parallel 30d backfill
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/btc-spot-cvd-full-backfill.yml"
+permissions:
+  contents: write
+concurrency:
+  group: btc-spot-cvd-full-backfill
+  cancel-in-progress: false
+jobs:
+  per-venue:
+    strategy:
+      fail-fast: false
+      matrix:
+        venue: [binance, okx, bybit, kraken, bitget]
+    runs-on: ubuntu-latest
+    timeout-minutes: 115
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install free-source trade reader
+        run: pip install -r btc-spot-cvd/requirements.txt
+      - name: Read all historical BTC spot trades with hourly integrity checks
+        run: |
+          python -u btc-spot-cvd/backfill_parallel.py --venue "${{ matrix.venue }}" --out "out/result.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: btc-cvd-venue-${{ matrix.venue }}
+          path: out/result.json
+          retention-days: 3
+          if-no-files-found: error
+
+  merge-publish:
+    needs: [per-venue]
+    if: ${{ always() && needs.per-venue.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r btc-spot-cvd/requirements.txt
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: btc-cvd-venue-*
+          path: /tmp/cvd-venue-input
+      - name: Reorganize each isolated venue output
+        shell: bash
+        run: |
+          mkdir -p /tmp/cvd-merge
+          for venue in binance okx bybit kraken bitget; do
+            mkdir -p "/tmp/cvd-merge/$venue"
+            cp "/tmp/cvd-venue-input/btc-cvd-venue-$venue/result.json" "/tmp/cvd-merge/$venue/result.json"
+          done
+      - name: Merge verified hourly records into freshest state with push-conflict retry
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in 1 2 3 4; do
+            git fetch origin main
+            git reset --hard origin/main
+            python -u btc-spot-cvd/backfill_parallel.py --merge /tmp/cvd-merge
+            git add btc-spot-cvd/data/state.json btc-spot-cvd/data/latest.json btc-spot-cvd/data/full_backfill_status.json
+            if git diff --cached --quiet; then exit 0; fi
+            git commit -m "data: verified parallel 30-day BTC spot CVD source coverage"
+            if git push origin HEAD:main; then exit 0; fi
+            sleep 3
+          done
+          exit 1
