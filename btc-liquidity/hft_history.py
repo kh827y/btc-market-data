@@ -392,6 +392,31 @@ def main():
                          "coverage_pct_of_global_window":round(len(rows)/source_days*100,2),
                          "first_verified_day":min(rows,default=None),
                          "latest_verified_day":max(rows,default=None)}
+    # Count every original archive calendar date as verified, explicitly
+    # failed (all three candidate hours tested), or still untested.
+    # No fabricated zero-depth rows or optimistic completion percentages.
+    audit={}
+    for venue in MARKETS:
+        dates=[(ARCHIVE_START+dt.timedelta(days=n)).isoformat()
+               for n in range(source_days)]
+        observed=verified_markets[venue]
+        bad=[];pending=[]
+        for day in dates:
+            if day in observed:continue
+            if all(f"{venue}:{day}:{hour:02d}" in failures for hour in SEARCH_HOURS):
+                bad.append(day)
+            else:
+                pending.append(day)
+        audit[venue]={
+            "eligible_days":len(dates),
+            "verified_days":len(observed),
+            "explicit_error_days":len(bad),
+            "not_fully_checked_days":len(pending),
+            "all_source_dates_accounted_for":not pending,
+            "error_date_examples":bad[:8],
+            "unchecked_date_examples":pending[:8],
+            "legacy_unverified_records":legacy_unverified[venue],
+        }
     anchor_keys={v:bool(verified_markets[v].get(through.isoformat())) for v in MARKETS}
     enough_spot=sum(anchor_keys[v] for v in MARKETS if MARKETS[v][1]=="spot")>=2
     enough_perp=sum(anchor_keys[v] for v in MARKETS if MARKETS[v][1]=="perpetual")>=1
@@ -404,6 +429,8 @@ def main():
         "searched_utc_hours":list(SEARCH_HOURS),
         "coverage_days":{v:len(rows) for v,rows in verified_markets.items()},
         "legacy_unverified_records":legacy_unverified,
+        "source_date_audit":audit,
+        "all_source_dates_accounted_for":all(x["all_source_dates_accounted_for"] for x in audit.values()),
         "coverage":coverage,
         "recent_window_coverage":recent_windows,
         "latest_by_venue":{v:max(rows,default=None) for v,rows in verified_markets.items()},
