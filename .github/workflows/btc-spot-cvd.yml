@@ -3,10 +3,21 @@ on:
   push:
     paths:
       - "btc-spot-cvd/collector.py"
+      - "btc-spot-cvd/tests/**"
       - ".github/workflows/btc-spot-cvd.yml"
   workflow_dispatch:
   schedule:
     - cron: "7,22,37,52 * * * *"
+  # Additional triggers when scheduled executions are late.
+  # NEVER trigger on monitor bridge; bridge already triggers on BTC spot CVD.
+  workflow_run:
+    workflows:
+      - "BTC derivatives history"
+      - "BTC options volatility and 25delta skew"
+      - "BTC validated historical L2 books"
+      - "BTC independent Bybit L2 historical depth"
+    types: [completed]
+    branches: [main]
 permissions:
   contents: write
 concurrency:
@@ -14,6 +25,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   collect:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -25,14 +37,27 @@ jobs:
         run: pip install -r btc-spot-cvd/requirements.txt
       - name: Unit tests
         run: cd btc-spot-cvd && python -m unittest discover -s tests -v
-      - name: Collect free spot trades
-        run: python btc-spot-cvd/collector.py
-      - name: Save checkpoint
+      - name: Collect and commit from the current upstream checkpoint with retries
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add btc-spot-cvd/data/state.json btc-spot-cvd/data/latest.json
-          if ! git diff --cached --quiet; then
+          for attempt in 1 2 3 4; do
+            echo "CVD write attempt $attempt: fetch latest canonical checkpoint"
+            git fetch origin main
+            git reset --hard origin/main
+            python -u btc-spot-cvd/collector.py
+            git add btc-spot-cvd/data/state.json btc-spot-cvd/data/latest.json
+            if git diff --cached --quiet; then
+              echo "No changes to save"
+              exit 0
+            fi
             git commit -m "data: update verified BTC spot CVD checkpoint"
-            git push
-          fi
+            if git push origin HEAD:main; then
+              echo "Saved CVD checkpoint"
+              exit 0
+            fi
+            echo "Concurrent write conflict; recalculate from newest checkpoint"
+            sleep 3
+          done
+          echo "CVD checkpoint could not be committed after retries" >&2
+          exit 1
