@@ -1,0 +1,207 @@
+"""Validated compact bridge for hourly BTC trend-risk automation; stdlib only."""
+import datetime as dt
+import json
+import math
+import os
+from pathlib import Path
+
+SOURCES={
+ "spot_cvd":("btc-spot-cvd/data/latest.json",2.5,"spot_execution"),
+ "derivatives":("btc-derivatives/data/latest.json",3.0,"positioning"),
+ "options":("btc-options/data/latest.json",3.0,"options"),
+ "onchain":("btc-onchain/data/monitor_latest.json",36.0,"holder_behavior"),
+ "live_depth":("btc-liquidity/data/latest.json",2.5,"orderbook"),
+ "hft_depth":("btc-liquidity/data/hft_latest.json",36.0,"orderbook"),
+ "bybit_depth":("btc-liquidity/data/bybit_independent_latest.json",36.0,"orderbook"),
+}
+UTC=dt.timezone.utc
+
+def val(o,*path):
+ for p in path:
+  if not isinstance(o,dict):return None
+  o=o.get(p)
+ return o
+
+def timeparse(value):
+ if not value:return None
+ try:
+  value=str(value)
+  if len(value)==10:value+="T00:00:00+00:00"
+  t=dt.datetime.fromisoformat(value.replace("Z","+00:00"))
+  return t if t.tzinfo else t.replace(tzinfo=UTC)
+ except (TypeError,ValueError,OverflowError):return None
+
+def num(x):
+ if isinstance(x,(int,float)) and not isinstance(x,bool) and math.isfinite(x):return x
+ return None
+
+def dt_age(now, t):
+ return round((now-t).total_seconds()/3600,2) if t else None
+
+def guard_bands(book):
+ out={}
+ for band,v in (book or {}).items():
+  if not isinstance(v,dict):continue
+  ok=v.get("bid_coverage_complete") is True and v.get("ask_coverage_complete") is True
+  out[band]={"complete":ok,"bid_usd":num(v.get("bid_usd")) if ok else None,
+             "ask_usd":num(v.get("ask_usd")) if ok else None,
+             "bid_share":(num(v.get("bid_share")) or num(v.get("imbalance_bid_share"))) if ok else None}
+ return out
+
+def compact_spot(j):
+ windows={}
+ for k in ("1h","24h","168h","720h"):
+  row=val(j,"windows",k) or {}
+  ok=row.get("complete") is True
+  windows[k]={"complete":ok,"net_usd_approx":num(row.get("net")) if ok else None,
+              "venues":{v:{"complete":x.get("complete") is True,
+                           "hours":x.get("hours"),"required":x.get("required"),
+                           "net_usd_approx":num(x.get("net")) if x.get("complete") is True else None}
+                        for v,x in (row.get("by_venue") or {}).items()}}
+ return {"last_complete_hour":j.get("last_complete_hour"),"windows":windows,
+         "scope":"executed spot-taker flow on observed venues only; NOT global BTC volume"}
+
+def compact_deriv(j):
+ r=j.get("results",{});oi=r.get("open_interest",{})
+ cot=r.get("cme_cot",{});basis=r.get("dated_futures_basis",{})
+ cme=r.get("cme_basis",{});liq=r.get("liquidations",{})
+ return {"source_coverage":j.get("coverage"),"oi_five_venue_usd":num(oi.get("latest_five_venue_usd")),
+         "oi_latest_hour":oi.get("latest_hour"),"oi_1d_7d_30d_pct":oi.get("changes_pct"),
+         "funding_settled":{k:{"last":v.get("last"),"rate":v.get("latest_raw_rate"),
+                                "max_gap_h":v.get("max_gap_hours")}
+                             for k,v in r.get("funding",{}).items()},
+         "forced_liquidations_24h":{k:val(liq,"24h",k) for k in
+                                    ("updated","long_usd","short_usd","data_freshness")},
+         "cftc_cme_weekly": {"as_of":cot.get("latest_date"),"positions":cot.get("latest")},
+         "dated_futures_matched_expiry":basis.get("matched_four_venue_expiry"),
+         "dated_futures_basis":basis.get("matched_four_venue_basis"),
+         "cme_front_basis":cme.get("front_recent_contract") if cme.get("status")=="ok" else None,
+         "warnings":["CFTC contracts are 5 BTC; leveraged fund shorts can hedge spot",
+                     "CME and dated futures basis are not perp funding; expiry matters"]}
+
+def compact_options(j):
+ r=j.get("results",{});dv=r.get("deribit_dvol_history",{})
+ a=r.get("deribit_live_surface",{})
+ dr=r.get("derivasys_daily_research",{})
+ return {"source_coverage":j.get("coverage"),"deribit_as_of":a.get("as_of_utc"),
+         "deribit_term":{k:val(a,"term_structure",k) for k in ("1W","2W","1M","3M","6M")},
+         "dvol":{"last_date":dv.get("last"),"percent":dv.get("last_dvol_pct"),
+                 "percentile":dv.get("percentile_all"),"closed_days":dv.get("history_closed_days")},
+         "derivasys_report_date":dr.get("report_date"),
+         "derivasys_1m":val(dr,"standard_tenors","1M"),
+         "rr25_convention":"call IV minus put IV (negative means more expensive downside puts), in volatility POINTS"}
+
+def compact_onchain(j,now):
+ out={}
+ for group,fields in {
+  "market_onchain":("mvrv","mvrv_zscore","nupl","sth_sopr","lth_sopr","lth_realized_profit","lth_realized_loss","sth_realized_profit","sth_realized_loss","sth_realized_price","lth_realized_price","exchange_in_btc","exchange_out_btc","exchange_reserves_btc"),
+  "lth_sth_bitview":("lth_supply_150d","lth_change_7d_150d","lth_change_30d_150d","lth_realized_price_150d","sth_realized_price_150d","lth_nupl_150d","sth_nupl_150d"),
+  "whale_deposits":("whale_exchange_deposit_count","whale_exchange_deposit_volume_btc","whale_only_top10_deposit_ratio","swiss_whale_deposit_count_ge50"),
+  "historical_whale_alerts":("observed_alert_count","observed_btc_volume","count_ge_100_btc","count_ge_1000_btc")
+ }.items():
+  values={}
+  for key in fields:
+   row=val(j,"components",group,"latest",key) or {}
+   t=timeparse(row.get("date"));lag=(now.date()-t.date()).days if t else None
+   ok=lag is not None and 0<=lag<=3 and num(row.get("value")) is not None and row.get("status") not in ("missing","error")
+   values[key]={"date":row.get("date"),"lag_days":lag,"status":"usable" if ok else "missing_or_delayed",
+                "value":num(row.get("value")) if ok else None}
+  out[group]={"metrics":values,"scope":val(j,"components",group,"scope")}
+ return {"groups":out,"known_stale":j.get("stale",[]),"missing":j.get("missing",[]),
+         "whale_alert_subset_not_all_transfers":True,
+         "historical_exact_whale_entity_flows":j.get("exact_multiyear_whale_deposit_history_available") is True}
+
+def compact_live_depth(j):
+ out={}
+ for venue,r in (val(j,"current","venues") or {}).items():
+  out[venue]={"market":r.get("market"),"symbol":r.get("symbol"),
+              "captured_at":r.get("captured_at"),"spread_bps":r.get("spread_bps"),
+              "reach_pct":r.get("reach_pct"),"bands":guard_bands(r.get("bands"))}
+ return {"venues":out,"spot_usable_venues":j.get("spot_usable_venues"),
+         "perp_usable_venues":j.get("perpetual_usable_venues"),
+         "source_errors":j.get("errors",[])[:5],
+         "resting_orders_not_executed_trades":True}
+
+def compact_hft(j):
+ venues={}
+ for venue,entry in j.get("comparison",{}).items():
+  look={}
+  for label,value in (entry.get("previous_days") or {}).items():
+   look[label]=value if value and value.get("bands") else None
+  venues[venue]={"latest_day":entry.get("latest_day"),"lookback":look,
+                 "verified_days":val(j,"coverage",venue,"verified_days")}
+ return {"data_day":j.get("target_anchor_date"),"status":j.get("status"),
+         "markets":venues,"time_of_day":"11-13 UTC verified real daily snapshot",
+         "not_intraday_average":True,"unverifiable_hour_files_total":j.get("unverifiable_hour_files_total")}
+
+def compact_bybit(j):
+ venues={}
+ for venue,entry in j.get("comparisons",{}).items():
+  venues[venue]={"latest_day":entry.get("latest"),
+                 "lookback":{k:x if x and x.get("bands") else None for k,x in entry.get("comparisons",{}).items()},
+                 "coverage":val(j,"coverage",venue)}
+ return {"data_day":j.get("target_day"),"status":j.get("status"),
+         "markets":venues,"time_of_day":"00:00 UTC genuine Bybit daily snapshot",
+         "full_source_zip_crc_verified":j.get("full_source_crc_verified") is True,
+         "not_intraday_average":True}
+
+TRANSFORM={"spot_cvd":compact_spot,"derivatives":compact_deriv,"options":compact_options,
+           "live_depth":compact_live_depth,"hft_depth":compact_hft,"bybit_depth":compact_bybit}
+
+def build(source,now):
+ feeds={};metrics={};issues=[]
+ for key,(path,max_age,family) in SOURCES.items():
+  j=source.get(key)
+  url=f"https://github.com/kh827y/btc-market-data/blob/main/{path}"
+  if not isinstance(j,dict):
+   feeds[key]={"status":"unavailable","source":url,"family":family}
+   issues.append(key+":unavailable");continue
+  stamp=timeparse(j.get("generated_utc") or j.get("generated_at"))
+  age=dt_age(now,stamp)
+  status="invalid_timestamp" if age is None else "future_timestamp" if age<-.2 else "stale" if age>max_age else "fresh"
+  if status=="fresh" and j.get("status") not in (None,"ok"):status="partial"
+  feeds[key]={"status":status,"source":url,"generated_at":stamp.isoformat() if stamp else None,
+              "age_h":age,"max_age_h":max_age,"family":family,
+              "source_status":j.get("status"),
+              "source_errors":len(j.get("errors") or j.get("errors_recent_run") or [])}
+  try:metrics[key]=compact_onchain(j,now) if key=="onchain" else TRANSFORM[key](j)
+  except (ValueError,KeyError,TypeError) as exc:
+   feeds[key]["status"]="invalid_schema"
+   issues.append(key+":invalid_schema:"+str(exc)[:100]);continue
+  if feeds[key]["status"]!="fresh":issues.append(key+":"+feeds[key]["status"])
+ usable={family:any(row.get("status")=="fresh" and row.get("family")==family for row in feeds.values())
+         for family in sorted({x[2] for x in SOURCES.values()})}
+ usable["current_orderbook"]=feeds.get("live_depth",{}).get("status")=="fresh"
+ usable["spot_cvd_24h_complete"]=feeds.get("spot_cvd",{}).get("status")=="fresh" and val(metrics,"spot_cvd","windows","24h","complete") is True
+ return {"schema":1,"as_of_utc":now.isoformat(),
+         "feed_contract":"Source-level UTC quality bridge; not a standalone reversal signal",
+         "audit":{"sources_total":len(SOURCES),"sources_parsed":len(metrics),
+                  "fresh":sum(x.get("status")=="fresh" for x in feeds.values()),
+                  "issues":issues,"family_readiness":usable,
+                  "WARNING":"Bridge generation success DOES NOT imply source freshness or all-market coverage"},
+         "feeds":feeds,"metrics":metrics,
+         "rules":["Trust only source rows with status=fresh for current conditions",
+                  "Also check original source measurement date and complete window/band for each indicator",
+                  "A daily historical snapshot is not live orderbook or a daily average",
+                  "Historical 00:00 and 12:00 UTC daily depths must not be pooled or compared",
+                  "Compare orderbook within one venue/market/price band only",
+                  "Spot CVD = executed trades; resting book bids/asks are not actual demand",
+                  "Funding, OI, options, onchain have dependent indicators: do not double-count",
+                  "Missing or stale groups REDUCE conviction, never imply no risk",
+                  "No risk/news alert unless genuinely material change; cite source and key indicators"]}
+
+def main():
+ now=timeparse(os.environ.get("BTC_MONITOR_TEST_NOW")) or dt.datetime.now(UTC)
+ source={}
+ for key,(path,_,_) in SOURCES.items():
+  try:source[key]=json.loads(Path(path).read_text(encoding="utf8"))
+  except (OSError,ValueError) as exc:
+   print("SOURCE_ERROR",key,str(exc),flush=True)
+ report=build(source,now)
+ out=Path("btc-monitor/data/latest.json");out.parent.mkdir(parents=True,exist_ok=True)
+ out.write_text(json.dumps(report,indent=2,sort_keys=True,ensure_ascii=False,allow_nan=False)+"\n",encoding="utf8")
+ print(json.dumps({"as_of":report["as_of_utc"],"feed_status":{k:v["status"] for k,v in report["feeds"].items()},
+                   "audit":report["audit"],"file_bytes":out.stat().st_size},ensure_ascii=False),flush=True)
+ if len(report["metrics"])<5:raise SystemExit("Risk bridge insufficient parsed feeds: expected at least five")
+
+if __name__=="__main__":main()
