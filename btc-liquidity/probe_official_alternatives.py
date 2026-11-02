@@ -24,14 +24,19 @@ REST={
 WS={
  "bybit_spot_official_ws": {
    "url":"wss://stream.bybit.com/v5/public/spot",
-   "message":{"op":"subscribe","args":["orderbook.200.BTCUSDT"]},
-   "topic":"orderbook.200.BTCUSDT","market":"spot"},
+   "message":{"op":"subscribe","args":["orderbook.1000.BTCUSDT"]},
+   "topic":"orderbook.1000.BTCUSDT","market":"spot"},
  "bybit_perp_official_ws": {
    "url":"wss://stream.bybit.com/v5/public/linear",
-   "message":{"op":"subscribe","args":["orderbook.200.BTCUSDT"]},
-   "topic":"orderbook.200.BTCUSDT","market":"perpetual"},
+   "message":{"op":"subscribe","args":["orderbook.1000.BTCUSDT"]},
+   "topic":"orderbook.1000.BTCUSDT","market":"perpetual"},
  "binance_usdm_official_partial_ws": {
    "url":"wss://fstream.binance.com/ws/btcusdt@depth20@100ms",
+   "market":"perpetual"},
+ "binance_usdm_ws_api_depth_1000": {
+   "url":"wss://ws-fapi.binance.com/ws-fapi/v1",
+   "message":{"id":"btc-depth-check","method":"depth",
+              "params":{"symbol":"BTCUSDT","limit":1000}},
    "market":"perpetual"},
 }
 def validate_book(bids,asks,source_ms=None):
@@ -87,14 +92,20 @@ def ws_probe(name,item):
                         "market":item["market"],"url":url,"elapsed_s":round(time.monotonic()-t0,2),
                         **valid}
             if "data" in msg and isinstance(msg["data"],dict):msg=msg["data"]
-            if msg.get("e") not in ("depthUpdate","partialDepthUpdate") and not (
-                "bids" in msg and "asks" in msg):
-                continue
-            if msg.get("bids") and msg.get("asks"):
-                valid=validate_book(msg["bids"],msg["asks"],msg.get("E"))
-                return {"status":"verified","transport":"official_websocket_partial_depth",
+            # Binance WS API returns request id/status/result with 1000 rows;
+            # Binance partial-depth stream uses b/a (not bids/asks).
+            result=msg.get("result") if isinstance(msg.get("result"),dict) else msg
+            bids=result.get("bids") or result.get("b")
+            asks=result.get("asks") or result.get("a")
+            if bids and asks:
+                valid=validate_book(bids,asks,result.get("E") or result.get("T"))
+                return {"status":"verified",
+                        "transport":"official_websocket_depth_request" if "result" in msg else "official_websocket_partial_depth",
                         "market":item["market"],"url":url,"elapsed_s":round(time.monotonic()-t0,2),
-                        **valid}
+                        "returned_keys":list(result.keys())[:12],**valid}
+            if attempt==0:
+                print("BINANCE_WS_FIRST_KEYS",name,list(msg.keys())[:12],
+                      list(result.keys())[:12],flush=True)
         raise ValueError("No order book snapshot after 8 frames")
     except Exception as e:
         err=str(e)[:240]
