@@ -1,0 +1,37 @@
+name: BTC native Gate spot deep-book capability test
+on:
+  push:
+    paths:
+      - "btc-liquidity/probe_gate_spot_depth.py"
+      - ".github/workflows/btc-gate-spot-depth-probe.yml"
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: btc-gate-spot-depth-capability
+  cancel-in-progress: false
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Probe verified official Gate BTC spot depth
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in 1 2 3 4; do
+            git fetch origin main
+            git reset --hard origin/main
+            python -m py_compile btc-liquidity/probe_gate_spot_depth.py
+            python -u btc-liquidity/probe_gate_spot_depth.py
+            git add btc-liquidity/data/gate_spot_depth_probe.json
+            if git diff --cached --quiet; then exit 0; fi
+            git commit -m "probe: verified native Gate spot deep-book capability"
+            if git push origin HEAD:main; then exit 0; fi
+            sleep 3
+          done
+          exit 1
