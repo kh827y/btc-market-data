@@ -1,15 +1,23 @@
-import urllib.request,urllib.error,io,zipfile,json,re
-root="https://historical-data.boros.finance/"
-for expiry in ("20260327","20260626","20260925","20261225","20270326"):
- url=root+"futures-premium/cme-BTC-"+expiry+".ndjson.zip"
- try:
-  with urllib.request.urlopen(urllib.request.Request(url,headers={"User-Agent":"Mozilla/5.0 BTC-research/1.0"}),timeout=24) as r:blob=r.read(2000000)
-  with zipfile.ZipFile(io.BytesIO(blob)) as z:
-   rows=[json.loads(x) for x in z.read(z.namelist()[0]).splitlines() if x]
-  print(expiry,"ROWS",len(rows),"FIRST",rows[0]["datetime"],"LAST",rows[-1]["datetime"],"LATEST_APR",rows[-1]["premiumApr"])
- except Exception as e:print(expiry,"ERROR",str(e)[:100])
-try:
- with urllib.request.urlopen(urllib.request.Request(root+"index.html",headers={"User-Agent":"Mozilla/5.0 BTC-research/1.0"}),timeout=15) as r:s=r.read().decode()
- for term in ("manifest","files.json","file-list","index.json","fileTree","fetch("):
-  print("INDEX",term,"COUNT",s.count(term),"AROUND",s[max(0,s.find(term)-120):s.find(term)+160] if term in s else "")
-except Exception as e:print("INDEX_ERROR",str(e))
+import urllib.request,json,datetime as dt,collections
+headers={"User-Agent":"BTC-market-research/1.0","Accept":"application/json"}
+def get(url):
+ with urllib.request.urlopen(urllib.request.Request(url,headers=headers),timeout=40) as r:return json.load(r)
+obj=get("https://www.sharpe.ai/api/futures/data?chart=liquidations&coin=BTC&timeframe=1M")
+rows=obj.get("data",[])
+by=collections.defaultdict(lambda:{"long":0.0,"short":0.0,"n":0})
+cut=dt.datetime.now(dt.timezone.utc)-dt.timedelta(days=7)
+for item in rows:
+ if item.get("exchange") not in ("Binance","Bybit"):continue
+ t=dt.datetime.fromisoformat(item["timestamp"].replace("Z","+00:00"))
+ if t<cut:continue
+ side=item.get("side")
+ if side not in ("long","short"):continue
+ amount=float(item["quantity"])
+ by[item["exchange"]][side]+=amount
+ by[item["exchange"]]["n"]+=1
+print("SHARPE_META",str(obj.get("meta",{}))[:1000])
+print("SHARPE_COUNTS_7D",dict(by))
+print("SHARPE_FIELDS",rows[0] if rows else {})
+print("SHARPE_ROWS",len(rows))
+edge=get("https://edgeornot.com/api/liquidations?hours=168&coin=btc")
+print("EDGE_BY_EXCHANGE_7D",edge.get("by_exchange"))
