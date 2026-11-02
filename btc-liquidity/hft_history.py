@@ -208,7 +208,9 @@ def targets(through, existing, failures=None, now=None):
     """
     failures=failures or {}
     now=now or dt.datetime.now(UTC)
-    priority=(0,1,7,30,90,365,180,2,3,4,5,6,8,14,21,60)
+    # Complete the most recent 30 actual dates FIRST. Earlier order placed
+    # sparse 90/365d comparators ahead of 24-29d recent missing days.
+    priority=list(range(31))+[60,90,180,365,31,32,33,89,179,364]
     days=list(dict.fromkeys([through-dt.timedelta(days=n) for n in
                              list(priority)+list(range((through-ARCHIVE_START).days+1))
                              if ARCHIVE_START<=through-dt.timedelta(days=n)<=through]))
