@@ -115,4 +115,49 @@ class OfficialWSTests(unittest.TestCase):
             ws.read_official_book("bybit_spot",lambda *a,**kw:fake)
         self.assertTrue(fake.closed)
 
+
+    def test_gate_v2_native_400_full_book_is_accepted(self):
+        b,a=sides(400)
+        ts=int(dt.datetime.now(ws.UTC).timestamp()*1000)
+        full={"channel":"futures.obu","event":"update",
+              "result":{"s":"ob.BTC_USDT.400","full":True,"u":201,
+                        "t":ts,"b":b,"a":a},"time_ms":ts}
+        fake=FakeConnection([{"channel":"futures.obu","event":"subscribe",
+                             "result":{"status":"success"}},full])
+        out=ws.read_gate_v2_book(lambda *args,**kw:fake)
+        self.assertTrue(fake.closed)
+        self.assertEqual(fake.sent[0]["payload"],["ob.BTC_USDT.400"])
+        self.assertEqual(out["_transport"],"gate_official_ws_v2_full_snapshot")
+        self.assertEqual(out["id"],201)
+        bid,ask,stamp=book.normalize_book("gate_usdt_perp",out)
+        self.assertEqual(len(bid),400)
+        self.assertEqual(len(ask),400)
+        self.assertEqual(stamp,ts)
+        self.assertIsNotNone(book.summarize_orderbook(bid,ask)["bands"]["0.01"]["imbalance_bid_share"])
+
+    def test_gate_v2_deltas_and_wrong_symbol_are_not_accepted(self):
+        b,a=sides(400)
+        ts=int(dt.datetime.now(ws.UTC).timestamp()*1000)
+        msg={"channel":"futures.obu","event":"update",
+             "result":{"s":"ob.BTC_USDT.400","u":201,"t":ts,"b":b,"a":a}}
+        self.assertIsNone(ws.gate_v2_snapshot(msg))
+        msg["result"]["full"]=True
+        msg["result"]["s"]="ob.ETH_USDT.400"
+        with self.assertRaisesRegex(ws.UnverifiedBook,"instrument"):
+            ws.gate_v2_snapshot(msg)
+        msg["result"]["s"]="ob.BTC_USDT.400"
+        msg["result"]["u"]=0
+        with self.assertRaisesRegex(ws.UnverifiedBook,"update ID"):
+            ws.gate_v2_snapshot(msg)
+        msg["result"]["u"]=201
+        msg["result"]["t"]=ts-3600*1000
+        with self.assertRaisesRegex(ws.UnverifiedBook,"stale"):
+            ws.gate_v2_snapshot(msg)
+
+    def test_gate_v2_subscription_error_is_not_silent(self):
+        msg={"channel":"futures.obu","event":"subscribe",
+             "result":{"status":"fail"},"error":{"code":2}}
+        with self.assertRaisesRegex(ws.UnverifiedBook,"subscription"):
+            ws.gate_v2_snapshot(msg)
+
 if __name__=="__main__":unittest.main()
