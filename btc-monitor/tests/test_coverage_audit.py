@@ -70,6 +70,13 @@ class CoverageLedgerTests(unittest.TestCase):
         self.assertFalse(out["live_orderbook"]["market_details"]["gate_usdt_perp"]["bands"]["0.2"]["both_sides_complete"])
         self.assertIn("gate_usdt_perp",out["live_orderbook"]["complete_bid_ask_bands"]["0.2"]["missing_venues"])
 
+    def test_covering_all_markets_does_not_override_per_band_audit(self):
+        data=list(fixture())
+        data[0]["family_readiness"]={"current_all_11_selected_orderbooks":True,
+                                    "current_orderbook_band_1pct_verified_markets":11}
+        with self.assertRaisesRegex(ValueError,"band count disagreement"):
+            m.build(*data)
+
     def test_gate_rejects_usable_if_original_bid_uncovered(self):
         data=list(fixture())
         data[1]["current"]["venues"]["gate_usdt_perp"]["bands"]["0.2"]["bid_coverage_complete"]=False
