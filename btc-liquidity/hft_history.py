@@ -265,7 +265,7 @@ def make_comparisons(records):
                 hour_offset=abs(((current_time-previous_time)-dt.timedelta(days=lag)).total_seconds())/3600
             else:
                 hour_offset=None
-            if item is None or hour_offset>2:
+            if item is None or hour_offset>0.5:
                 comparisons[venue]["previous_days"][str(lag)+"d"]=None
                 continue
             deltas={}
@@ -282,7 +282,11 @@ def make_comparisons(records):
                                                                      "bands":deltas} if deltas else None
         for period,minimum in ((7,5),(30,20),(90,60),(365,240)):
             sub=[by_day[day]["data"] for day in dates
-                 if 0<=(dt.date.fromisoformat(newest)-dt.date.fromisoformat(day)).days<period]
+                 if 0<=(dt.date.fromisoformat(newest)-dt.date.fromisoformat(day)).days<period
+                 and abs((dt.datetime.fromisoformat(latest["time"])
+                          -dt.datetime.fromisoformat(by_day[day]["data"]["time"])
+                          -dt.timedelta(days=(dt.date.fromisoformat(newest)-dt.date.fromisoformat(day)).days)
+                         ).total_seconds())<=1800]
             row={"days":period,"available":len(sub),"required":minimum,"bands":{}}
             for band in BANDS:
                 k=str(band)
@@ -382,7 +386,7 @@ def main():
         "errors_recent_run":errors[-20:],
         "caveats":[
             "One real checkpoint per date, typically around 12:00 UTC; not a daily median nor 24h continuous depth.",
-            "Daily observations used in comparisons are required to be within 2 hours of the same UTC clock time.",
+            "Daily observations used in comparisons and baseline medians must be within 30 minutes of the same UTC clock time.",
             "Missing checkpoint or insufficient coverage is NOT interpreted as no liquidity; null values are intentional.",
             "Bybit 50-level snapshots are usually too shallow for 0.05%: 0.01% is separately measured and only same-band metrics are comparable.",
             "Market is venue/instrument specific; spot and perpetuals are never pooled or called global.",
