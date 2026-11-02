@@ -201,7 +201,11 @@ class BridgeTests(unittest.TestCase):
   self.assertEqual(len(brief["orderbook_live"]["venues"]),11)
   self.assertEqual(brief["orderbook_live"]["venues"]["bybit_spot"]["transport"],"bybit_official_ws_snapshot")
   self.assertEqual(list(brief["orderbook_live"]["venues"]["bybit_spot"]["bands"]),["0.01"])
-  self.assertFalse(any(x.startswith("live_depth:") for x in brief["coverage_gaps"]))
+  self.assertEqual(brief["orderbook_live"]["complete_markets_by_band"]["0.01"],11)
+  self.assertEqual(brief["orderbook_live"]["complete_markets_by_band"]["0.2"],0)
+  self.assertFalse(brief["orderbook_live"]["all_11_markets_complete_1pct"])
+  self.assertIn("live_depth:0.2pct_complete=0/11_selected_markets",brief["coverage_gaps"])
+  self.assertIn("live_depth:1.0pct_complete=0/11_selected_markets",brief["coverage_gaps"])
   del venues["bybit_spot"]
   report=m.build({"live_depth":source},NOW)
   self.assertFalse(report["audit"]["family_readiness"]["current_all_11_selected_orderbooks"])
