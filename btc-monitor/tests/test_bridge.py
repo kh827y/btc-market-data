@@ -322,6 +322,53 @@ class BridgeTests(unittest.TestCase):
   self.assertEqual(brief["us_spot_bitcoin_etf"]["latest_session_date"],"2026-10-30")
   self.assertEqual(brief["us_spot_bitcoin_etf"]["last_21_reported_sessions_net_flow_usd"],-617697202.31)
 
+ def test_delayed_macro_collector_keeps_fred_and_etf_but_expires_intraday_dxy(self):
+  now=dt.datetime(2026,11,2,18,40,tzinfo=UTC)
+  recent=[{"date":day,"net_flow_usd":v} for day,v in
+          [("2026-10-30",-100),("2026-10-29",20),("2026-10-28",30),
+           ("2026-10-27",40),("2026-10-26",10)]]
+  src={"schema_version":1,"generated_utc":"2026-11-02T10:07:00Z","status":"ok",
+       "macro":{"metrics":{
+          "treasury_2y_pct":{"series_id":"DGS2","status":"usable","date":"2026-10-29","value":4.61},
+          "treasury_10y_pct":{"series_id":"DGS10","status":"usable","date":"2026-10-29","value":4.98},
+          "fed_funds_effective_pct":{"series_id":"DFF","status":"usable","date":"2026-10-29","value":3.88},
+          "fed_target_lower_pct":{"series_id":"DFEDTARL","status":"usable","date":"2026-11-01","value":3.75},
+          "fed_target_upper_pct":{"series_id":"DFEDTARU","status":"usable","date":"2026-11-01","value":4.0}},
+          "yield_curve_10y_minus_2y":{"status":"usable","date":"2026-10-29",
+              "spread_pct_points":0.37,"same_day_2y_pct":4.61,"same_day_10y_pct":4.98},
+          "ice_dxy":{"status":"usable","date":"2026-11-02","value":101.579,
+              "instrument":"ICE DXY six-currency index","not_fred_broad_usd":True,
+              "observation_kind":"unfinished_current_session",
+              "fetched_utc":"2026-11-02T10:07:00Z"}},
+       "etf":{"status":"usable","license":"CC BY 4.0",
+              "market":"US-listed spot BTC ETFs only","date":"2026-10-30",
+              "latest_net_flow_usd":-100,"five_sessions_net_flow_usd":0,
+              "last_five_sessions":recent}}
+  out=m.build({"macro_etf":src},now)
+  feed=out["feeds"]["macro_etf"]
+  self.assertEqual(feed["status"],"fresh")
+  self.assertTrue(out["audit"]["family_readiness"]["macro_fed_rates"])
+  self.assertTrue(out["audit"]["family_readiness"]["macro_treasury_yields"])
+  self.assertTrue(out["audit"]["family_readiness"]["us_spot_btc_etf_flows"])
+  self.assertFalse(out["audit"]["family_readiness"]["macro_exact_ice_dxy"])
+  self.assertIn("macro_etf:ice_dxy_exact_unavailable",out["audit"]["coverage_gaps"])
+  brief=m.make_brief(out)
+  self.assertEqual(brief["us_spot_bitcoin_etf"]["latest_session_date"],"2026-10-30")
+  self.assertIsNone(brief["macro"]["dxy_exact"]["value"])
+
+ def test_partially_failed_macro_feed_does_not_hide_independent_fed_rates(self):
+  now=dt.datetime(2026,11,2,18,40,tzinfo=UTC)
+  src={"schema_version":1,"generated_utc":"2026-11-02T10:07:00Z","status":"partial",
+       "macro":{"metrics":{
+          "fed_funds_effective_pct":{"series_id":"DFF","status":"usable","date":"2026-10-29","value":3.88},
+          "fed_target_lower_pct":{"series_id":"DFEDTARL","status":"usable","date":"2026-11-01","value":3.75},
+          "fed_target_upper_pct":{"series_id":"DFEDTARU","status":"usable","date":"2026-11-01","value":4.0}}}}
+  out=m.build({"macro_etf":src},now)
+  self.assertEqual(out["feeds"]["macro_etf"]["status"],"fresh")
+  self.assertTrue(out["audit"]["family_readiness"]["macro_fed_rates"])
+  self.assertFalse(out["audit"]["family_readiness"]["us_spot_btc_etf_flows"])
+  self.assertIn("macro_etf:partial_source",out["audit"]["coverage_gaps"])
+
  def test_fed_broad_usd_not_mislabeled_as_dxy_and_missing_etf_is_null(self):
   j={"schema_version":1,"generated_utc":"2026-11-02T07:15:00Z","status":"ok",
      "macro":{"metrics":{"usd_broad_trade_weighted":{"series_id":"DTWEXBGS",
