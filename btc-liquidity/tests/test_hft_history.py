@@ -3,6 +3,7 @@ import importlib.util
 import io
 from pathlib import Path
 import unittest
+from unittest.mock import patch
 
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -294,6 +295,32 @@ class HistoricL2Tests(unittest.TestCase):
         self.assertNotIn("binance_futures:2026-09-11:12",failures)
         self.assertIn("binance_futures:2026-09-11:13",failures)
         self.assertIn("binance_futures:2026-09-11:11",failures)
+
+
+    def test_strict_same_clock_7d_30d_does_not_invent_wide_band_depth(self):
+        day=dt.date(2026,10,31)
+        tight=m.parse_checkpoint(fixture(tick=0.001),"bybit","BTCUSDT",
+                                 "perpetual",1.0,"USDT",day)
+        earlier=dict(tight)
+        earlier["time"]="2026-10-30T11:00:00+00:00"
+        observed={"bybit":{
+            "2026-10-31":{"status":"ok","data":tight},
+            "2026-10-30":{"status":"ok","data":earlier},
+        }}
+        for width in ("7d","30d"):
+            row=m.recent_coverage(observed,day)[width]["bybit"]
+            self.assertEqual(row["verified_days"],2)
+            self.assertEqual(row["same_clock_12utc_verified_days"],1)
+            self.assertEqual(row["same_clock_12utc_complete_band_days"]["0.01"],1)
+            self.assertEqual(row["same_clock_12utc_complete_band_days"]["0.05"],0)
+            self.assertEqual(row["same_clock_12utc_complete_band_days"]["1.0"],0)
+
+    def test_compressed_download_cap_fails_closed_without_truncating(self):
+        with patch.object(m.urllib.request,"urlopen",side_effect=lambda *a,**k:io.BytesIO(b"x"*12)):
+            with patch.object(m.time,"sleep",return_value=None):
+                with self.assertRaisesRegex(ValueError,"File exceeds"):
+                    m.download("https://example.invalid/file",limit=10)
+                self.assertEqual(m.download("https://example.invalid/file",limit=12),b"x"*12)
 
 if __name__=="__main__":
     unittest.main()
