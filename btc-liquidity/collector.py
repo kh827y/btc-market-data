@@ -79,6 +79,9 @@ def normalize_book(venue, raw):
         asks = [[item["p"], item["s"]] for item in raw["asks"]]
         # Gate's current/update timestamps are expressed in SECONDS.
         source_ms = int(float(raw["current"]) * 1000)
+    elif venue == "binance_usdm_perp":
+        bids, asks = raw["bids"], raw["asks"]
+        source_ms = int(raw["E"])
     elif venue.startswith("okx"):
         if raw.get("code") != "0":
             raise ValueError("OKX nonzero code")
@@ -156,7 +159,14 @@ def collect_live(now, errors):
     venues = {}
     for name, (market, symbol, url) in VENUES.items():
         try:
-            raw = fetch(url)
+            if name in ("bybit_spot","bybit_usdt_perp","binance_usdm_perp"):
+                # REST returns 403/451 from GitHub runners; official native
+                # public WS returns timestamped FULL snapshots of identical
+                # venue/instrument. No proxies or different exchanges.
+                from official_ws import read_official_book
+                raw=read_official_book(name)
+            else:
+                raw=fetch(url)
             bids, asks, source_ms = normalize_book(name, raw)
             contract_size = None
             if name == "gate_usdt_perp":
@@ -180,7 +190,10 @@ def collect_live(now, errors):
                                                 "OKX contracts times ctVal times ctMult into BTC")
             record.update({"market": market, "symbol": symbol, "quote": "USD" if name == "coinbase_spot" else "USDT",
                            "captured_at": dt.datetime.now(UTC).isoformat().replace("+00:00", "Z"), "source_timestamp": dt.datetime.fromtimestamp(source_ms / 1000, UTC).isoformat()
-                           if source_ms is not None else None, "source_url": url.split("?")[0]})
+                           if source_ms is not None else None,
+                           "source_url": raw.get("_source_url",url.split("?")[0]) if isinstance(raw,dict) else url.split("?")[0],
+                           "transport": raw.get("_transport","official_public_rest") if isinstance(raw,dict) else "official_public_rest",
+                           "snapshot_type":raw.get("_snapshot_type","rest_snapshot") if isinstance(raw,dict) else "rest_snapshot"})
             venues[name] = record
         except Exception as exc:
             errors.append(f"{name}: {str(exc)[:180]}")
