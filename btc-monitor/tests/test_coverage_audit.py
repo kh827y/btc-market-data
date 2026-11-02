@@ -114,4 +114,20 @@ class CoverageLedgerTests(unittest.TestCase):
         unknown=m.build(*data)
         self.assertFalse(unknown["live_orderbook"]["official_deeper_snapshot_probe"]["gate_live_400_verified"])
 
+
+    def test_okx_5000_actual_native_book_requires_levels_and_source(self):
+        data=list(fixture())
+        for name in ("okx_spot","okx_usdt_perp"):
+            item=data[1]["current"]["venues"][name]
+            item.update({"native_depth_levels_requested":5000,
+                         "source_url":"https://www.okx.com/api/v5/market/books-full",
+                         "source_timestamp":"2026-11-02T21:28:52Z",
+                         "levels":{"bid":5000,"ask":5000}})
+        result=m.build(*data)["live_orderbook"]["official_deeper_snapshot_probe"]
+        self.assertTrue(result["okx_spot_5000_actual_live"])
+        self.assertTrue(result["okx_perpetual_5000_actual_live"])
+        data[1]["current"]["venues"]["okx_usdt_perp"]["levels"]["bid"]=400
+        result=m.build(*data)["live_orderbook"]["official_deeper_snapshot_probe"]
+        self.assertFalse(result["okx_perpetual_5000_actual_live"])
+
 if __name__=="__main__":unittest.main()
