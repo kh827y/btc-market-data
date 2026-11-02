@@ -116,7 +116,8 @@ class WatchdogTests(unittest.TestCase):
                 else "bybit_official_ws_snapshot" if venue in m.WS_REQUIRED
                 else "official_public_rest")
             markets[venue]={"market":market,"captured_at":"2026-11-02T19:35:00Z",
-                            "source_timestamp":"2026-11-02T19:34:59Z" if venue in m.WS_REQUIRED else None,
+                            "source_timestamp":"2026-11-02T19:34:59Z"
+                                if venue in m.WS_REQUIRED or venue in m.NATIVE_TIME_REQUIRED else None,
                             "transport":transport,"bands":{"0.01":book}}
         source={"generated_at":"2026-11-02T19:35:00Z","errors":[],
                 "spot_usable_venues":6,"perpetual_usable_venues":5,
@@ -144,7 +145,7 @@ class WatchdogTests(unittest.TestCase):
                     "bands":{"0.01":{"bid_coverage_complete":True,
                                        "ask_coverage_complete":True}}}}}}
         failure=m.assess("live_depth",source,NOW)
-        self.assertEqual(failure["market_health"]["bybit_spot"],"stale_native_ws_timestamp")
+        self.assertEqual(failure["market_health"]["bybit_spot"],"stale_native_source_timestamp")
         self.assertTrue(failure["needs_recovery"])
 
     def test_stale_historical_L2_is_external_only(self):
@@ -224,6 +225,61 @@ class WatchdogTests(unittest.TestCase):
         self.assertEqual(v["status"], "stale_file")
         self.assertTrue(v["needs_recovery"])
 
+
+
+    def test_fresh_monitor_bridge_cannot_hide_required_stale_inputs(self):
+        source={k:{"status":"fresh"} for k in
+                ("price_technical","spot_cvd","derivatives","options",
+                 "macro_etf","live_depth","onchain")}
+        record={"as_of_utc":NOW.isoformat(),"coverage_gaps":[],
+                "sources":source,"family_readiness":{"price_technical_verified":True},
+                "metric_quality":{"checks":{"price.closed_daily_weekly":{"status":"usable"}},
+                                  "critical_issues":[]}}
+        ok=m.assess("monitor_bridge",record,NOW)
+        self.assertEqual(ok["status"],"healthy")
+        self.assertFalse(ok["needs_recovery"])
+        record["metric_quality"]["critical_issues"]=["spot_cvd.original_five.24h:incomplete"]
+        result=m.assess("monitor_bridge",record,NOW)
+        self.assertEqual(result["status"],"degraded_critical_inputs")
+        self.assertFalse(result["needs_recovery"])  # no useless bridge retry
+        self.assertTrue(result["critical_metric_issues"])
+        self.assertIn("critical_metric:spot_cvd.original_five.24h:incomplete",result["coverage_gaps"])
+        record["metric_quality"]["critical_issues"]=[]
+        record["sources"]["spot_cvd"]["status"]="stale"
+        bad=m.assess("monitor_bridge",record,NOW)
+        self.assertEqual(bad["status"],"degraded_critical_inputs")
+        self.assertIn("spot_cvd",bad["stale_or_missing_critical_families"])
+        self.assertFalse(bad["needs_recovery"])
+
+    def test_bridge_absent_metric_quality_requires_real_rebuild(self):
+        record={"as_of_utc":NOW.isoformat(),
+                "sources":{"spot_cvd":{"status":"fresh"}},
+                "family_readiness":{},
+                "metric_quality":{"checks":{}}}
+        bad=m.assess("monitor_bridge",record,NOW)
+        self.assertEqual(bad["status"],"invalid_schema")
+        self.assertEqual(bad["reason"],"bridge_metric_quality_missing")
+        self.assertTrue(bad["needs_recovery"])
+
+    def test_stale_native_okx_gate_and_bitget_snapshots_not_laundered(self):
+        book={"bid_coverage_complete":True,"ask_coverage_complete":True,
+              "bid_usd":120000,"ask_usd":145000}
+        for market in m.NATIVE_TIME_REQUIRED:
+            source={"generated_at":NOW.isoformat(),"errors":[],
+                    "current":{"venues":{market:{
+                        "market":m.LIVE_BOOK_MARKETS[market],
+                        "captured_at":NOW.isoformat(),
+                        "source_timestamp":"2026-11-02T14:00:00Z",
+                        "transport":"official_public_rest",
+                        "bands":{"0.01":book}}}}}
+            if market=="gate_usdt_perp":
+                source["current"]["venues"][market]["transport"]="gate_official_ws_v2_full_snapshot"
+            result=m.assess("live_depth",source,NOW)
+            self.assertEqual(result["market_health"][market],
+                             "stale_native_source_timestamp",market)
+            self.assertTrue(result["needs_recovery"])
+        # One unverified book must not be counted as healthy or repair itself
+        # by selecting an unrelated venue's newest timestamp.
 
 if __name__ == "__main__":
     unittest.main()
