@@ -3,6 +3,7 @@ on:
   push:
     paths:
       - "btc-options/collector.py"
+      - "btc-options/tests/**"
       - ".github/workflows/btc-options-history.yml"
   workflow_dispatch:
   schedule:
@@ -21,8 +22,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Verify Python collector
-        run: python -m py_compile btc-options/collector.py
+      - name: Verify collector and delta/IV sign tests
+        run: |
+          python -m py_compile btc-options/collector.py
+          cd btc-options && python -m unittest discover -s tests -v
       - name: Collect independent Deribit chain and Derivasys comparison
         run: python btc-options/collector.py
       - name: Save derived options risk data
