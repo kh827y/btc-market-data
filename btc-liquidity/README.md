@@ -24,3 +24,15 @@ Binance public USD-M perpetual bookDepth 30-second archival samples are used for
 The scheduled monitoring automation must verify generated_at and status, check book reach for every band, and treat this as additional market context, NOT a stand-alone reversal signal. The monitor reading this JSON is **not** automatically guaranteed until item 7/8 (integration) is completed.
 
 Limits: Source APIs can block GitHub runner IPs; errors stay visible. 1h REST snapshots miss brief liquidity events. The quote is USDT on most venues and is treated as approximately USD for large-scale research (not exact execution cost). A free multi-year multi-venue spot Level 2 archive is not claimed.
+
+
+## Full free source backfill (additional historical layer)
+
+A separate verified historical L2 collector now reads free [CryptoHFTData](https://www.cryptohftdata.com/docs/rest-orderbook) hourly Parquet files from the published archive since 2025-06-28. Public GET /download requires no key (60 requests/minute free). A daily 12:00 UTC point-in-time checkpoint is extracted for **Binance Spot, Bybit Spot, Bitget Spot, OKX Spot, Binance USD-M Futures, Bybit linear perpetuals, and OKX USDT perpetuals**. Only genuine snapshot rows are used. The tool rejects files without an hour-start checkpoint, malformed/non-Parquet responses, crossed books and incomplete price-band reach. Historical quantities on OKX USDT perpetuals assume 0.01 BTC/contract: check historical contract changes before relying on distant dates.
+
+* btc-liquidity/data/hft_latest.json — source-qualified daily 12:00 UTC historical book-depth snapshots by exchange, 1/7/30/90/365-day like-for-like date comparisons and 7/30/90/365-day observed baselines **only after enough distinct valid days exist**.
+* btc-liquidity/data/hft_history.json — actual 12:00 snapshots with source path, date, instrument type, levels, spread, 0.05%/0.2%/1% reach, bid/ask USD notional and validation errors. It does not publish the raw provider dataset or pretend that one checkpoint is continuous L2 coverage. The original 2026-06 to 09 pre-defect Binance futures bookDepth records remain a separate type of archive.
+
+GitHub Actions [btc-hft-l2.yml](../.github/workflows/btc-hft-l2.yml) runs on every hour at UTC :23, fills a bounded batch from the entire available publication history beginning 2025-06-28, prioritizes comparators before sequential backfill, and continues over subsequent runs. There is no payment or Codex. Historical completeness is reported per venue and never assumed if an old file is absent or lacks a starting snapshot. Read the provider's [documented gaps and corrections](https://www.cryptohftdata.com/docs/data-gaps-and-corrections) before declaring a long-term statistical conclusion.
+
+**Important:** archive backfilling does not automatically update the ChatGPT risk-monitor automation's prompt. The next integration item needs to read and verify freshness and quality of BOTH hft_latest.json and latest.json. Unlike our current live REST sampled books, daily source checkpoints can provide reliable backdated anchors for like-for-like historical comparisons.
