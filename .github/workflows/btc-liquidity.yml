@@ -28,7 +28,8 @@ jobs:
       - name: Test orderbook accuracy and archive corruption detection
         run: |
           python -m py_compile btc-liquidity/collector.py btc-liquidity/official_ws.py
-          cd btc-liquidity && python -m unittest discover -s tests -p 'test_*.py' -v
+          cd btc-liquidity && python -m unittest discover -s tests -p test_collector.py -v
+          python -m unittest discover -s tests -p test_official_ws.py -v
       - name: Collect and persist with race-safe latest-state retry
         run: |
           git config user.name "github-actions[bot]"
