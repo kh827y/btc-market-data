@@ -33,10 +33,14 @@ The original `lth_realized_price` had not yet been downloaded. A real
 one-off public API probe at `btc-onchain/data/bgeometrics_probe.json`
 established HTTP 200 and **7 dated rows through 2026-10-26** for all three
 original documented public endpoints. Thus the missing original LTH source
-was not a non-existent API; the collector now selects it once for its
-checkpoint bootstrap (<=11 BGeometrics calls that day) without changing
-the published 15-per-day free plan; thereafter the regular optional
-rotation uses <=10 calls/day. If the source continues to publish 7 days
+was not a non-existent API; the collector now prioritizes it in its
+existing optional request slot, keeping **10 requests per daily run**
+within both free plan limits (**10 per hour and 15 per day**). The first
+attempt to send 11 requests in one hour correctly produced HTTP 429;
+the budget was then fixed, with code-push CI changed to run tests only
+so it cannot repeatedly consume the free allowance. After genuine
+LTH checkpoint retrieval the optional rotation resumes. If the source
+continues to publish 7 days
 late, this **cannot be repaired by repeated requests**. Old observations
 remain labelled delayed and are never published as fresh.
 
