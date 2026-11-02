@@ -112,7 +112,7 @@ def compact_onchain(j,now):
  out={}
  for group,fields in {
   "market_onchain":("mvrv","mvrv_zscore","nupl","sth_sopr","lth_sopr","lth_realized_profit","lth_realized_loss","sth_realized_profit","sth_realized_loss","sth_realized_price","lth_realized_price","exchange_in_btc","exchange_out_btc","exchange_reserves_btc"),
-  "lth_sth_bitview":("lth_supply_150d","lth_change_7d_150d","lth_change_30d_150d","lth_realized_price_150d","sth_realized_price_150d","lth_nupl_150d","sth_nupl_150d"),
+  "lth_sth_bitview":("lth_supply_150d","sth_supply_150d","lth_change_7d_150d","lth_change_30d_150d","lth_realized_price_150d","sth_realized_price_150d","realized_price_bitview","lth_nupl_150d","sth_nupl_150d"),
   "whale_deposits":("whale_exchange_deposit_count","whale_exchange_deposit_volume_btc","whale_only_top10_deposit_ratio","swiss_whale_deposit_count_ge50"),
   "historical_whale_alerts":("observed_alert_count","observed_btc_volume","count_ge_100_btc","count_ge_1000_btc")
  }.items():
@@ -120,11 +120,33 @@ def compact_onchain(j,now):
   for key in fields:
    row=val(j,"components",group,"latest",key) or {}
    t=timeparse(row.get("date"));lag=(now.date()-t.date()).days if t else None
-   ok=lag is not None and 0<=lag<=3 and num(row.get("value")) is not None and row.get("status") not in ("missing","error")
+   component_age=num(val(j,"components",group,"feed_age_hours"))
+   ok=(lag is not None and 0<=lag<=3 and num(row.get("value")) is not None
+       and row.get("status") not in ("missing","error","delayed")
+       and (component_age is None or 0<=component_age<=30))
    values[key]={"date":row.get("date"),"lag_days":lag,"status":"usable" if ok else "missing_or_delayed",
                 "value":num(row.get("value")) if ok else None}
-  out[group]={"metrics":values,"scope":val(j,"components",group,"scope")}
- return {"groups":out,"known_stale":j.get("stale",[]),"missing":j.get("missing",[]),
+  out[group]={"metrics":values,"scope":val(j,"components",group,"scope"),
+              "source":val(j,"components",group,"source")}
+ # Different measurement methodologies are NEVER silently substituted.
+ # The 150-day Bitview UTXO cohorts are distinct from 155-day
+ # entity-weighted LTH/STH metrics; network realized price has its own
+ # independent provider and may vary slightly even on the same day.
+ alternatives={}
+ for label,field,kind in (
+   ("network_realized_price","realized_price_bitview","bitcoin_utxo_network"),
+   ("sth_cost_basis_150d","sth_realized_price_150d","utxo_age_less_than_150d"),
+   ("lth_cost_basis_150d","lth_realized_price_150d","utxo_age_at_least_150d"),
+ ):
+  obs=out["lth_sth_bitview"]["metrics"][field]
+  alternatives[label]={"value":obs["value"],"date":obs["date"],
+       "lag_days":obs["lag_days"],"status":obs["status"],
+       "source":"Bitview","source_url":"https://bitview.space/api/",
+       "methodology":kind,
+       "not_interchangeable_with_bgeometrics_155d_cohorts":label!="network_realized_price"}
+ return {"groups":out,"cost_basis_independent":alternatives,
+         "cost_basis_all_three_usable":all(x["status"]=="usable" for x in alternatives.values()),
+         "known_stale":j.get("stale",[]),"missing":j.get("missing",[]),
          "whale_alert_subset_not_all_transfers":True,
          "historical_exact_whale_entity_flows":j.get("exact_multiyear_whale_deposit_history_available") is True}
 
@@ -215,6 +237,7 @@ def build(source,now):
  usable={family:any(row.get("status")=="fresh" and row.get("family")==family for row in feeds.values())
          for family in sorted({x[2] for x in SOURCES.values()})}
  usable["current_orderbook"]=feeds.get("live_depth",{}).get("status")=="fresh"
+ usable["onchain_independent_cost_basis"]=feeds.get("onchain",{}).get("status")=="fresh" and val(metrics,"onchain","cost_basis_all_three_usable") is True
  usable["spot_cvd_24h_complete"]=feeds.get("spot_cvd",{}).get("status")=="fresh" and val(metrics,"spot_cvd","windows","24h","complete") is True
  usable["spot_cvd_24h_covered_subset"]=feeds.get("spot_cvd",{}).get("status")=="fresh" and val(metrics,"spot_cvd","windows","24h","complete_venue_subset","available") is True
  usable["spot_cvd_24h_fixed_five_ex_coinbase"]=feeds.get("spot_cvd",{}).get("status")=="fresh" and val(metrics,"spot_cvd","windows","24h","fixed_five_ex_coinbase","complete") is True
@@ -278,6 +301,7 @@ def make_brief(report):
   j=metrics["onchain"]["groups"]
   summary["onchain"]={group:{name:{"value":v["value"],"date":v["date"],"status":v["status"]}
           for name,v in item["metrics"].items()} for group,item in j.items()}
+  summary["onchain_cost_basis_independent"]=metrics["onchain"]["cost_basis_independent"]
  if good("live_depth"):
   j=metrics["live_depth"]
   summary["orderbook_live"]={"spot_venues":j["spot_usable_venues"],
