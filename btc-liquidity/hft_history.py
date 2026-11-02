@@ -199,6 +199,31 @@ def write(path,content):
     path.parent.mkdir(parents=True,exist_ok=True)
     path.write_text(json.dumps(content,ensure_ascii=False,indent=2,sort_keys=True)+"\n",encoding="utf8")
 
+def verified_entry(entry,venue,day):
+    """Only an observed native snapshot is counted; legacy inferred books are unverified."""
+    if not isinstance(entry,dict) or entry.get("status")!="ok":
+        return False
+    data=entry.get("data")
+    if not isinstance(data,dict):
+        return False
+    if (data.get("source")!="CryptoHFTData historical verified L2 snapshot"
+        or data.get("method")!="first genuine complete vendor snapshot in UTC file (may follow unanchored updates); not a daily median"
+        or data.get("venue")!=venue
+        or data.get("symbol")!=MARKETS[venue][0]
+        or data.get("market")!=MARKETS[venue][1]
+        or data.get("snapshot_rows",0)<20
+        or not isinstance(data.get("bands"),dict)
+        or not all(k in data["bands"] for k in ("0.01","0.05","0.2","1.0"))):
+        return False
+    try:
+        stamp=dt.datetime.fromisoformat(data["time"])
+        return (stamp.tzinfo is not None and stamp.astimezone(UTC).date().isoformat()==day
+                and stamp.astimezone(UTC).hour in SEARCH_HOURS
+                and data.get("sample_utc_hour")==stamp.astimezone(UTC).hour
+                and data.get("file_path","").startswith(f"{venue}/{day}/"))
+    except (ValueError,KeyError,TypeError):
+        return False
+
 def targets(through, existing, failures=None, now=None):
     """Search real 12:00, 11:00, 13:00 UTC anchors; retry gaps after source updates.
 
@@ -217,12 +242,11 @@ def targets(through, existing, failures=None, now=None):
     for day in days:
         for venue in MARKETS:
             day_key=day.isoformat()
-            if day_key in existing.get(venue,{}):
-                previous=existing[venue][day_key].get("data",{})
-                # Upgrade 50-level Bybit books to the genuinely observable
-                # 0.01% band; legacy 0.05% measurements are mostly null.
-                if venue not in ("bybit","bybit_spot") or "0.01" in previous.get("bands",{}):
-                    continue
+            previous_entry=existing.get(venue,{}).get(day_key,{})
+            if verified_entry(previous_entry,venue,day_key):
+                continue  # Strict source snapshot verified; no need to redownload.
+            # Legacy "hour-start checkpoint" rows may be inferred from
+            # unanchored updates. Retain for audit but do NOT treat as verified.
             for hour in SEARCH_HOURS:
                 key=f"{venue}:{day_key}:{hour:02d}"
                 failure=failures.get(key,{})
@@ -321,10 +345,8 @@ def main():
     for venue,day,hour in targets(through,markets,failures,now):
         if files>=limit or time.monotonic()-start>700:break
         key=day.isoformat()
-        if key in markets[venue]:
-            prev=markets[venue][key].get("data",{})
-            if venue not in ("bybit","bybit_spot") or "0.01" in prev.get("bands",{}):
-                continue  # previously verified and already has all required bands
+        if verified_entry(markets[venue].get(key,{}),venue,key):
+            continue  # Genuine snapshot already verified.
         symbol,kind,mul,quote=MARKETS[venue]
         name=f"{venue}/{key}/{hour:02d}/{symbol}_orderbook.parquet"
         url=API+"?"+urllib.parse.urlencode({"file":name})
@@ -354,30 +376,37 @@ def main():
     # Bound the failures record to published archive dates (do not lose findings).
     history["updated_at"]=now.isoformat()
     history["schema_version"]=2
-    comparisons,baselines=make_comparisons(markets)
+    # Never count old inferred/legacy checkpoint records as verified even if
+    # they carry status="ok". Only the strict native-snapshot parser can
+    # upgrade them. Keep old entries separately for reproducible audit.
+    verified_markets={v:{day:row for day,row in markets[v].items()
+                         if verified_entry(row,v,day)} for v in MARKETS}
+    legacy_unverified={v:len(markets[v])-len(verified_markets[v]) for v in MARKETS}
+    comparisons,baselines=make_comparisons(verified_markets)
     source_days=(through-ARCHIVE_START).days+1
-    recent_windows=recent_coverage(markets,through)
+    recent_windows=recent_coverage(verified_markets,through)
     coverage={}
-    for venue,rows in markets.items():
+    for venue,rows in verified_markets.items():
         coverage[venue]={"verified_days":len(rows),
                          "eligible_days_since_global_start":source_days,
                          "coverage_pct_of_global_window":round(len(rows)/source_days*100,2),
                          "first_verified_day":min(rows,default=None),
                          "latest_verified_day":max(rows,default=None)}
-    anchor_keys={v:bool(markets[v].get(through.isoformat())) for v in MARKETS}
+    anchor_keys={v:bool(verified_markets[v].get(through.isoformat())) for v in MARKETS}
     enough_spot=sum(anchor_keys[v] for v in MARKETS if MARKETS[v][1]=="spot")>=2
     enough_perp=sum(anchor_keys[v] for v in MARKETS if MARKETS[v][1]=="perpetual")>=1
     latest={
         "schema_version":2,"generated_at":now.isoformat(),
-        "status":"ok" if enough_spot and enough_perp else "partial" if any(markets.values()) else "unavailable",
+        "status":"ok" if enough_spot and enough_perp else "partial" if any(verified_markets.values()) else "unavailable",
         "source":"CryptoHFTData historical L2 /download; real observed vendor checkpoint",
         "archive_start":ARCHIVE_START.isoformat(),
         "target_anchor_date":through.isoformat(),
         "searched_utc_hours":list(SEARCH_HOURS),
-        "coverage_days":{v:len(rows) for v,rows in markets.items()},
+        "coverage_days":{v:len(rows) for v,rows in verified_markets.items()},
+        "legacy_unverified_records":legacy_unverified,
         "coverage":coverage,
         "recent_window_coverage":recent_windows,
-        "latest_by_venue":{v:max(rows,default=None) for v,rows in markets.items()},
+        "latest_by_venue":{v:max(rows,default=None) for v,rows in verified_markets.items()},
         "unverifiable_hour_files_total":len(failures),
         "files_attempted_this_run":files,
         "verified_this_run":good,
@@ -391,6 +420,7 @@ def main():
             "Bybit 50-level snapshots are usually too shallow for 0.05%: 0.01% is separately measured and only same-band metrics are comparable.",
             "Market is venue/instrument specific; spot and perpetuals are never pooled or called global.",
             "OKX perpetual 0.01 BTC/contract is assumed historically constant; contract-value history remains unverified.",
+            "Legacy hour-start checkpoints without native event_type=snapshot proof are excluded until reverified.",
             "Provider's archives may have gaps and revisions; negative checks retried after 7 days."
         ]
     }
