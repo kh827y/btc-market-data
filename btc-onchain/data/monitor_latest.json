@@ -1,8 +1,8 @@
 {
-  "generated_utc": "2026-11-02T05:13:54.523235+00:00",
+  "generated_utc": "2026-11-02T05:31:33.610954+00:00",
   "components": {
     "market_onchain": {
-      "feed_age_hours": 0.33,
+      "feed_age_hours": 0.62,
       "latest": {
         "mvrv": {
           "status": "fresh",
@@ -113,7 +113,7 @@
       "errors": []
     },
     "lth_sth_bitview": {
-      "feed_age_hours": 0.13,
+      "feed_age_hours": 0.42,
       "latest": {
         "lth_supply_150d": {
           "date": "2026-11-01",
@@ -173,7 +173,7 @@
       "errors": []
     },
     "whale_deposits": {
-      "feed_age_hours": 0.06,
+      "feed_age_hours": 0.02,
       "latest": {
         "whale_exchange_deposit_volume_btc": {
           "date": "2026-10-31",
@@ -189,11 +189,39 @@
           "date": "2026-11-01",
           "value": 0.74,
           "lag_days": 1
+        },
+        "swiss_whale_deposit_count_ge50": {
+          "date": "2026-11-01",
+          "value": 40,
+          "lag_days": 1
         }
       },
       "errors": []
     }
   },
+  "whale_history_coverage": {
+    "swiss_whale_deposit_count_ge50": {
+      "daily_observations": 7,
+      "first_utc_day": "2026-10-26",
+      "last_utc_day": "2026-11-01"
+    },
+    "whale_exchange_deposit_count": {
+      "daily_observations": 1,
+      "first_utc_day": "2026-10-31",
+      "last_utc_day": "2026-10-31"
+    },
+    "whale_exchange_deposit_volume_btc": {
+      "daily_observations": 1,
+      "first_utc_day": "2026-10-31",
+      "last_utc_day": "2026-10-31"
+    },
+    "whale_only_top10_deposit_ratio": {
+      "daily_observations": 7,
+      "first_utc_day": "2026-10-26",
+      "last_utc_day": "2026-11-01"
+    }
+  },
+  "exact_multiyear_whale_deposit_history_available": false,
   "missing": [
     "market_onchain:lth_realized_price"
   ],
@@ -203,7 +231,8 @@
   ],
   "known_limits": [
     "Bitview long/short holders use UTXO 150d, not 155d entity-weighted",
-    "Whale deposit raw daily history accumulates only since first successful observation",
+    "CoinGlass entity-classified whale deposit count and volume do not have verified free multi-year raw daily histories; only accumulated dated observations. CoinGlass 1d/7d/30d changes and historical percentiles are vendor-calculated, not self-recomputed.",
+    "Swiss >=50 BTC whale deposit count and concentration are DIFFERENT metrics, with a verified 7-day backfill; never combine with CoinGlass entity-clustered counts.",
     "CoinMetrics exchange transfers are provisional and entity attribution incomplete"
   ]
 }
