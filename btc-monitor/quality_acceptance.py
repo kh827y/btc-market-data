@@ -77,7 +77,9 @@ def verify():
     assert all("not worldwide" not in (row.get("comparison_key") or "").lower() for row in checks.values()),"unsupported global comparison"
     return {"status":"verified","schema":1,"checked_utc":NOW.isoformat(),
             "brief_as_of_utc":latest["as_of_utc"],
-            "source_families_verified":len(feeds),"individual_metric_checks":len(checks),
+            "source_families_audited":len(feeds),
+            "source_families_currently_fresh":sum(v.get("status")=="fresh" for v in feeds.values()),
+            "individual_metric_checks":len(checks),
             "status_counts":published,"critical_issues":quality.get("critical_issues"),
             "comparison_and_null_gates":True,"full_brief_consistency":True,
             "economic_vendor_accuracy_not_automatically_proven":True,
