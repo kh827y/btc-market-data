@@ -146,7 +146,10 @@ def compact_hft(j):
   for label,value in (entry.get("previous_days") or {}).items():
    look[label]=value if value and value.get("bands") else None
   venues[venue]={"latest_day":entry.get("latest_day"),"lookback":look,
-                 "verified_days":val(j,"coverage",venue,"verified_days")}
+                 "verified_days":val(j,"coverage",venue,"verified_days"),
+                 "recent_coverage":{window:val(j,"recent_window_coverage",window,venue)
+                                    for window in ("7d","30d","90d","365d")
+                                    if val(j,"recent_window_coverage",window,venue)}}
  return {"data_day":j.get("target_anchor_date"),"status":j.get("status"),
          "markets":venues,"time_of_day":"11-13 UTC verified real daily snapshot",
          "not_intraday_average":True,"unverifiable_hour_files_total":j.get("unverifiable_hour_files_total")}
@@ -297,7 +300,9 @@ def make_brief(report):
            if name in ("0.01","0.05")}
     if bands:output[lag]={"baseline_day":record.get("baseline_date") or record.get("baseline_day"),
                           "bands":bands}
-   hist[key][venue]={"latest_day":row.get("latest_day"),"comparisons":output}
+   hist[key][venue]={"latest_day":row.get("latest_day"),"comparisons":output,
+                     "coverage_30d":row.get("recent_coverage",{}).get("30d") if src=="hft_depth" else
+                                    row.get("coverage")}
  if hist:summary["orderbook_history"]=hist
  return summary
 
