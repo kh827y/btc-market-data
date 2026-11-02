@@ -4,15 +4,15 @@ Automatic hourly collection without API keys or paid services of BTC spot and pe
 
 ## Live sources and quality
 
-Spot markets: Binance BTC/USDT, Coinbase BTC/USD, Bybit BTC/USDT, OKX BTC/USDT. Perpetual markets: Binance and Bybit BTCUSDT. Data are **venue-local quotes**, not a worldwide BTC book. Each observed snapshot records time, best bid/ask midpoint, spread, level count, observed book reach, visible bid and ask notional within 0.2% and 1% of midpoint, and bid share.
+Spot markets: Binance BTC/USDT, Coinbase BTC/USD, Bybit BTC/USDT, OKX BTC/USDT. Perpetual markets: Binance, Bybit and OKX BTCUSDT. Data are **venue-local quotes**, not a worldwide BTC book. Each observed snapshot records time, best bid/ask midpoint, spread, level count, observed book reach, visible bid and ask notional within 0.05%, 0.2% and 1% of midpoint, and bid share.
 
 Bands beyond actually observed depth are **null, never zero**. Missing API, stale timestamps, abnormal spreads, crossed/unordered books and price outliers are quarantined. A resting visible order can be cancelled, so visible depth is NOT executed trades, guaranteed support, or liquidation-price density.
 
-Like-for-like changes over 24 hours, 7 days and 30 days are calculated ONLY when a genuine earlier snapshot exists, within +/-3 hours of target time, for the same venue/instrument/band. The raw hourly sampled history is retained ~32 days; the history genuinely begins when the GitHub workflow runs. There is no invented or reconstructed older spot orderbook.
+For OKX perpetuals, contract counts are converted into BTC using the current public instrument ctVal and ctMult (BTC-denominated contracts only), and are rejected if denomination changes. Like-for-like changes over 24 hours, 7 days and 30 days are calculated ONLY when a genuine earlier snapshot exists, within +/-3 hours of target time, for the same venue/instrument/band. The raw hourly sampled history is retained ~32 days; the history genuinely begins when the GitHub workflow runs. There is no invented or reconstructed older spot orderbook.
 
 ## Archived futures: independent older historical series
 
-Binance public USD-M perpetual bookDepth 30-second archival samples are used for 2026-06-01 to 2026-09-02 ONLY. A background backfill processes up to 8 daily ZIPs each run, validates archive rows, and derives daily medians of bid/ask USD notional at 0.2%, 1% and 2% bands. Historical perpetual prices must not be mixed with spot liquidity and are not a substitute for modern spot-depth data.
+Binance public USD-M perpetual bookDepth 30-second archival samples are used for 2026-06-01 to 2026-09-02 ONLY. A background backfill processes up to 100 daily ZIPs per run (450-second limit; resumes if incomplete), validates archive rows, and derives daily medians of bid/ask USD notional at 0.2%, 1% and 2% bands. Historical perpetual prices must not be mixed with spot liquidity and are not a substitute for modern spot-depth data.
 
 **Known upstream defect**: Binance futures archival ask depth froze in several inner bands from 2026-09-03. See https://github.com/binance/binance-public-data/issues/496 . Newer archived dates are excluded; a valid ZIP checksum does not imply valid underlying observations.
 
