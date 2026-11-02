@@ -83,6 +83,17 @@ def build(brief,source,original_onchain,hft,bybit,deep):
                 "ask_reach_pct":reach.get("ask")}
         markets[name]=detail
     expected_total=len(BOOKS)
+    readiness=brief.get("family_readiness") or {}
+    # Same-checkpoint full-versus-compact book counts must agree; otherwise
+    # a race, wrong venue or incomplete source may have been republished.
+    for band,key in (("0.01","001"),("0.05","005"),("0.2","02"),("1.0","1")):
+        flag="current_orderbook_band_"+key+"pct_verified_markets"
+        if flag in readiness and readiness[flag]!=perband[band]["usable_count"]:
+            raise ValueError("source bridge/book band count disagreement: "+flag)
+    if "current_all_11_selected_orderbooks" in readiness:
+        actual=sum(m["at_least_one_complete_bid_and_ask_band"] for m in markets.values())==expected_total
+        if readiness["current_all_11_selected_orderbooks"]!=actual:
+            raise ValueError("source bridge/market identity disagreement")
     live={
         "expected_named_markets":expected_total,
         "verified_markets":sum(m["at_least_one_complete_bid_and_ask_band"] for m in markets.values()),
