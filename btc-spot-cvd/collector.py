@@ -261,11 +261,23 @@ def main():
     # Production defaults grow the archive; env caps allow short real
     # integration runs that still commit verified market observations.
     batch=max(0,min(120,int(os.getenv("BTC_CVD_ARCHIVE_BATCH","36"))))
-    recent_pages=max(0,min(250,int(os.getenv("BTC_CVD_COINBASE_RECENT_PAGES","65"))))
+    recent_pages=max(0,min(1000,int(os.getenv("BTC_CVD_COINBASE_RECENT_PAGES","250"))))
     deep_pages=max(0,min(500,int(os.getenv("BTC_CVD_COINBASE_DEEP_PAGES","120"))))
     archives(state,now,errors,batch=batch)
-    if recent_pages: coinbase_recent(state,now,errors,pages=recent_pages)
-    if deep_pages: coinbase(state,now,errors,pages=deep_pages)
+    # Unlike restarting the head every run, jump to exactly the missing
+    # recent UTC-hour intervals and certify contiguous REST trade IDs.
+    if recent_pages:
+        from coinbase_recent_repair import repair
+        recent_result=repair(state,now,errors,pages=recent_pages,horizon=30)
+    else:
+        recent_result={"status":"disabled","pages_scanned":0}
+    # Historical cursor progresses until 720h are really complete. Once the
+    # verified 30d archive is present, avoid endlessly refetching all history.
+    end=now.replace(minute=0,second=0,microsecond=0)-dt.timedelta(hours=2)
+    coinbase_known=state.get("hourly",{}).get("coinbase",{})
+    full_coinbase=all(coinbase_known.get(key(end-dt.timedelta(hours=i)),{}).get("complete")
+                      for i in range(720))
+    if deep_pages and not full_coinbase: coinbase(state,now,errors,pages=deep_pages)
     cutoff=now-dt.timedelta(days=31)
     for failures in state.get("archive_retry_after",{}).values():
         for k in list(failures):
@@ -274,6 +286,8 @@ def main():
         for k in list(records):
             if dt.datetime.fromisoformat(k.replace("Z","+00:00"))<cutoff: del records[k]
     output=summarise(state,now,errors)
+    output["coinbase_recent_repair"]=recent_result
+    output["coinbase_720h_gap_free"]=full_coinbase
     path.parent.mkdir(parents=True,exist_ok=True)
     path.write_text(json.dumps(state,separators=(",",":"))+"\n")
     Path("btc-spot-cvd/data/latest.json").write_text(json.dumps(output,indent=2)+"\n")
