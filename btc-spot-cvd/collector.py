@@ -136,7 +136,10 @@ def coinbase(state,now,errors,pages=280,window_hours=720):
             trades=r.json()
             if not trades: break
             ids=[int(x["trade_id"]) for x in trades]
-            if any(a<=b for a,b in zip(ids,ids[1:])): raise ValueError("IDs not descending")
+            if any(a-b!=1 for a,b in zip(ids,ids[1:])):
+                raise ValueError("Coinbase trade IDs missing within REST page")
+            if cp.get("after") and ids[0]!=int(cp["after"])-1:
+                raise ValueError("Coinbase lost trades at REST pagination boundary")
             for tr in trades:
                 when=dt.datetime.fromisoformat(tr["time"].replace("Z","+00:00"))
                 hk=key(when.replace(minute=0,second=0,microsecond=0))
@@ -144,7 +147,23 @@ def coinbase(state,now,errors,pages=280,window_hours=720):
                 if hk!=cp["pending"]:
                     if cp["pending"] is not None:
                         if cp["bucket"]["trades"] and cp["pending"]<=key(end):
-                            b=cp["bucket"];known[cp["pending"]]={"buy":round(b["buy"],2),"sell":round(b["sell"],2),"net":round(b["buy"]-b["sell"],2),"trades":b["trades"],"complete":True,"source":"Coinbase REST","symbol":"BTC-USD","quote":"USD","hour":cp["pending"]}
+                            b=cp["bucket"]
+                            newrow={"buy":round(b["buy"],2),"sell":round(b["sell"],2),
+                                    "net":round(b["buy"]-b["sell"],2),"trades":b["trades"],
+                                    "complete":True,"source":"Coinbase Exchange public REST",
+                                    "symbol":"BTC-USD","quote":"USD","hour":cp["pending"],
+                                    "time_basis":"exchange_trade_time"}
+                            oldrow=known.get(cp["pending"])
+                            # Never overwrite a stronger fully ID-continuous
+                            # archived hour with a less rigorously audited
+                            # rolling or deep-cursor pass. Alert on a mismatch.
+                            if oldrow and oldrow.get("integrity")=="id_continuous_verified":
+                                difference=abs(float(oldrow["net"])-newrow["net"])
+                                if difference>max(1.0,abs(float(oldrow["net"]))*1e-5):
+                                    errors.append("coinbase: conflicting official trade totals for "
+                                                  +cp["pending"]+" (verified history retained)")
+                            else:
+                                known[cp["pending"]]=newrow
                     cp["pending"]=hk;cp["bucket"]={"buy":0.0,"sell":0.0,"trades":0}
                 if hk<key(cutoff):
                     cp["complete"]=True;break
@@ -155,8 +174,11 @@ def coinbase(state,now,errors,pages=280,window_hours=720):
                 if side not in ("buy","sell"): raise ValueError("Invalid maker side")
                 cp["bucket"]["buy" if side=="sell" else "sell"]+=value
                 cp["bucket"]["trades"]+=1
-            after=r.headers.get("CB-AFTER") or str(ids[-1])
-            if cp.get("after") and int(after)>=int(cp["after"]): raise ValueError("Cursor stalled")
+            after=r.headers.get("CB-AFTER")
+            if not after or int(after)!=ids[-1]:
+                raise ValueError("Coinbase pagination header inconsistent with final trade")
+            if cp.get("after") and int(after)>=int(cp["after"]):
+                raise ValueError("Cursor stalled")
             cp["after"]=after
             if cp.get("complete"): break
         except Exception as e:
