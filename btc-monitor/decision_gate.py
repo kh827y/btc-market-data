@@ -13,7 +13,7 @@ from collections import defaultdict
 UTC=dt.timezone.utc
 # Correlated indicators are counted as ONE independent decision channel.
 GROUP={
-    "price":"price_execution",
+    "price_technical":"price_execution",
     "spot_cvd":"price_execution",
     "derivatives":"leverage_options",
     "options":"leverage_options",
@@ -22,11 +22,13 @@ GROUP={
     "live_depth":"visible_liquidity",
 }
 CURRENT_MAX_HOURS={
-    "price_execution":27,
-    "leverage_options":6,
-    "holders":84,
-    "macro_etf":96,
-    "visible_liquidity":3,
+    "price_technical":27, # closed daily candles, NOT live tick
+    "spot_cvd":5,
+    "derivatives":6,
+    "options":6,
+    "onchain":84, # daily provider lag explicitly scoped by quality gate
+    "macro_etf":96, # weekends/ETF publication delay explicitly scoped
+    "live_depth":3,
 }
 
 def parse_timestamp(value):
@@ -62,7 +64,7 @@ def state(brief,evidence,now):
     if observed is None:
         return None,"missing_observation_time"
     age_h=(now-observed).total_seconds()/3600
-    if age_h < -0.1 or age_h > CURRENT_MAX_HOURS[group]:
+    if age_h < -0.1 or age_h > CURRENT_MAX_HOURS[source]:
         return None,"candidate_observation_outside_horizon"
     proof_time=parse_timestamp(proof.get("observed_at"))
     # Date-only metrics (ETF closing session/onchain) are legal, but the
