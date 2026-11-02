@@ -36,17 +36,31 @@ MARKETS={
     "okx_futures":("BTC-USDT-SWAP","perpetual",0.01,"USDT"),
 }
 
+_LAST_REQUEST_AT=0.0
 def download(url, limit=45_000_000):
+    """Pace anonymous API requests and obey Retry-After on explicit rate limit."""
+    global _LAST_REQUEST_AT
     request=urllib.request.Request(url,headers={"User-Agent":"BTC-market-data-independent-historical-L2/1.0"})
-    with urllib.request.urlopen(request,timeout=65) as response:
-        chunks=[]; total=0
-        while True:
-            chunk=response.read(1024*1024)
-            if not chunk:break
-            total+=len(chunk)
-            if total>limit:raise ValueError("File exceeds 45 MB cap; not silently truncated")
-            chunks.append(chunk)
-    return b"".join(chunks)
+    for attempt in range(3):
+        delay=1.1-(time.monotonic()-_LAST_REQUEST_AT)
+        if delay>0:time.sleep(delay)
+        _LAST_REQUEST_AT=time.monotonic()
+        try:
+            with urllib.request.urlopen(request,timeout=65) as response:
+                chunks=[]; total=0
+                while True:
+                    chunk=response.read(1024*1024)
+                    if not chunk:break
+                    total+=len(chunk)
+                    if total>limit:raise ValueError("File exceeds 45 MB cap; not silently truncated")
+                    chunks.append(chunk)
+                return b"".join(chunks)
+        except urllib.error.HTTPError as err:
+            if err.code not in (429,500,502,503,504) or attempt==2:raise
+            value=err.headers.get("Retry-After","") if err.headers else ""
+            wait=float(value) if value.replace(".","",1).isdigit() else 5+5*attempt
+            time.sleep(max(1,min(wait,60)))
+    raise RuntimeError("unreachable retry state")
 
 def decode_parquet(blob):
     # Historical vendor archive objects can be a WHOLE .parquet compressed
@@ -322,6 +336,16 @@ def main():
     history["schema_version"]=2
     comparisons,baselines=make_comparisons(markets)
     source_days=(through-ARCHIVE_START).days+1
+    recent_windows={}
+    for width in (7,30,90,365):
+        recent_windows[str(width)+"d"]={}
+        dates={(through-dt.timedelta(days=d)).isoformat()
+               for d in range(width) if through-dt.timedelta(days=d)>=ARCHIVE_START}
+        for venue,rows in markets.items():
+            observed=len(dates.intersection(rows))
+            recent_windows[str(width)+"d"][venue]={"verified_days":observed,
+                  "eligible_days":len(dates),
+                  "coverage_pct":round(100*observed/len(dates),2) if dates else 0}
     coverage={}
     for venue,rows in markets.items():
         coverage[venue]={"verified_days":len(rows),
@@ -341,6 +365,7 @@ def main():
         "searched_utc_hours":list(SEARCH_HOURS),
         "coverage_days":{v:len(rows) for v,rows in markets.items()},
         "coverage":coverage,
+        "recent_window_coverage":recent_windows,
         "latest_by_venue":{v:max(rows,default=None) for v,rows in markets.items()},
         "unverifiable_hour_files_total":len(failures),
         "files_attempted_this_run":files,
