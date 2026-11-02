@@ -122,8 +122,8 @@ def main():
         "missing_day_note":"Only days with observed public alerts are included; missing dates must not be interpreted as zero true transfers.",
     }
     OUTPUT.mkdir(parents=True,exist_ok=True)
-    (OUTPUT/"whale_alert_daily.json").write_text(json.dumps(daily,sort_keys=True,separators=(",",":"))+"\\n")
-    (OUTPUT/"whale_alert_latest.json").write_text(json.dumps(report,indent=2)+"\\n")
+    (OUTPUT/"whale_alert_daily.json").write_text(json.dumps(daily,sort_keys=True,separators=(",",":"))+"\n")
+    (OUTPUT/"whale_alert_latest.json").write_text(json.dumps(report,indent=2)+"\n")
     print(json.dumps(report,ensure_ascii=False))
 if __name__=="__main__":
     main()
