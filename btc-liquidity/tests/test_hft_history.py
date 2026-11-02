@@ -175,6 +175,40 @@ class HistoricL2Tests(unittest.TestCase):
         self.assertEqual(comparisons["binance_spot"]["previous_days"]["1d"]["clock_offset_hours"],0.011)
         self.assertEqual(baselines["binance_spot"]["7d"]["available"],2)
 
+    def test_noon_and_midnight_baselines_are_strictly_separate(self):
+        day=dt.date(2026,10,31)
+        native=m.parse_checkpoint(fixture(),"binance_spot","BTCUSDT",
+                                  "spot",1.0,"USDT",day)
+        def row(date, clock, hour):
+            rec={**native,"time":f"{date}T{clock}+00:00",
+                 "sample_utc_hour":hour,
+                 "file_path":f"binance_spot/{date}/{hour:02d}/BTCUSDT_orderbook.parquet"}
+            return {"status":"ok","data":rec}
+        rows={"2026-10-27":row("2026-10-27","00:13:00",0),
+              "2026-10-28":row("2026-10-28","00:14:00",0),
+              "2026-10-29":row("2026-10-29","00:32:00",0),
+              "2026-10-30":row("2026-10-30","11:05:00",11),
+              "2026-10-31":row("2026-10-31","12:10:00",12)}
+        self.assertTrue(all(m.verified_entry(v,"binance_spot",d)
+                            for d,v in rows.items()))
+        verified={"binance_spot":rows}
+        noon=m.clock_matched_records(verified,12)
+        midnight=m.clock_matched_records(verified,0)
+        self.assertEqual(sorted(noon["binance_spot"]),["2026-10-31"])
+        self.assertEqual(sorted(midnight["binance_spot"]),
+                         ["2026-10-27","2026-10-28"])
+        primary,primary_baselines=m.make_comparisons(noon)
+        alternate,alternate_baselines=m.make_comparisons(midnight)
+        self.assertEqual(primary["binance_spot"]["latest_day"],"2026-10-31")
+        self.assertIsNone(primary["binance_spot"]["previous_days"]["1d"])
+        self.assertEqual(primary_baselines["binance_spot"]["7d"]["available"],1)
+        self.assertEqual(alternate["binance_spot"]["latest_day"],"2026-10-28")
+        self.assertEqual(alternate["binance_spot"]["previous_days"]["1d"]["baseline_day"],
+                         "2026-10-27")
+        self.assertEqual(alternate_baselines["binance_spot"]["7d"]["available"],2)
+        # The 00:32 book is genuine, but too late for a midnight comparison.
+        self.assertEqual(m.recent_coverage(verified,day)["7d"]["binance_spot"]["verified_days"],5)
+
     def test_legacy_audit_explicitly_uses_original_three_hour_scope(self):
         day=m.ARCHIVE_START
         found={v:{} for v in m.MARKETS}
