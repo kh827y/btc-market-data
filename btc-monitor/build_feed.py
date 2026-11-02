@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 
 SOURCES={
+ "price_technical":("btc-price/data/latest.json",2.5,"price_trend"),
  "spot_cvd":("btc-spot-cvd/data/latest.json",2.5,"spot_execution"),
  "derivatives":("btc-derivatives/data/latest.json",3.0,"positioning"),
  "options":("btc-options/data/latest.json",3.0,"options"),
@@ -190,8 +191,66 @@ def compact_bybit(j):
          "full_source_zip_crc_verified":j.get("full_source_crc_verified") is True,
          "not_intraday_average":True}
 
+def compact_price(j):
+ """Never upgrade unfinished or numerically invalid prices to verified technicals."""
+ daily=j.get("daily") or {}
+ weekly=j.get("weekly") or {}
+ ma=daily.get("ma") or {}
+ checks=j.get("cross_checks") or {}
+ coverage=j.get("coverage") or {}
+ if j.get("status")!="ok" or j.get("instrument",{}).get("symbol")!="BTCUSDT":
+  raise ValueError("unverified symbol/status for BTC technicals")
+ if coverage.get("daily_complete",0)<250 or coverage.get("weekly_complete",0)<210:
+  raise ValueError("insufficient completed daily/weekly history")
+ if coverage.get("daily_missing")!=0 or coverage.get("weekly_missing")!=0:
+  raise ValueError("gaps in technical candle intervals")
+ if checks.get("same_venue_daily_weekly_weeks",0)<4:
+  raise ValueError("no 1d/1w integrity cross-check")
+ price=num(daily.get("close_usdt"))
+ weekly_close=num(weekly.get("last_close_usdt"))
+ weekly_sma=num(weekly.get("ma200"))
+ rsi=num(daily.get("rsi14_wilder"))
+ prices=[num(ma.get("ma"+str(n))) for n in (20,50,200)]
+ if (price is None or price<=0 or weekly_close is None or weekly_close<=0
+     or weekly_sma is None or weekly_sma<=0 or rsi is None or not 0<=rsi<=100
+     or any(x is None or x<=0 for x in prices)):
+  raise ValueError("invalid numeric BTC trend indicators")
+ if not timeparse(j.get("last_closed_day_utc")) or not timeparse(j.get("last_closed_week_monday_utc")):
+  raise ValueError("undated closed BTC candle")
+ cross=checks.get("coinbase_daily") or {}
+ if cross.get("status")=="verified":
+  delta=num(cross.get("absolute_difference_pct"))
+  if delta is None or not 0<=delta<=3:
+   raise ValueError("unverified/mismatched Coinbase spot price")
+ quote=j.get("spot_quote") or {}
+ current=num(quote.get("price_usdt"))
+ current_at=timeparse(quote.get("observed_utc"))
+ return {"source":"Binance BTCUSDT spot (USDT); not worldwide BTC/USD index",
+   "last_closed_day_utc":j["last_closed_day_utc"],
+   "last_closed_week_monday_utc":j["last_closed_week_monday_utc"],
+   "latest_closed_day_price_usdt":price,
+   "daily_ma":{"ma20":prices[0],"ma50":prices[1],"ma200":prices[2]},
+   "daily_rsi14_wilder":rsi,"rsi14_previous":num(daily.get("rsi14_previous")),
+   "daily_change_pct":daily.get("change_pct"),
+   "volume_vs_20d_median":num(daily.get("volume_vs_prev20d_median")),
+   "breakout20":daily.get("breakout20"),"swings":daily.get("swings"),
+   "weekly_close_usdt":weekly_close,"weekly_ma200":weekly_sma,
+   "weekly_ma200_rising":weekly_sma>num(weekly.get("prev_ma200")) if num(weekly.get("prev_ma200")) is not None else None,
+   "weekly_above_ma200":weekly_close>weekly_sma,
+   "trend":j.get("trend",{}).get("classification"),
+   "latest_spot_price_usdt":current if current is not None and current>0 and current_at else None,
+   "latest_spot_observed_utc":current_at.isoformat() if current_at else None,
+   "independent_coinbase_status":cross.get("status"),
+   "independent_coinbase_difference_pct":num(cross.get("absolute_difference_pct")),
+   "confidence":"cross_venue_verified" if cross.get("status")=="verified" else "single_venue",
+   "completed_daily_bars":coverage["daily_complete"],
+   "completed_weekly_bars":coverage["weekly_complete"],
+   "closed_candles_only":True,
+   "spot_not_futures":True}
+
 TRANSFORM={"spot_cvd":compact_spot,"derivatives":compact_deriv,"options":compact_options,
-           "live_depth":compact_live_depth,"hft_depth":compact_hft,"bybit_depth":compact_bybit}
+           "live_depth":compact_live_depth,"hft_depth":compact_hft,"bybit_depth":compact_bybit,
+           "price_technical":compact_price}
 
 def build(source,now):
  feeds={};metrics={};issues=[]
@@ -209,10 +268,11 @@ def build(source,now):
   # CVD trades are published ~2 hours late by design; reject stalled data.
   sampled_at=(timeparse(j.get("last_complete_hour")) if key=="spot_cvd"
               else timeparse(val(j,"current","time")) if key=="live_depth"
+              else timeparse(j.get("last_closed_day_utc")) if key=="price_technical"
               else None)
   sample_age=dt_age(now,sampled_at)
   if status=="fresh" and sample_age is not None:
-   if (key=="spot_cvd" and sample_age>5.0) or (key=="live_depth" and sample_age>3.0):
+   if (key=="spot_cvd" and sample_age>5.0) or (key=="live_depth" and sample_age>3.0) or (key=="price_technical" and sample_age>48):
     status="stale_observation"
   feeds[key]={"status":status,"source":url,"generated_at":stamp.isoformat() if stamp else None,
               "measurement_at":sampled_at.isoformat() if sampled_at else None,
@@ -226,6 +286,8 @@ def build(source,now):
    issues.append(key+":invalid_schema:"+str(exc)[:100]);continue
   if feeds[key]["status"]!="fresh":issues.append(key+":"+feeds[key]["status"])
  coverage_gaps=[]
+ if feeds.get("price_technical",{}).get("status")!="fresh":
+  coverage_gaps.append("btc_technicals:unavailable_or_stale")
  if "spot_cvd" in metrics:
   for window in ("24h","168h","720h"):
    if val(metrics,"spot_cvd","windows",window,"complete") is not True:
@@ -240,6 +302,8 @@ def build(source,now):
  usable={family:any(row.get("status")=="fresh" and row.get("family")==family for row in feeds.values())
          for family in sorted({x[2] for x in SOURCES.values()})}
  usable["current_orderbook"]=feeds.get("live_depth",{}).get("status")=="fresh"
+ usable["price_technical_verified"]=feeds.get("price_technical",{}).get("status")=="fresh"
+ usable["price_technical_cross_venue"]=usable["price_technical_verified"] and val(metrics,"price_technical","confidence")=="cross_venue_verified"
  usable["onchain_independent_cost_basis"]=feeds.get("onchain",{}).get("status")=="fresh" and val(metrics,"onchain","cost_basis_all_three_usable") is True
  usable["spot_cvd_24h_complete"]=feeds.get("spot_cvd",{}).get("status")=="fresh" and val(metrics,"spot_cvd","windows","24h","complete") is True
  usable["spot_cvd_24h_covered_subset"]=feeds.get("spot_cvd",{}).get("status")=="fresh" and val(metrics,"spot_cvd","windows","24h","complete_venue_subset","available") is True
@@ -280,6 +344,8 @@ def make_brief(report):
                    "CVD longer windows are null until 100% complete",
                    "Options RR25 is call-minus-put; CFTC futures shorts may be hedges",
                    "If important independent factors are unavailable reduce confidence; never infer no risk"]}
+ if good("price_technical"):
+  summary["btc_technicals"]=metrics["price_technical"]
  if good("spot_cvd"):
   j=metrics["spot_cvd"]
   summary["spot_cvd"]={"last_complete_hour":j.get("last_complete_hour"),
