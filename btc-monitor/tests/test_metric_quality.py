@@ -132,7 +132,7 @@ class QualityTests(unittest.TestCase):
               "latest":{"sth_realized_price_150d":{"date":"2026-11-01","value":72000,"status":"delayed"}}}}}
         v={"date":"2026-11-01","lag_days":1,"value":72000,"status":"usable"}
         transformed={"onchain":{"groups":{"lth_sth_bitview":{"metrics":{"sth_realized_price_150d":v}}},
-             },"cost_basis_independent":{"sth_cost_basis_150d":{
+             "cost_basis_independent":{"sth_cost_basis_150d":{
                  "value":72000,"status":"usable"}}}}
         r=q.assess({"onchain":raw},fresh("onchain"),transformed,NOW)
         self.assertEqual(r["checks"]["onchain.lth_sth_bitview.sth_realized_price_150d"]["status"],"unverified")
