@@ -81,6 +81,9 @@ def compact_spot(j):
                            "net_usd_approx":num(x.get("net")) if x.get("complete") is True else None}
                         for v,x in (row.get("by_venue") or {}).items()}}
  return {"last_complete_hour":j.get("last_complete_hour"),"windows":windows,
+         "coinbase_window_integrity":j.get("coinbase_window_integrity"),
+         "coinbase_recent_repair":j.get("coinbase_recent_repair"),
+         "time_basis_note":j.get("time_basis_note"),
          "scope":"executed spot-taker flow on observed venues only; NOT global BTC volume"}
 
 def compact_deriv(j):
@@ -560,6 +563,9 @@ def make_brief(report):
  if good("spot_cvd"):
   j=metrics["spot_cvd"]
   summary["spot_cvd"]={"last_complete_hour":j.get("last_complete_hour"),
+     "coinbase_window_integrity":j.get("coinbase_window_integrity"),
+     "coinbase_recent_repair":j.get("coinbase_recent_repair"),
+     "time_basis_note":j.get("time_basis_note"),
      "windows":{k:{"complete":v["complete"],"net_usd_approx":v["net_usd_approx"],
                 "complete_venue_subset":v.get("complete_venue_subset"),
                 "fixed_five_ex_coinbase":v.get("fixed_five_ex_coinbase"),
