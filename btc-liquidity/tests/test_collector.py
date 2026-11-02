@@ -77,5 +77,35 @@ class LiquidityTests(unittest.TestCase):
                       "1.0": {"bid_usd": None, "ask_usd": None, "imbalance_bid_share": None}}
         }}}
         self.assertEqual(m.compare_lookback([s], now)["1d"], {})
+    def test_bitget_v3_orderbook_parses_timestamp_and_side(self):
+        obj={"code":"00000","data":{"b":[["80000","2"],["79999","3"]],
+          "a":[["80001","4"],["80002","5"]],"ts":"1793600000123"}}
+        bids,asks,stamp=m.normalize_book("bitget_usdt_perp",obj)
+        self.assertEqual(bids[0],["80000","2"])
+        self.assertEqual(asks[0],["80001","4"])
+        self.assertEqual(stamp,1793600000123)
+    def test_gate_direct_contract_multiplier_not_raw_contracts(self):
+        self.assertAlmostEqual(m.gate_btc_contract_size({
+            "name":"BTC_USDT","type":"direct","quanto_multiplier":"0.0001"}),0.0001)
+        with self.assertRaises(ValueError):
+            m.gate_btc_contract_size({"name":"BTC_USDT","type":"inverse",
+                                      "quanto_multiplier":"0.0001"})
+    def test_gate_futures_orderbook_seconds_timestamp(self):
+        bids,asks,t=m.normalize_book("gate_usdt_perp",{
+            "current":1793600000.125,
+            "bids":[{"p":"77000","s":"100"},{"p":"76999","s":"200"}],
+            "asks":[{"p":"77001","s":"150"},{"p":"77002","s":"200"}]})
+        self.assertEqual(t,1793600000125)
+        self.assertEqual(bids[0],["77000","100"])
+        self.assertEqual(asks[0],["77001","150"])
+    def test_restricted_source_403_not_retried(self):
+        from unittest.mock import patch
+        from urllib.error import HTTPError
+        e=HTTPError("https://example.com",403,"Forbidden",None,None)
+        with patch.object(m.urllib.request,"urlopen",side_effect=e) as f:
+            with self.assertRaises(RuntimeError):
+                m.fetch("https://example.com/api")
+            self.assertEqual(f.call_count,1)
+
 if __name__ == "__main__":
     unittest.main()
