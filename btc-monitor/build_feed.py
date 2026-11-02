@@ -162,7 +162,9 @@ def compact_live_depth(j):
  out={}
  for venue,r in (val(j,"current","venues") or {}).items():
   out[venue]={"market":r.get("market"),"symbol":r.get("symbol"),
-              "captured_at":r.get("captured_at"),"spread_bps":r.get("spread_bps"),
+              "captured_at":r.get("captured_at"),"source_timestamp":r.get("source_timestamp"),
+              "transport":r.get("transport"),"snapshot_type":r.get("snapshot_type"),
+              "source_url":r.get("source_url"),"spread_bps":r.get("spread_bps"),
               "reach_pct":r.get("reach_pct"),"bands":guard_bands(r.get("bands"))}
  return {"venues":out,"spot_usable_venues":j.get("spot_usable_venues"),
          "perp_usable_venues":j.get("perpetual_usable_venues"),
@@ -477,6 +479,18 @@ def build(source,now):
  usable["current_perp_orderbook"]=feeds.get("live_depth",{}).get("status")=="fresh" and book_counts["perpetual"]>0
  usable["current_spot_orderbook_venues"]=book_counts["spot"] if usable["current_spot_orderbook"] else 0
  usable["current_perp_orderbook_venues"]=book_counts["perpetual"] if usable["current_perp_orderbook"] else 0
+ # Exact list, not simply 11 arbitrary exchanges; incomplete bands excluded.
+ expected_spot={"binance_spot","bybit_spot","coinbase_spot","okx_spot","bitget_spot","gate_spot"}
+ expected_perp={"binance_usdm_perp","bybit_usdt_perp","okx_usdt_perp","bitget_usdt_perp","gate_usdt_perp"}
+ live_rows=val(metrics,"live_depth","venues") or {}
+ valid_rows={n for n,r in live_rows.items() if any(b.get("complete") is True for b in r.get("bands",{}).values())}
+ usable["current_all_11_selected_orderbooks"]=(
+  feeds.get("live_depth",{}).get("status")=="fresh" and
+  feeds["live_depth"].get("source_errors",0)==0 and
+  all(n in valid_rows and live_rows[n].get("market")=="spot" for n in expected_spot) and
+  all(n in valid_rows and live_rows[n].get("market")=="perpetual" for n in expected_perp))
+ if "live_depth" in metrics and not usable["current_all_11_selected_orderbooks"]:
+  coverage_gaps.append("live_depth:original_11_selected_markets_not_all_verified")
  usable["macro_fed_rates"]=feeds.get("macro_etf",{}).get("status")=="fresh" and val(metrics,"macro_etf","quality","fed_rates") is True
  usable["macro_treasury_yields"]=feeds.get("macro_etf",{}).get("status")=="fresh" and val(metrics,"macro_etf","quality","treasury_yields") is True
  usable["macro_usd_broad_not_dxy"]=feeds.get("macro_etf",{}).get("status")=="fresh" and val(metrics,"macro_etf","quality","usd_broad_index") is True
@@ -593,9 +607,13 @@ def make_brief(report):
   j=metrics["live_depth"]
   summary["orderbook_live"]={"spot_venues":j["spot_usable_venues"],
     "perpetual_venues":j["perp_usable_venues"],
+    "expected_selected_markets":11,
+    "all_selected_markets_verified":report["audit"]["family_readiness"].get("current_all_11_selected_orderbooks",False),
     "venues":{venue:{"market":item["market"],"captured_at":item["captured_at"],
+                     "source_timestamp":item.get("source_timestamp"),
+                     "transport":item.get("transport"),"source_url":item.get("source_url"),
                      "bands":{k:v for k,v in item["bands"].items()
-                              if k in ("0.01","0.05","0.2") and v["complete"]}}
+                              if k in ("0.01","0.05","0.2","1.0") and v["complete"]}}
               for venue,item in j["venues"].items()}}
  hist={}
  for src,key,names in (("hft_depth","hft_12utc",("binance_spot","okx_spot","binance_futures","bybit","bybit_spot")),
