@@ -43,10 +43,11 @@ jobs:
           python -m unittest discover -s btc-liquidity/tests -p test_bybit_parallel.py -v
       - name: Build and safely commit dated historical BTC L2 liquidity
         env:
-          # Bounded serial fetches (1.1s minimum pacing) within the script 700s cap.
-          # Increase the serial batch only after a successful 180-file/6-minute run.
-          # The script still enforces a 700-second cap and >=1.1s pacing.
-          HFT_MAX_FILES: "240"
+          # 240-file backfill completed successfully at 2026-11-02 18:03 UTC.
+          # Use remaining 700s cap more fully: up to 360 serial file attempts,
+          # still paced >=1.1s and bounded by the hard 700s script limit.
+          # HTTP 429/5xx retries remain controlled by the collector.
+          HFT_MAX_FILES: "360"
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
