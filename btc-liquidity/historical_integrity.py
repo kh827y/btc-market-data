@@ -115,6 +115,18 @@ def audit_hft(history,latest):
                     "HFT calendar interval partition mismatch "+venue)
         require(latest["coverage_days"][venue]==len(verified[venue]),
                 "HFT source verified count mismatch "+venue)
+        if latest.get("schema_version",2)>=4:
+            start=hft.MARKET_START[venue]
+            eligible=(through-start).days+1
+            coverage=latest["coverage"][venue]
+            require(current["source_market_start"]==start.isoformat()
+                    and coverage["source_market_start"]==start.isoformat()
+                    and coverage["eligible_days_since_market_start"]==eligible
+                    and current["eligible_days"]==eligible,
+                    "HFT market-specific start/denominator mismatch "+venue)
+            expected_pct=round(len(verified[venue])/eligible*100,2) if eligible>0 else 0
+            require(coverage["coverage_pct_of_eligible_window"]==expected_pct,
+                    "HFT eligible-window coverage percentage mismatch "+venue)
         for width in ("7d","30d","90d","365d"):
             require(latest["recent_window_coverage"][width][venue]==recent[width][venue],
                     "HFT "+width+" verified coverage mismatch "+venue)
