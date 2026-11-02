@@ -506,6 +506,31 @@ def build(source,now):
                   "No risk/news alert unless genuinely material change; cite source and key indicators"]}
 
 
+def read_collector_watchdog(now):
+ """Independent collector health; never treat it as a price/trend signal."""
+ try:
+  j=json.loads(Path("btc-monitor/data/health_latest.json").read_text(encoding="utf8"))
+ except (OSError,ValueError):
+  return {"status":"unavailable","reason":"watchdog_health_feed_unreadable",
+          "workflow_api_reachable":False}
+ age=dt_age(now,timeparse(j.get("checked_utc")))
+ if age is None or age<-.2 or age>1.5:
+  return {"status":"stale","checked_utc":j.get("checked_utc"),
+          "age_h":age,"reason":"independent_watchdog_stopped",
+          "workflow_api_reachable":False}
+ items={}
+ for name,v in (j.get("sources") or {}).items():
+  items[name]={"status":v.get("status"),"reason":v.get("reason"),
+       "recovery":val(v,"recovery","action"),
+       "workflow_api_error":v.get("workflow_api_error"),
+       "file_age_h":v.get("file_age_h"),"coverage_gaps":v.get("coverage_gaps") or []}
+ return {"status":j.get("status") if j.get("workflow_api_reachable") is True else "monitoring_blind",
+         "checked_utc":j.get("checked_utc"),"age_h":age,
+         "workflow_api_reachable":j.get("workflow_api_reachable") is True,
+         "unavailable_or_stale":j.get("unavailable_or_stale") or [],
+         "auto_recovery":j.get("auto_recovery") or {},"sources":items,
+         "caveat":"This feed is not proof that the scheduled ChatGPT run actually read it"}
+
 def make_brief(report):
  """Compact monitor-facing payload; never upgrade stale inputs to fresh."""
  metrics=report["metrics"]; feeds=report["feeds"]
@@ -583,6 +608,8 @@ def make_brief(report):
                      "coverage_30d":row.get("recent_coverage",{}).get("30d") if src=="hft_depth" else
                                     row.get("coverage")}
  if hist:summary["orderbook_history"]=hist
+ summary["collector_watchdog"]=report.get("collector_watchdog",{
+    "status":"not_checked","workflow_api_reachable":False})
  return summary
 
 def main():
@@ -593,6 +620,7 @@ def main():
   except (OSError,ValueError) as exc:
    print("SOURCE_ERROR",key,str(exc),flush=True)
  report=build(source,now)
+ report["collector_watchdog"]=read_collector_watchdog(now)
  out=Path("btc-monitor/data/latest.json");out.parent.mkdir(parents=True,exist_ok=True)
  out.write_text(json.dumps(report,indent=2,sort_keys=True,ensure_ascii=False,allow_nan=False)+"\n",encoding="utf8")
  brief_path=Path("btc-monitor/data/brief.json")
