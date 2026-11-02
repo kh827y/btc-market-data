@@ -16,8 +16,11 @@ VENUES = {
     "okx": ("okx_spot", ["BTC-USDT","BTC-USD"]),
     "bybit": ("bybit_spot", ["BTCUSDT","BTCUSD"]),
     "kraken": ("kraken_spot", ["BTC_USD","BTC/USD","XBTUSD","XBT/USD","BTCUSD"]),
+    "bitget": ("bitget_spot", ["BTCUSDT","BTCUSDC","BTCUSD"]),
 }
-ALL = ["binance","coinbase","okx","bybit","kraken"]
+ALL = ["binance","coinbase","okx","bybit","kraken"]  # original exact five-venue coverage
+ALT_FIVE = ["binance","okx","bybit","kraken","bitget"]  # fixed alternate scope, no Coinbase
+OBSERVED = ALL + ["bitget"]  # six tracked sources; never call this the entire market
 _LAST_HFT_REQUEST_AT = 0.0
 _HFT_INTERVAL_SECONDS = 1.15  # Provider free tier: 60 requests/minute; cap ~52/min
 
@@ -75,7 +78,7 @@ def calculate_parquet(blob, hour):
     return {"buy":round(buy,2),"sell":round(sell,2),"net":round(buy-sell,2),"trades":len(tab),"complete":True}
 
 
-def archives(state, now, errors, batch=24):
+def archives(state, now, errors, batch=60):
     end=now.replace(minute=0,second=0,microsecond=0)-dt.timedelta(hours=2)
     first=end-dt.timedelta(hours=719)
     for name,(ex,preferred) in VENUES.items():
@@ -83,6 +86,7 @@ def archives(state, now, errors, batch=24):
             sym=state.setdefault("symbols",{}).get(name) or symbol(ex,preferred)
             state["symbols"][name]=sym
             known=state.setdefault("hourly",{}).setdefault(name,{})
+            retry=state.setdefault("archive_retry_after",{}).setdefault(name,{})
             # Fill the freshest 24h FIRST. Earlier forward walk from ~30
             # days ago left current 24h CVD permanently incomplete despite
             # many valid historical hours being downloaded.
@@ -91,6 +95,7 @@ def archives(state, now, errors, batch=24):
             for hour in dict.fromkeys(candidates):
                 k=key(hour)
                 if k in known: continue
+                if retry.get(k,0)>now.timestamp(): continue
                 if done>=batch: break
                 done+=1
                 path=f"{ex}/{hour:%Y-%m-%d}/{hour:%H}/{sym}_trades.parquet"
@@ -99,13 +104,17 @@ def archives(state, now, errors, batch=24):
                     rec=calculate_parquet(data,hour)
                     rec.update({"source":"CryptoHFTData","symbol":sym,"quote":"USDT" if "USDT" in sym else "USD","hour":k})
                     known[k]=rec
+                    retry.pop(k,None)
                 except Exception as e:
+                    # A persistent missing hour must not consume the whole quota
+                    # again on every run; retry after a bounded cooldown.
+                    retry[k]=now.timestamp()+(12*3600 if "404" in str(e) else 30*60)
                     errors.append(f"{name} {k}: {str(e)[:120]}")
         except Exception as e:
             errors.append(f"{name}: {str(e)[:120]}")
 
 
-def coinbase(state,now,errors,pages=130):
+def coinbase(state,now,errors,pages=280):
     # Coinbase returns descending IDs; 'after' walks older transactions.
     # Only closed hours with a fully observed subsequent older hour are published.
     cp=state.setdefault("coinbase_cursor",{"after":None,"pending":None,"bucket":None})
@@ -150,7 +159,7 @@ def coinbase(state,now,errors,pages=130):
             errors.append("coinbase: "+str(e)[:150]);break
 
 
-def coinbase_recent(state,now,errors,pages=40):
+def coinbase_recent(state,now,errors,pages=95):
     """Refresh the latest fully closed Coinbase hours independently of deep backfill.
 
     A single continuing historical cursor crawls backwards for 30 days and
@@ -175,13 +184,14 @@ def summarise(state,now,errors):
     for h in (1,24,168,720):
         times=[key(end-dt.timedelta(hours=i)) for i in range(h)]
         per={}
-        for name in ALL:
+        for name in OBSERVED:
             data=state.get("hourly",{}).get(name,{})
             rows=[data[k] for k in times if k in data and data[k].get("complete")]
             full=len(rows)==h
             per[name]={"hours":len(rows),"required":h,"complete":full,"net":round(sum(x["net"] for x in rows),2) if full else None}
-        full=all(v["complete"] for v in per.values())
-        complete_names=[name for name in ALL if per[name]["complete"]]
+        full=all(per[name]["complete"] for name in ALL)
+        alt_full=all(per[name]["complete"] for name in ALT_FIVE)
+        complete_names=[name for name in OBSERVED if per[name]["complete"]]
         # Strict published 5/5 window still requires all venues. Also expose
         # a separately labeled fixed-venue subset so missing Coinbase history
         # does not erase genuine Binance/OKX/Bybit/Kraken observations.
@@ -190,9 +200,13 @@ def summarise(state,now,errors):
                 "venue_count":len(complete_names),
                 "venues":complete_names,
                 "net":round(sum(per[n]["net"] for n in complete_names),2) if subset_usable else None,
-                "scope":"observed, selected complete venues ONLY; not 5-venue/worldwide BTC CVD"}
-        out["windows"][str(h)+"h"]={"complete":full,"net":round(sum(v["net"] for v in per.values()),2) if full else None,
-                                      "by_venue":per,"complete_venue_subset":subset}
+                "scope":"observed complete venues among six tracked sources; not global BTC CVD"}
+        alt={"complete":alt_full,"venues":ALT_FIVE,
+             "net":round(sum(per[n]["net"] for n in ALT_FIVE),2) if alt_full else None,
+             "scope":"fixed five spot venues EXCLUDING Coinbase; not worldwide CVD"}
+        out["windows"][str(h)+"h"]={"complete":full,"net":round(sum(per[n]["net"] for n in ALL),2) if full else None,
+                                      "by_venue":per,"complete_venue_subset":subset,
+                                      "fixed_five_ex_coinbase":alt}
     return out
 
 
@@ -205,6 +219,9 @@ def main():
     coinbase_recent(state,now,errors)
     coinbase(state,now,errors)
     cutoff=now-dt.timedelta(days=31)
+    for failures in state.get("archive_retry_after",{}).values():
+        for k in list(failures):
+            if dt.datetime.fromisoformat(k.replace("Z","+00:00"))<cutoff: del failures[k]
     for records in state.get("hourly",{}).values():
         for k in list(records):
             if dt.datetime.fromisoformat(k.replace("Z","+00:00"))<cutoff: del records[k]
