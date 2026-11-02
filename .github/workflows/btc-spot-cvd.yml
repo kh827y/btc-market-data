@@ -22,7 +22,9 @@ permissions:
   contents: write
 concurrency:
   group: btc-spot-cvd-collector
-  cancel-in-progress: false
+  # Changes to collector code supersede obsolete long-running runs.
+  # Scheduled/trailing worker runs themselves do not cancel one another.
+  cancel-in-progress: ${{ github.event_name == 'push' }}
 jobs:
   collect:
     if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
