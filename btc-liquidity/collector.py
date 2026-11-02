@@ -255,11 +255,15 @@ def parse_archive(data, day):
                                       "median_bid_share": round(b / (b + a), 5)}
     return result
 
-def backfill_futures(history, checks, errors, max_days=8):
+def backfill_futures(history, checks, errors, max_days=100):
     # Do not fetch 2026-09-03 onward: known frozen ask bands in Binance public exporter.
     dates = [ARCHIVE_LAST_SAFE - dt.timedelta(days=d) for d in range((ARCHIVE_LAST_SAFE - ARCHIVE_START).days + 1)]
     attempts = 0
+    start = time.monotonic()
     for day in dates:
+        if time.monotonic() - start > 450:
+            errors.append("archive backfill paused after 450s; resumes on next run")
+            break
         key = day.isoformat()
         if key in history or checks.get(key, {}).get("permanent"):
             continue
