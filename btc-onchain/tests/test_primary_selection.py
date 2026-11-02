@@ -12,9 +12,9 @@ class PrimarySelectionTests(unittest.TestCase):
  def test_missing_lth_price_is_seeded_without_exceeding_free_api_quota(self):
   date=dt.date(2026,11,2)
   selected=m.selected_metrics({},date)
-  self.assertEqual(len(selected),11)
+  self.assertEqual(len(selected),10)
   self.assertEqual(selected.count("lth_realized_price"),1)
-  self.assertIn("realized_price",selected)
+  self.assertNotIn("realized_price",selected)
  def test_existing_lth_price_returns_to_only_one_optional_per_day(self):
   date=dt.date(2026,11,2)
   selected=m.selected_metrics({"lth_realized_price":{"2026-10-26":49000}},date)
