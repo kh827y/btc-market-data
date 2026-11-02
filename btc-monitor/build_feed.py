@@ -311,8 +311,8 @@ def compact_macro_etf(j,now):
          and abs(sum(values)-(num(raw.get("five_sessions_net_flow_usd")) or 0))<=0.1)
  history=raw.get("historical") or {}
  last21=num(history.get("last_21_reported_sessions_net_usd"))
- hist_ok=etf_ok and history.get("end_date")==raw.get("date") and
-         isinstance(history.get("observations"),int) and history["observations"]>=21 and last21 is not None
+ hist_ok=(etf_ok and history.get("end_date")==raw.get("date") and
+         isinstance(history.get("observations"),int) and history["observations"]>=21 and last21 is not None)
  etf={"status":"usable" if etf_ok else "missing_or_delayed",
       "latest_session_date":raw.get("date") if etf_ok else None,
       "net_flow_usd":total if etf_ok else None,
