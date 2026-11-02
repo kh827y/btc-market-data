@@ -139,7 +139,8 @@ def dxy_optional(now):
         if not rows:raise ValueError("no usable USD index close")
         d,val=rows[-1];age=(now.date()-d).days
         return {"source":"Yahoo Finance, DX-Y.NYB (ICE US Dollar Index indicative public bars)",
-          "date":d.isoformat(),"lag_days":age,"value":round(val,4) if age<=7 else None,
+          "date":d.isoformat(),"fetched_utc":now.isoformat(),
+          "lag_days":age,"value":round(val,4) if age<=7 else None,
           "status":"usable" if age<=7 else "delayed","instrument":"ICE DXY six-currency index",
           "not_fred_broad_usd":True,
           "observation_kind":"unfinished_current_session" if d==now.date() else "finished_prior_session"}
