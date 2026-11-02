@@ -6,6 +6,13 @@ on:
       - "btc-price/tests/**"
       - ".github/workflows/btc-price-technicals.yml"
   workflow_dispatch:
+  # GitHub's scheduled events can be delayed; run a second independent
+  # hourly attempt after derivatives finish, without changing the L2 jobs.
+  workflow_run:
+    workflows:
+      - "BTC derivatives history"
+    types: [completed]
+    branches: [main]
   schedule:
     - cron: "6 * * * *"
 permissions:
@@ -15,6 +22,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   verify-and-collect:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
