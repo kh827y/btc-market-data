@@ -169,7 +169,18 @@ def build(source,now):
   age=dt_age(now,stamp)
   status="invalid_timestamp" if age is None else "future_timestamp" if age<-.2 else "stale" if age>max_age else "fresh"
   if status=="fresh" and j.get("status") not in (None,"ok"):status="partial"
+  # A freshly rebuilt file is NOT proof that its underlying hour is new:
+  # CVD trades are published ~2 hours late by design; reject stalled data.
+  sampled_at=(timeparse(j.get("last_complete_hour")) if key=="spot_cvd"
+              else timeparse(val(j,"current","time")) if key=="live_depth"
+              else None)
+  sample_age=dt_age(now,sampled_at)
+  if status=="fresh" and sample_age is not None:
+   if (key=="spot_cvd" and sample_age>5.0) or (key=="live_depth" and sample_age>3.0):
+    status="stale_observation"
   feeds[key]={"status":status,"source":url,"generated_at":stamp.isoformat() if stamp else None,
+              "measurement_at":sampled_at.isoformat() if sampled_at else None,
+              "measurement_age_h":sample_age,
               "age_h":age,"max_age_h":max_age,"family":family,
               "source_status":j.get("status"),
               "source_errors":len(j.get("errors") or j.get("errors_recent_run") or [])}
