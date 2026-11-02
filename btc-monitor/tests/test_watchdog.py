@@ -44,6 +44,32 @@ class WatchdogTests(unittest.TestCase):
         self.assertEqual(v["status"], "stale_observation")
         self.assertEqual(v["reason"], "live_quote_stale")
 
+    def test_daily_bitview_observation_lag_repaired_only_beyond_normal_lag(self):
+        good = {"generated_utc":"2026-11-02T15:00:00Z",
+                "last_closed_utc_day":"2026-11-01",
+                "latest":{"lth_supply_150d":{"date":"2026-11-01","value":12345}}}
+        result = m.assess("onchain_bitview",good,NOW)
+        self.assertEqual(result["status"],"healthy")
+        bad = dict(good,last_closed_utc_day="2026-10-22")
+        result = m.assess("onchain_bitview",bad,NOW)
+        self.assertEqual(result["reason"],"bitview_holder_series_lag_gt_3d")
+        self.assertTrue(result["needs_recovery"])
+
+    def test_onchain_vendor_delays_visible_but_no_duplicate_retry(self):
+        value = {"generated_utc":"2026-11-02T15:00:00Z",
+                 "latest":{"mvrv":{"status":"fresh","date":"2026-11-01","value":1.2},
+                           "sth_realized_price":{"status":"delayed","date":"2026-10-26","value":None}}}
+        result = m.assess("onchain_market",value,NOW)
+        self.assertEqual(result["status"],"healthy")
+        self.assertIn("sth_realized_price:missing_or_vendor_delay",result["coverage_gaps"])
+
+    def test_whale_alerts_no_latest_event_does_not_mean_collector_failed(self):
+        value = {"generated_utc":"2026-11-02T15:00:00Z",
+                 "labelled_to_exchange_alerts":7225,
+                 "last_observed_day":"2026-11-01"}
+        result = m.assess("onchain_whale_alerts",value,NOW)
+        self.assertFalse(result["needs_recovery"])
+
     def test_missing_price_after_new_day(self):
         v = m.assess("price_technical", {
             "generated_utc": "2026-11-03T00:50:00Z",
