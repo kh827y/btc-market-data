@@ -27,17 +27,32 @@ def parse_rows(data):
         out[d]=v
     if not out:raise ValueError("no numerical dated observations")
     return out
+def selected_metrics(data,today):
+    """Stay under the published 15/day free API limit.
+    
+    The missing LTH cost basis gets ONE additional collection to seed its
+    actual primary history; no paid endpoint or error-dependent infinite loop.
+    Once seeded, resume the standard rotation (10 requests/day).
+    """
+    required=["mvrv","mvrv_zscore","nupl","sth_sopr","lth_sopr",
+              "lth_realized_profit","lth_realized_loss",
+              "sth_realized_profit","sth_realized_loss"]
+    optional=["sth_realized_price","lth_realized_price","realized_price"]
+    rotation=optional[today.toordinal()%len(optional)]
+    selected=required+[rotation]
+    if not data.get("lth_realized_price") and rotation!="lth_realized_price":
+        selected.append("lth_realized_price")
+    return selected
+
 def main():
     ROOT.mkdir(parents=True,exist_ok=True)
     now=dt.datetime.now(dt.timezone.utc)
     previous=ROOT/"history.json"
     data=json.loads(previous.read_text()) if previous.exists() else {}
     errors=[]
-    # Free BGeometrics: max 15/day. Rotate lower-priority metrics to stay <= 10 API calls/day.
-    required=["mvrv","mvrv_zscore","nupl","sth_sopr","lth_sopr","lth_realized_profit","lth_realized_loss","sth_realized_profit","sth_realized_loss"]
-    optional=["sth_realized_price","lth_realized_price","realized_price"]
-    rotation=optional[now.toordinal()%len(optional)]
-    for name in required+[rotation]:
+    # Free BGeometrics 15/day. Temporarily seed the documented, genuinely
+    # available LTH price endpoint (11 calls), then return to 10/day.
+    for name in selected_metrics(data,now.date()):
         slug=METRICS[name]
         try:
             rows=parse_rows(fetch("https://bitcoin-data.com/v1/"+slug+"?startday=2022-11-01"))
