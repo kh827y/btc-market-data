@@ -228,5 +228,42 @@ class HistoricL2Tests(unittest.TestCase):
         self.assertEqual(m.retry_delay_days("HTTPError: HTTP Error 429"),1)
         self.assertEqual(m.retry_delay_days("TimeoutError: timed out"),1)
 
+    def test_lossless_calendar_intervals_do_not_fill_unobserved_days(self):
+        days=["2026-10-01","2026-10-03","2026-10-02","2026-10-05",
+              "2026-10-05","2026-10-08"]
+        self.assertEqual(m.compact_date_intervals(days),[
+            {"start":"2026-10-01","end":"2026-10-03","days":3},
+            {"start":"2026-10-05","end":"2026-10-05","days":1},
+            {"start":"2026-10-08","end":"2026-10-08","days":1}])
+        self.assertEqual(m.compact_date_intervals([]),[])
+
+    def test_calendar_intervals_partition_verified_errors_and_unchecked(self):
+        start=m.ARCHIVE_START
+        days=[(start+dt.timedelta(days=i)).isoformat() for i in range(5)]
+        found={venue:{} for venue in m.MARKETS}
+        found["binance_spot"]={days[0]:{},days[2]:{}}
+        errors={}
+        for hour in m.SEARCH_HOURS:
+            errors[f"binance_spot:{days[1]}:{hour:02d}"]={
+                "last_error":"HTTPError: HTTP Error 404: Not Found",
+                "retry_after":"2026-11-09T00:00:00+00:00"}
+            errors[f"binance_spot:{days[3]}:{hour:02d}"]={
+                "last_error":"ValueError: no verified checkpoint snapshot found anywhere in the requested UTC hour",
+                "retry_after":"2026-11-09T00:00:00+00:00"}
+        row=m.audit_source_dates(found,errors,start+dt.timedelta(days=4))["binance_spot"]
+        self.assertEqual(row["verified_date_intervals"],[
+            {"start":days[0],"end":days[0],"days":1},
+            {"start":days[2],"end":days[2],"days":1}])
+        self.assertEqual(row["explicit_error_date_intervals"],[
+            {"start":days[1],"end":days[1],"days":1},
+            {"start":days[3],"end":days[3],"days":1}])
+        self.assertEqual(row["unchecked_date_intervals"],[
+            {"start":days[4],"end":days[4],"days":1}])
+        self.assertEqual(set(row["explicit_error_intervals_by_reason"]),{
+            "source_file_404_in_sampled_hours","no_native_snapshot_in_sampled_hours"})
+        self.assertEqual(row["eligible_days"],5)
+        self.assertEqual(row["verified_days"]+row["explicit_error_days"]+
+                         row["not_fully_checked_days"],5)
+
 if __name__=="__main__":
     unittest.main()
