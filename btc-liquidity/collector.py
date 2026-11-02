@@ -113,6 +113,15 @@ def summarize_orderbook(bids_raw, asks_raw):
         }
     return result
 
+def okx_swap_contract_size(record):
+    if record.get("code") != "0" or not record.get("data"):
+        raise ValueError("OKX instrument metadata unavailable")
+    item = record["data"][0]
+    if (item.get("instId") != "BTC-USDT-SWAP" or item.get("ctValCcy") != "BTC"
+            or item.get("settleCcy") != "USDT"):
+        raise ValueError("OKX swap contract denomination changed; do not interpret contracts as BTC")
+    return finite_positive(item["ctVal"]) * finite_positive(item["ctMult"])
+
 def collect_live(now, errors):
     captured = now.isoformat().replace("+00:00", "Z")
     venues = {}
@@ -120,9 +129,19 @@ def collect_live(now, errors):
         try:
             raw = fetch(url)
             bids, asks, source_ms = normalize_book(name, raw)
+            contract_size = None
+            if name == "okx_usdt_perp":
+                spec = fetch("https://www.okx.com/api/v5/public/instruments?instType=SWAP&instId=BTC-USDT-SWAP")
+                contract_size = okx_swap_contract_size(spec)
+                # OKX orderbook size is number of contracts, not base BTC.
+                bids = [[row[0], str(float(row[1]) * contract_size)] for row in bids]
+                asks = [[row[0], str(float(row[1]) * contract_size)] for row in asks]
             if source_ms is not None and abs(now.timestamp() * 1000 - source_ms) > 120_000:
                 raise ValueError("stale source timestamp")
             record = summarize_orderbook(bids, asks)
+            if contract_size is not None:
+                record["contract_size_btc"] = contract_size
+                record["quantity_conversion"] = "OKX contracts times ctVal times ctMult into BTC"
             record.update({"market": market, "symbol": symbol, "quote": "USD" if name == "coinbase_spot" else "USDT",
                            "captured_at": captured, "source_timestamp": dt.datetime.fromtimestamp(source_ms / 1000, UTC).isoformat()
                            if source_ms is not None else None, "source_url": url.split("?")[0]})
