@@ -1,0 +1,66 @@
+name: BTC Spot CVD and bridge quick verification
+on:
+  push:
+    paths:
+      - "btc-spot-cvd/collector.py"
+      - "btc-spot-cvd/tests/**"
+      - "btc-monitor/build_feed.py"
+      - "btc-monitor/tests/**"
+      - ".github/workflows/btc-spot-cvd-quick-check.yml"
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: btc-spot-cvd-unit-check
+  cancel-in-progress: true
+jobs:
+  verify-and-record:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install collector dependencies
+        run: pip install -r btc-spot-cvd/requirements.txt
+      - name: Execute tests and commit independently reviewable result
+        shell: bash
+        run: |
+          set +e
+          (cd btc-spot-cvd && python -m unittest discover -s tests -v) > /tmp/cvd-check.log 2>&1
+          cvd_status=$?
+          python -m unittest discover -s btc-monitor/tests -p test_bridge.py -v > /tmp/bridge-check.log 2>&1
+          bridge_status=$?
+          set -e
+          tail -30 /tmp/cvd-check.log
+          tail -30 /tmp/bridge-check.log
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in 1 2 3 4; do
+            git fetch origin main
+            git reset --hard origin/main
+            BTC_CVD_TEST_STATUS="$cvd_status" BTC_BRIDGE_TEST_STATUS="$bridge_status" python - <<'PY'
+          import datetime
+          import json
+          import os
+          from pathlib import Path
+          row = {
+             "tested_commit_sha":os.getenv("GITHUB_SHA"),
+             "completed_utc":datetime.datetime.now(datetime.timezone.utc).isoformat(),
+             "collector_tests_ok":os.getenv("BTC_CVD_TEST_STATUS") == "0",
+             "bridge_tests_ok":os.getenv("BTC_BRIDGE_TEST_STATUS") == "0",
+             "scope":"unit tests only; does NOT prove successful new trade data download or full 24h/7d/30d CVD",
+          }
+          path=Path("btc-spot-cvd/data/quick_check.json")
+          path.parent.mkdir(parents=True,exist_ok=True)
+          path.write_text(json.dumps(row,indent=2)+"\n")
+          PY
+            git add btc-spot-cvd/data/quick_check.json
+            if git diff --cached --quiet; then break; fi
+            git commit -m "test: BTC CVD and bridge unit check result"
+            if git push origin HEAD:main; then break; fi
+            if [ "$attempt" -eq 4 ]; then exit 1; fi
+            sleep 2
+          done
+          if [ "$cvd_status" -ne 0 ] || [ "$bridge_status" -ne 0 ]; then exit 1; fi
