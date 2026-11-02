@@ -275,10 +275,38 @@ def recent_coverage(markets,through,windows=(7,30,90,365)):
         for venue,rows in markets.items():
             dates={(through-dt.timedelta(days=d)).isoformat()
                    for d in range(width) if through-dt.timedelta(days=d)>=MARKET_START[venue]}
-            observed=len(dates.intersection(rows))
+            observed_dates=dates.intersection(rows)
+            observed=len(observed_dates)
+            # Calendar completeness is not the same as same-clock, same-band
+            # comparability. Only complete bid AND ask depth at 12:00±30m UTC
+            # can be counted for strict historical liquidity comparisons.
+            same_clock=0
+            band_days={str(b):0 for b in BANDS}
+            for day in observed_dates:
+                data=rows[day].get("data",{}) if isinstance(rows[day],dict) else {}
+                try:
+                    stamp=dt.datetime.fromisoformat(data["time"]).astimezone(UTC)
+                    anchor=dt.datetime.combine(dt.date.fromisoformat(day),dt.time(12),UTC)
+                    comparable=abs((stamp-anchor).total_seconds())<=1800
+                except (ValueError,TypeError,KeyError):
+                    comparable=False
+                if not comparable:continue
+                same_clock+=1
+                for band in BANDS:
+                    k=str(band)
+                    depth=data.get("bands",{}).get(k,{})
+                    if (depth.get("bid_coverage_complete") is True
+                        and depth.get("ask_coverage_complete") is True
+                        and depth.get("bid_share") is not None
+                        and depth.get("bid_usd") is not None
+                        and depth.get("ask_usd") is not None):
+                        band_days[k]+=1
             result[str(width)+"d"][venue]={"verified_days":observed,
                   "eligible_days":len(dates),
-                  "coverage_pct":round(100*observed/len(dates),2) if dates else 0}
+                  "coverage_pct":round(100*observed/len(dates),2) if dates else 0,
+                  "same_clock_12utc_verified_days":same_clock,
+                  "same_clock_12utc_complete_band_days":band_days,
+                  "clock_tolerance_minutes":30}
     return result
 
 def retry_delay_days(reason):
@@ -508,7 +536,7 @@ def main():
     enough_spot=sum(anchor_keys[v] for v in MARKETS if MARKETS[v][1]=="spot")>=2
     enough_perp=sum(anchor_keys[v] for v in MARKETS if MARKETS[v][1]=="perpetual")>=1
     latest={
-        "schema_version":3,"generated_at":now.isoformat(),
+        "schema_version":4,"generated_at":now.isoformat(),
         "status":"ok" if enough_spot and enough_perp else "partial" if any(verified_markets.values()) else "unavailable",
         "source":"CryptoHFTData historical L2 /download; real observed vendor checkpoint",
         "archive_start":ARCHIVE_START.isoformat(),
