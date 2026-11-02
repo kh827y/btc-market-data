@@ -1,0 +1,72 @@
+name: BTC data collector watchdog
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "btc-monitor/watchdog.py"
+      - "btc-monitor/tests/test_watchdog.py"
+      - ".github/workflows/btc-collector-watchdog.yml"
+  workflow_run:
+    workflows:
+      - "BTC risk monitor validated source bridge"
+    types: [completed]
+    branches: [main]
+  schedule:
+    - cron: "3,18,33,48 * * * *"
+permissions:
+  contents: write
+  actions: write
+concurrency:
+  group: btc-data-collector-watchdog
+  cancel-in-progress: false
+jobs:
+  monitor-and-recover:
+    if: \${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate watchdog without network or dispatch calls
+        run: |
+          python -m py_compile btc-monitor/watchdog.py
+          python -m unittest discover -s btc-monitor/tests -p test_watchdog.py -v
+      - name: Check actual timestamps, workflow runs and recover outages
+        env:
+          GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -eu
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # Read canonical main so the watchdog never evaluates stale checkout.
+          git fetch origin main
+          git reset --hard origin/main
+          python -m unittest discover -s btc-monitor/tests -p test_watchdog.py -q
+          python -u btc-monitor/watchdog.py
+          git add btc-monitor/data/health_latest.json btc-monitor/data/watchdog_state.json
+          if git diff --cached --quiet; then
+            echo "No material health change"
+            exit 0
+          fi
+          git commit -m "health: BTC collector freshness and bounded recovery actions"
+          # Do not re-run the watchdog on concurrent updates, or it might
+          # dispatch the same failed collector twice.
+          for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            if git push origin HEAD:main; then
+              echo "Watchdog health status persisted"
+              exit 0
+            fi
+            git fetch origin main
+            if ! git rebase origin/main; then
+              git rebase --abort || true
+              echo "Health receipt conflict: audit needed" >&2
+              exit 1
+            fi
+            sleep 2
+          done
+          echo "Could not persist BTC watchdog health after retries" >&2
+          exit 1
