@@ -53,3 +53,24 @@ def main():
             latest[name] = {"date":day,"value":value,"lag_days":(now.date()-dt.date.fromisoformat(day)).days}
         except Exception as exc:
             errors.append({"metric":name,"reason":str(exc)[:180]})
+    try:
+        markup = download("https://swisswhaleintelligence.com/glossary/exchange_whale_ratio/")
+        day, value = extract_swiss(markup)
+        name = "whale_only_top10_deposit_ratio"
+        history.setdefault(name, {})[day] = value
+        latest[name] = {"date":day,"value":value,"lag_days":(now.date()-dt.date.fromisoformat(day)).days}
+        sources[name] = "Swiss Whale Intelligence: top-10 deposits / whale-size inflow only, not total inflow"
+    except Exception as exc:
+        errors.append({"metric":"whale_only_top10_deposit_ratio","reason":str(exc)[:180]})
+    result = {
+        "generated_utc":now.isoformat(),
+        "complete_for_latest":not errors and len(latest)==3,
+        "history_is_complete":False,
+        "history_note":"Only daily observations collected since first run; no fabricated historical points",
+        "latest":latest,"source":sources,"errors":errors,
+    }
+    previous.write_text(json.dumps(history, separators=(",",":"),sort_keys=True)+"\n")
+    (ROOT/"whale_latest.json").write_text(json.dumps(result,indent=2)+"\n")
+    print(json.dumps(result))
+if __name__=="__main__":
+    main()
