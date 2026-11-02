@@ -26,6 +26,20 @@ EXPECTED_LIVE={
 WS_TRANSPORTS={"bybit_spot":"bybit_official_ws_snapshot",
                "bybit_usdt_perp":"bybit_official_ws_snapshot",
                "binance_usdm_perp":"binance_official_ws_api_depth"}
+# All native timestamped source snapshots are independently date-checked.
+# A newly published wrapper never makes an old exchange REST book current.
+NATIVE_BOOK_TIMESTAMPS=("okx_spot","okx_usdt_perp","bitget_spot",
+                        "bitget_usdt_perp","gate_spot","gate_usdt_perp")
+BOOK_TRANSPORTS={
+    "binance_spot":("official_public_rest",),
+    "coinbase_spot":("official_public_rest",),
+    "okx_spot":("official_public_rest","okx_official_rest_400_fallback"),
+    "okx_usdt_perp":("official_public_rest","okx_official_rest_400_fallback"),
+    "bitget_spot":("official_public_rest",),
+    "bitget_usdt_perp":("official_public_rest",),
+    "gate_spot":("official_public_rest","gate_official_rest_1000_fallback"),
+    "gate_usdt_perp":("official_public_rest","gate_official_ws_v2_full_snapshot"),
+}
 SPANS={"1h":1,"24h":24,"168h":168,"720h":720}
 REPORTABLE=("usable",)
 
@@ -411,14 +425,15 @@ def gate_live(g,raw,metrics):
     for name,market in EXPECTED_LIVE.items():
         r=data.get(name) or {}
         age=interval_age(g.now,r.get("captured_at"),2.5)
+        permitted=( (r.get("transport")==WS_TRANSPORTS[name])
+                   if name in WS_TRANSPORTS
+                   else (r.get("transport") in BOOK_TRANSPORTS.get(name,())))
         fresh=(age=="usable" and r.get("market")==market and
-               r.get("symbol") in ("BTCUSD","BTCUSDT") and
-               r.get("transport")==WS_TRANSPORTS.get(name,r.get("transport")))
-        if name in WS_TRANSPORTS:
+               r.get("symbol") in ("BTCUSD","BTCUSDT") and permitted)
+        if name in WS_TRANSPORTS or name in NATIVE_BOOK_TIMESTAMPS:
             source=at(r.get("source_timestamp"));capture=at(r.get("captured_at"))
             fresh=(fresh and source is not None and capture is not None and
-                   -10 <= (capture-source).total_seconds() <= 120 and
-                   r.get("transport")==WS_TRANSPORTS[name])
+                   -10 <= (capture-source).total_seconds() <= 120)
         bands=r.get("bands") or {}
         anygood=False
         for band in ("0.01","0.05","0.2","1.0"):
