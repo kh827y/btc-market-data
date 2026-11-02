@@ -114,4 +114,33 @@ class BridgeTests(unittest.TestCase):
                            "bid_share":0.0,"imbalance_bid_share":0.7}})
   self.assertEqual(got["0.05"]["bid_share"],0.0)
 
+ def test_fixed_five_spot_scope_separate_from_original_coinbase_five(self):
+  originals=["binance","coinbase","okx","bybit","kraken"]
+  alt=["binance","okx","bybit","kraken","bitget"]
+  row={"complete":False,"net":None,
+       "by_venue":{v:{"complete":v!="coinbase","hours":24 if v!="coinbase" else 4,
+                      "required":24,"net":10 if v!="coinbase" else None}
+                   for v in originals+["bitget"]},
+       "fixed_five_ex_coinbase":{"complete":True,"venues":alt,"net":50},
+       "complete_venue_subset":{"available":True,"venues":alt,"net":50}}
+  source={"generated_utc":"2026-11-02T07:20:00Z",
+          "last_complete_hour":"2026-11-02T06:00:00Z",
+          "windows":{"24h":row}}
+  result=m.build({"spot_cvd":source},NOW)
+  full=result["metrics"]["spot_cvd"]["windows"]["24h"]
+  self.assertFalse(full["complete"])
+  self.assertIsNone(full["net_usd_approx"])
+  self.assertTrue(full["fixed_five_ex_coinbase"]["complete"])
+  self.assertEqual(full["fixed_five_ex_coinbase"]["net_usd_approx"],50)
+  self.assertFalse(result["audit"]["family_readiness"]["spot_cvd_24h_complete"])
+  self.assertTrue(result["audit"]["family_readiness"]["spot_cvd_24h_fixed_five_ex_coinbase"])
+  self.assertEqual(m.make_brief(result)["spot_cvd"]["windows"]["24h"]["fixed_five_ex_coinbase"]["venues"],alt)
+ def test_reject_unsubstantiated_fixed_five(self):
+  row={"complete":False,"net":None,"by_venue":{"bitget":{"complete":False}},
+       "fixed_five_ex_coinbase":{"complete":True,
+                                 "venues":["binance","okx","bybit","kraken","bitget"],"net":9000}}
+  result=m.build({"spot_cvd":{"generated_utc":"2026-11-02T07:20:00Z",
+             "last_complete_hour":"2026-11-02T06:00:00Z","windows":{"24h":row}}},NOW)
+  self.assertFalse(result["metrics"]["spot_cvd"]["windows"]["24h"]["fixed_five_ex_coinbase"]["complete"])
+
 if __name__=="__main__":unittest.main()
