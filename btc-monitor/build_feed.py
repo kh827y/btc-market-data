@@ -486,7 +486,8 @@ def build(source,now):
  usable["price_live_spot_quote"]=usable["price_technical_verified"] and feeds.get("price_technical",{}).get("spot_quote_status")=="fresh"
  usable["price_technical_cross_venue"]=usable["price_technical_verified"] and val(metrics,"price_technical","confidence")=="cross_venue_verified"
  usable["onchain_independent_cost_basis"]=feeds.get("onchain",{}).get("status")=="fresh" and val(metrics,"onchain","cost_basis_all_three_usable") is True
- usable["spot_cvd_24h_complete"]=feeds.get("spot_cvd",{}).get("status")=="fresh" and val(metrics,"spot_cvd","windows","24h","complete") is True
+ for span in ("1h","24h","168h","720h"):
+  usable["spot_cvd_"+span+"_complete"]=feeds.get("spot_cvd",{}).get("status")=="fresh" and val(metrics,"spot_cvd","windows",span,"complete") is True
  usable["spot_cvd_24h_covered_subset"]=feeds.get("spot_cvd",{}).get("status")=="fresh" and val(metrics,"spot_cvd","windows","24h","complete_venue_subset","available") is True
  usable["spot_cvd_24h_fixed_five_ex_coinbase"]=feeds.get("spot_cvd",{}).get("status")=="fresh" and val(metrics,"spot_cvd","windows","24h","fixed_five_ex_coinbase","complete") is True
  for h in ("168h","720h"):
