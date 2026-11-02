@@ -12,6 +12,15 @@ from collections import defaultdict
 
 UTC=dt.timezone.utc
 # Correlated indicators are counted as ONE independent decision channel.
+METRIC_PREFIX_SOURCE={
+    "price.":"price_technical",
+    "spot_cvd.":"spot_cvd",
+    "derivatives.":"derivatives",
+    "options.":"options",
+    "onchain.":"onchain",
+    "macro.":"macro_etf",
+    "live_depth.":"live_depth",
+}
 GROUP={
     "price_technical":"price_execution",
     "spot_cvd":"price_execution",
@@ -22,7 +31,7 @@ GROUP={
     "live_depth":"visible_liquidity",
 }
 CURRENT_MAX_HOURS={
-    "price_technical":27, # closed daily candles, NOT live tick
+    "price_technical":54, # closed daily candles; proof date still checked
     "spot_cvd":5,
     "derivatives":6,
     "options":6,
@@ -49,8 +58,16 @@ def state(brief,evidence,now):
     proof=quality.get(key) if isinstance(key,str) else None
     if not isinstance(proof,dict) or proof.get("status")!="usable":
         return None,"metric_not_proven_usable"
-    source=proof.get("source")
-    if not isinstance(source,str) or (brief.get("sources") or {}).get(source,{}).get("status")!="fresh":
+    # The compact bridge intentionally omits 'source' in per-metric rows,
+    # so resolve ONLY an allowlisted canonical prefix; the full bridge may
+    # additionally provide source and must agree with that known mapping.
+    source=next((src for prefix,src in METRIC_PREFIX_SOURCE.items()
+                 if key.startswith(prefix)),None)
+    if source is None or (proof.get("source") not in (None,source)):
+        return None,"unverifiable_metric_origin"
+    if not proof.get("unit") or not proof.get("scope"):
+        return None,"missing_metric_unit_or_scope"
+    if (brief.get("sources") or {}).get(source,{}).get("status")!="fresh":
         return None,"parent_source_not_fresh"
     group=GROUP.get(source)
     if group is None:
@@ -66,10 +83,16 @@ def state(brief,evidence,now):
     age_h=(now-observed).total_seconds()/3600
     if age_h < -0.1 or age_h > CURRENT_MAX_HOURS[source]:
         return None,"candidate_observation_outside_horizon"
-    proof_time=parse_timestamp(proof.get("observed_at"))
-    # Date-only metrics (ETF closing session/onchain) are legal, but the
-    # candidate can never claim observation more recent than the source.
-    if proof_time and observed > proof_time + dt.timedelta(hours=24):
+    # Compact proof may have a UTC date only. For daily observations the
+    # latest justifiable observed time is end-of-that-day; never represent
+    # a weekly or daily row as a new intraday measurement.
+    raw_time=proof.get("observed_at")
+    daily=isinstance(raw_time,str) and len(raw_time)==10
+    proof_time=parse_timestamp(raw_time+"T00:00:00Z") if daily else parse_timestamp(raw_time)
+    if proof_time is None:
+        return None,"source_measurement_time_missing"
+    bound=dt.timedelta(hours=24 if daily else 0.5)
+    if observed>proof_time+bound:
         return None,"candidate_newer_than_source"
     return (group,direction,key),None
 
