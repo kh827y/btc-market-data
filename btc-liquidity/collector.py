@@ -15,7 +15,7 @@ from collections import defaultdict
 
 UTC = dt.timezone.utc
 ROOT = pathlib.Path("btc-liquidity/data")
-BANDS = (0.2, 1.0)
+BANDS = (0.05, 0.2, 1.0)
 ARCHIVE_START = dt.date(2026, 6, 1)
 ARCHIVE_LAST_SAFE = dt.date(2026, 9, 2)  # Binance exporter corruption since Sep 3, 2026
 VENUES = {
@@ -170,7 +170,7 @@ def daily_summary(samples):
             bands = {}
             for band in BANDS:
                 k = str(band)
-                good = [x["bands"][k] for x in rows if x["bands"][k]["imbalance_bid_share"] is not None]
+                good = [x["bands"][k] for x in rows if x["bands"].get(k, {}).get("imbalance_bid_share") is not None]
                 bands[k] = ({"samples": len(good),
                              "median_bid_usd": round(statistics.median(x["bid_usd"] for x in good), 2),
                              "median_ask_usd": round(statistics.median(x["ask_usd"] for x in good), 2),
@@ -198,8 +198,8 @@ def compare_lookback(samples, now):
             bands = {}
             for band in BANDS:
                 k = str(band)
-                a, b = current["bands"][k], old["bands"][k]
-                if a["imbalance_bid_share"] is None or b["imbalance_bid_share"] is None:
+                a, b = current["bands"].get(k), old["bands"].get(k)
+                if not a or not b or a["imbalance_bid_share"] is None or b["imbalance_bid_share"] is None:
                     continue
                 bands[k] = {
                     "bid_depth_change_pct": round((a["bid_usd"] / b["bid_usd"] - 1) * 100, 2) if b["bid_usd"] else None,
@@ -307,10 +307,13 @@ def main():
     write(ROOT / "history.json", history)
     spot_count = sum(v["market"] == "spot" for v in sample["venues"].values())
     perp_count = sum(v["market"] == "perpetual" for v in sample["venues"].values())
+    spot_usable = sum(v["market"] == "spot" and any(b["imbalance_bid_share"] is not None for b in v["bands"].values()) for v in sample["venues"].values())
+    perp_usable = sum(v["market"] == "perpetual" and any(b["imbalance_bid_share"] is not None for b in v["bands"].values()) for v in sample["venues"].values())
     latest = {
         "schema_version": 1, "generated_at": now.isoformat(),
-        "status": "ok" if spot_count >= 2 and perp_count >= 1 else "partial" if spot_count + perp_count else "unavailable",
+        "status": "ok" if spot_usable >= 2 and perp_usable >= 1 else "partial" if spot_usable + perp_usable else "unavailable",
         "spot_venues": spot_count, "perpetual_venues": perp_count,
+        "spot_usable_venues": spot_usable, "perpetual_usable_venues": perp_usable,
         "current": sample if sample["venues"] else None,
         "spot_and_perpetual_are_not_aggregated": True,
         "comparisons": compare_lookback(samples, now),
