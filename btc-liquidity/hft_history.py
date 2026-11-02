@@ -48,7 +48,7 @@ def download(url, limit=45_000_000):
 def decode_parquet(blob):
     # Historical vendor archive objects can be a WHOLE .parquet compressed
     # again as a Zstandard frame (28 B5 2F FD). Recent hours are plain Parquet.
-    if blob.startswith(b"\\x28\\xb5\\x2f\\xfd"):
+    if blob.startswith(bytes.fromhex("28b52ffd")):
         max_output=350_000_000
         with zstd.ZstdDecompressor().stream_reader(io.BytesIO(blob)) as reader:
             out=reader.read(max_output+1)
