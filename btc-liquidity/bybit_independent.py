@@ -37,7 +37,7 @@ def range_bytes(url,length=524288):
     with urllib.request.urlopen(req,timeout=40) as resp:
         if resp.status!=206:raise ValueError("source did not honor byte-range request")
         rng=resp.headers.get("Content-Range","")
-        match=re.fullmatch(r"bytes 0-(\\d+)/(\\d+)",rng)
+        match=re.fullmatch(r"bytes 0-(\d+)/(\d+)",rng)
         if not match:raise ValueError("invalid Content-Range: "+rng)
         final,total=map(int,match.groups())
         expected=min(length,total)
