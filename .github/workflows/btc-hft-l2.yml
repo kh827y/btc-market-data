@@ -34,15 +34,23 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          for attempt in 1 2 3; do
-            git fetch origin main
-            git reset --hard origin/main
-            python -u btc-liquidity/hft_history.py
-            git add btc-liquidity/data/hft_latest.json btc-liquidity/data/hft_history.json
-            if git diff --cached --quiet; then exit 0; fi
-            git commit -m "data: verified historical BTC spot/perpetual L2 depth"
+          git fetch origin main
+          git reset --hard origin/main
+          python -u btc-liquidity/hft_history.py
+          git add btc-liquidity/data/hft_latest.json btc-liquidity/data/hft_history.json
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "data: verified historical BTC spot/perpetual L2 depth"
+          # Other independent BTC workflows frequently push to main during the
+          # 5-12 minute archive scan. Rebase the verified data commit instead
+          # of discarding it and repeating every paid-in-time HTTP request.
+          for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
             if git push origin HEAD:main; then exit 0; fi
-            echo "Concurrent update; restart from canonical historical state"
-            sleep 3
+            git fetch origin main
+            if ! git rebase origin/main; then
+              git rebase --abort || true
+              echo "Conflicting historical data update; next scheduled run will retry from canonical state"
+              exit 1
+            fi
+            sleep 2
           done
           exit 1
