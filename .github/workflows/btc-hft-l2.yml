@@ -4,6 +4,7 @@ on:
     paths:
       - "btc-liquidity/hft_history.py"
       - "btc-liquidity/tests/test_hft_history.py"
+      - "btc-liquidity/historical_integrity.py"
       - ".github/workflows/btc-hft-l2.yml"
   workflow_dispatch:
   schedule:
@@ -26,7 +27,7 @@ jobs:
         run: pip install --disable-pip-version-check pyarrow zstandard
       - name: Verify sample parsing and quality tests
         run: |
-          python -m py_compile btc-liquidity/hft_history.py
+          python -m py_compile btc-liquidity/hft_history.py btc-liquidity/historical_integrity.py
           python -m unittest discover -s btc-liquidity/tests -p test_hft_history.py -v
       - name: Build and safely commit dated historical BTC L2 liquidity
         env:
@@ -39,7 +40,10 @@ jobs:
           git fetch origin main
           git reset --hard origin/main
           python -u btc-liquidity/hft_history.py
-          git add btc-liquidity/data/hft_latest.json btc-liquidity/data/hft_history.json
+          # Independent source-date audit must match the exact newly built
+          # history; do not publish a stale 7d/30d or global coverage audit.
+          python -u btc-liquidity/historical_integrity.py
+          git add btc-liquidity/data/hft_latest.json btc-liquidity/data/hft_history.json btc-liquidity/data/historical_integrity_status.json
           if git diff --cached --quiet; then exit 0; fi
           git commit -m "data: verified historical BTC spot/perpetual L2 depth"
           # Other independent BTC workflows frequently push to main during the
@@ -53,6 +57,12 @@ jobs:
               echo "Conflicting historical data update; next scheduled run will retry from canonical state"
               exit 1
             fi
+            # Recalculate integrity against the newly rebased Bybit/HFT
+            # canonical data; another workflow may have published Bybit since
+            # the first calculation. Fail closed on any count inconsistency.
+            python -u btc-liquidity/historical_integrity.py
+            git add btc-liquidity/data/historical_integrity_status.json
+            if ! git diff --cached --quiet; then git commit --amend --no-edit; fi
             sleep 2
           done
           exit 1
