@@ -114,14 +114,18 @@ def archives(state, now, errors, batch=60):
             errors.append(f"{name}: {str(e)[:120]}")
 
 
-def coinbase(state,now,errors,pages=280):
+def coinbase(state,now,errors,pages=280,window_hours=720):
     # Coinbase returns descending IDs; 'after' walks older transactions.
     # Only closed hours with a fully observed subsequent older hour are published.
     cp=state.setdefault("coinbase_cursor",{"after":None,"pending":None,"bucket":None})
     known=state.setdefault("hourly",{}).setdefault("coinbase",{})
     end=now.replace(minute=0,second=0,microsecond=0)-dt.timedelta(hours=2)
-    cutoff=end-dt.timedelta(hours=719)
-    if cp.get("complete") and cp.get("cutoff") != key(cutoff):
+    if not 1<=window_hours<=720:
+        raise ValueError("Coinbase trade backfill window out of bounds")
+    cutoff=end-dt.timedelta(hours=window_hours-1)
+    # The short rolling window must restart after reaching its cutoff to
+    # capture new recent hours; the 30-day cursor stays independent.
+    if cp.get("complete") and (cp.get("cutoff") != key(cutoff) or window_hours<=30):
         cp.update({"after":None,"pending":None,"bucket":None,"complete":False})
     cp["cutoff"]=key(cutoff)
     for i in range(pages):
@@ -160,22 +164,30 @@ def coinbase(state,now,errors,pages=280):
 
 
 def coinbase_recent(state,now,errors,pages=95):
-    """Refresh the latest fully closed Coinbase hours independently of deep backfill.
+    """Keep both the newest Coinbase hour AND a persistent rolling 30h scan.
 
-    A single continuing historical cursor crawls backwards for 30 days and
-    otherwise stops seeing NEW Coinbase hours. Re-scan a bounded head window
-    every run without destroying the persistent long-history cursor.
-    Only wholly traversed source hours are committed by coinbase().
+    A head refresh catches fresh trades every run; the other page budget
+    resumes a saved rolling cursor until it reaches the last 30h cutoff.
+    Deep 720h backfill continues under its original, untouched cursor.
+    No incomplete UTC hour is silently marked zero or complete.
     """
     saved=state.get("coinbase_cursor")
-    state["coinbase_cursor"]={"after":None,"pending":None,"bucket":None}
+    head_pages=min(18,pages)
+    rolling_pages=max(0,pages-head_pages)
     try:
-        coinbase(state,now,errors,pages=pages)
+        if head_pages:
+            state["coinbase_cursor"]={"after":None,"pending":None,"bucket":None}
+            coinbase(state,now,errors,pages=head_pages,window_hours=30)
+        if rolling_pages:
+            state["coinbase_cursor"]=state.get("coinbase_recent_cursor") or {
+                "after":None,"pending":None,"bucket":None}
+            try:
+                coinbase(state,now,errors,pages=rolling_pages,window_hours=30)
+            finally:
+                state["coinbase_recent_cursor"]=state["coinbase_cursor"]
     finally:
-        if saved is None:
-            state.pop("coinbase_cursor",None)
-        else:
-            state["coinbase_cursor"]=saved
+        if saved is None:state.pop("coinbase_cursor",None)
+        else:state["coinbase_cursor"]=saved
 
 
 def summarise(state,now,errors):
