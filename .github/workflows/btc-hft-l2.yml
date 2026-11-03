@@ -5,6 +5,7 @@ on:
       - "btc-liquidity/hft_history.py"
       - "btc-liquidity/tests/test_hft_history.py"
       - "btc-liquidity/historical_integrity.py"
+      - "btc-liquidity/tests/test_historical_integrity.py"
       - ".github/workflows/btc-hft-l2.yml"
   workflow_dispatch:
   # GitHub scheduled events for newly created workflows can be delayed or
@@ -41,6 +42,7 @@ jobs:
           python -m unittest discover -s btc-liquidity/tests -p test_hft_history.py -v
           python -m unittest discover -s btc-liquidity/tests -p test_bybit_independent.py -v
           python -m unittest discover -s btc-liquidity/tests -p test_bybit_parallel.py -v
+          python -m unittest discover -s btc-liquidity/tests -p test_historical_integrity.py -v
       - name: Build and safely commit dated historical BTC L2 liquidity
         env:
           # A 360-file pass completed with time remaining on 2026-11-02.
@@ -59,6 +61,7 @@ jobs:
           python -m unittest discover -s btc-liquidity/tests -p test_hft_history.py -q
           python -m unittest discover -s btc-liquidity/tests -p test_bybit_independent.py -q
           python -m unittest discover -s btc-liquidity/tests -p test_bybit_parallel.py -q
+          python -m unittest discover -s btc-liquidity/tests -p test_historical_integrity.py -q
           export TESTED_COMMIT="$(git rev-parse HEAD)"
           python -u btc-liquidity/hft_history.py
           # Independent source-date audit must match the exact newly built
@@ -103,6 +106,7 @@ jobs:
             python -m unittest discover -s btc-liquidity/tests -p test_hft_history.py -q
             python -m unittest discover -s btc-liquidity/tests -p test_bybit_independent.py -q
             python -m unittest discover -s btc-liquidity/tests -p test_bybit_parallel.py -q
+            python -m unittest discover -s btc-liquidity/tests -p test_historical_integrity.py -q
             python -u btc-liquidity/historical_integrity.py
             export TESTED_COMMIT="$(git rev-parse HEAD^)"
             python - <<'PY'
