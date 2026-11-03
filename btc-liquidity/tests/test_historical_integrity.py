@@ -65,10 +65,19 @@ class BybitCutoffAuditTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,"invalid source provenance"):
             m.audit_bybit(h,s,l)
 
-    def test_daily_latest_must_not_predate_bulk_cutoff(self):
+    def test_daily_latest_can_predate_bulk_cutoff_without_false_mismatch(self):
         h,s,l=fixture()
         l["target_day"]=(BULK-dt.timedelta(days=1)).isoformat()
-        with self.assertRaisesRegex(ValueError,"older than bulk"):
+        for venue in VENUES:
+            l["coverage"][venue].update(eligible_days=2,verified_days=2)
+        self.assertEqual(m.audit_bybit(h,s,l)["bybit_independent_linear"]["verified_days"],3)
+
+    def test_daily_older_cutoff_cannot_claim_future_verified_days(self):
+        h,s,l=fixture()
+        l["target_day"]=(BULK-dt.timedelta(days=1)).isoformat()
+        for venue in VENUES:
+            l["coverage"][venue]["eligible_days"]=2
+        with self.assertRaisesRegex(ValueError,"Bybit coverage mismatch"):
             m.audit_bybit(h,s,l)
 
     def test_bulk_explicit_error_stays_explicit_not_zero(self):
