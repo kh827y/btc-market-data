@@ -31,15 +31,20 @@ def audit_bybit(history,status,latest):
     require(latest["full_source_crc_verified"] is False,
             "Bybit partial ZIP is not a complete CRC validation")
     require(latest["snapshot_not_daily_average"] is True,"Bybit point snapshot label")
+    # The daily Bybit collector can publish newer snapshots than the
+    # one-off parallel bulk backfill. Audit each at its own date cutoff.
+    latest_through=dt.date.fromisoformat(latest["target_day"])
+    require(latest_through>=through,"Bybit daily snapshot older than bulk backfill")
     result={}
     for venue,start in BYBIT_START.items():
         rows=history["records"][venue]
         errs=history.get("failures",{})
         reported=status["day_audit"][venue]
         expected=(through-start).days+1
+        latest_expected=(latest_through-start).days+1
         require(expected>0,"Bybit source date range invalid")
-        verified=0;explicit=0;missing=[]
-        for offset in range(expected):
+        verified=0;latest_verified=0;explicit=0;missing=[]
+        for offset in range(latest_expected):
             day=(start+dt.timedelta(days=offset)).isoformat()
             row=rows.get(day)
             err=errs.get(venue+":"+day)
@@ -57,9 +62,11 @@ def audit_bybit(history,status,latest):
                         require(band.get("bid_coverage_complete") and band.get("ask_coverage_complete")
                                 and band.get("bid_usd") is not None and band.get("ask_usd") is not None,
                                 "Bybit partial band reported complete "+venue+":"+day)
-                verified+=1
-            elif err is not None:explicit+=1
-            else:missing.append(day)
+                latest_verified+=1
+                if offset<expected:verified+=1
+            elif offset<expected:
+                if err is not None:explicit+=1
+                else:missing.append(day)
         require(reported["eligible_days"]==expected
                 and reported["verified_days"]==verified
                 and reported["explicit_error_days"]==explicit
@@ -68,7 +75,8 @@ def audit_bybit(history,status,latest):
                 "Bybit source-date audit mismatch "+venue)
         require(status["coverage"][venue]["verified_days"]==verified
                 and status["coverage"][venue]["eligible_days"]==expected
-                and latest["coverage"][venue]["verified_days"]==verified,
+                and latest["coverage"][venue]["verified_days"]==latest_verified
+                and latest["coverage"][venue]["eligible_days"]==latest_expected,
                 "Bybit coverage mismatch "+venue)
         result[venue]={"eligible_days":expected,"verified_days":verified,
                        "explicit_error_days":explicit,"unchecked_days":len(missing),
