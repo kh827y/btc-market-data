@@ -1,5 +1,5 @@
 {
-  "as_of_utc": "2026-11-03T02:53:00.040987+00:00",
+  "as_of_utc": "2026-11-03T02:53:20.665875+00:00",
   "btc_technicals": {
     "breakout20": "within_prev20_range",
     "closed_candles_only": true,
@@ -61,7 +61,7 @@
     "weekly_ma200_rising": true
   },
   "collector_watchdog": {
-    "age_h": 0.68,
+    "age_h": 0.69,
     "auto_recovery": {
       "dispatched": [],
       "max_dispatch_per_check": 2,
@@ -203,12 +203,10 @@
     "workflow_api_reachable": true
   },
   "coverage_gaps": [
-    "macro_etf:ice_dxy_exact_unavailable",
     "onchain:missing_or_delayed_metrics=3",
     "derivatives:cme_front_basis_unavailable",
     "live_depth:original_11_selected_markets_not_all_verified",
-    "metric_quality:derivatives.oi_five:stale:parent_source_not_fresh",
-    "metric_quality:macro.ice_dxy_exact:unverified:"
+    "metric_quality:derivatives.oi_five:stale:parent_source_not_fresh"
   ],
   "family_readiness": {
     "current_all_11_orderbooks_complete_1pct": false,
@@ -223,7 +221,7 @@
     "current_spot_orderbook": false,
     "current_spot_orderbook_venues": 0,
     "holder_behavior": true,
-    "macro_exact_ice_dxy": false,
+    "macro_exact_ice_dxy": true,
     "macro_fed_rates": true,
     "macro_liquidity": true,
     "macro_treasury_yields": true,
@@ -253,15 +251,15 @@
   ],
   "macro": {
     "dxy_exact": {
-      "date": null,
+      "date": "2026-11-03",
       "exact_ice_index": true,
-      "fetched_utc": "2026-11-02T23:52:58.926868+00:00",
-      "intraday_quote_age_h": 3.0,
-      "not_finalized_eod": null,
-      "observation_kind": null,
+      "fetched_utc": "2026-11-03T02:53:07.299057+00:00",
+      "intraday_quote_age_h": 0.0,
+      "not_finalized_eod": true,
+      "observation_kind": "unfinished_current_session",
       "source": "Yahoo Finance, DX-Y.NYB (ICE US Dollar Index indicative public bars)",
-      "status": "unavailable_or_delayed",
-      "value": null
+      "status": "usable",
+      "value": 101.861
     },
     "fred": {
       "fed_balance_sheet_millions": {
@@ -330,7 +328,7 @@
     },
     "quality": {
       "fed_rates": true,
-      "ice_dxy_exact": false,
+      "ice_dxy_exact": true,
       "spot_etf_flow": true,
       "treasury_yields": true,
       "usd_broad_index": true
@@ -343,7 +341,7 @@
     "usd_broad_index_is_NOT_dxy": true
   },
   "metric_quality": {
-    "checked_utc": "2026-11-03T02:53:00.040987+00:00",
+    "checked_utc": "2026-11-03T02:53:20.665875+00:00",
     "checks": {
       "bybit_depth.bybit_independent_linear.1095d.0.01": {
         "comparison_key": "historical_book|bybit_depth|bybit_independent_linear|1095d|0.01",
@@ -1451,10 +1449,10 @@
       },
       "macro.ice_dxy_exact": {
         "comparison_key": "macro|ice_dxy_exact",
-        "observed_at": "2026-11-02",
+        "observed_at": "2026-11-03",
         "reason": null,
         "scope": "specific macro or ETF family, NOT an interchangeable global macro index",
-        "status": "unverified",
+        "status": "usable",
         "unit": "pct/index as individually labeled"
       },
       "macro.spot_etf_flow": {
@@ -1908,7 +1906,6 @@
     },
     "critical_issues": [
       "derivatives.oi_five:stale:parent_source_not_fresh",
-      "macro.ice_dxy_exact:unverified:",
       "live_depth.binance_spot:stale:parent_source_not_fresh",
       "live_depth.bybit_spot:stale:parent_source_not_fresh",
       "live_depth.coinbase_spot:stale:parent_source_not_fresh",
@@ -1928,8 +1925,8 @@
       "not_comparable": 0,
       "stale": 66,
       "unavailable": 0,
-      "unverified": 1,
-      "usable": 128
+      "unverified": 0,
+      "usable": 129
     }
   },
   "onchain": {
@@ -2645,7 +2642,7 @@
     "bybit_depth": {
       "age_h": 1.19,
       "collector_health": "ok",
-      "measurement_age_h": 26.88,
+      "measurement_age_h": 26.89,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-liquidity/data/bybit_independent_latest.json",
       "source_errors": 0,
       "spot_quote_age_h": null,
@@ -2665,7 +2662,7 @@
     "hft_depth": {
       "age_h": 2.99,
       "collector_health": "errors_present",
-      "measurement_age_h": 38.88,
+      "measurement_age_h": 38.89,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-liquidity/data/hft_latest.json",
       "source_errors": 20,
       "spot_quote_age_h": null,
@@ -2683,7 +2680,7 @@
       "status": "stale"
     },
     "macro_etf": {
-      "age_h": 3.0,
+      "age_h": 0.0,
       "collector_health": "ok",
       "measurement_age_h": null,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-macro/data/latest.json",
@@ -2693,7 +2690,7 @@
       "status": "fresh"
     },
     "onchain": {
-      "age_h": 10.26,
+      "age_h": 10.27,
       "collector_health": "ok",
       "measurement_age_h": null,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-onchain/data/monitor_latest.json",
@@ -2713,19 +2710,19 @@
       "status": "fresh"
     },
     "price_technical": {
-      "age_h": 0.0,
+      "age_h": 0.01,
       "collector_health": "ok",
-      "measurement_age_h": 2.88,
+      "measurement_age_h": 2.89,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-price/data/latest.json",
       "source_errors": 0,
-      "spot_quote_age_h": 0.0,
+      "spot_quote_age_h": 0.01,
       "spot_quote_status": "fresh",
       "status": "fresh"
     },
     "spot_cvd": {
       "age_h": 1.17,
       "collector_health": "ok",
-      "measurement_age_h": 2.88,
+      "measurement_age_h": 2.89,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-spot-cvd/data/latest.json",
       "source_errors": 0,
       "spot_quote_age_h": null,
