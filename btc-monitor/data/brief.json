@@ -1,5 +1,5 @@
 {
-  "as_of_utc": "2026-11-03T23:57:18.284858+00:00",
+  "as_of_utc": "2026-11-03T23:57:38.098945+00:00",
   "btc_technicals": {
     "breakout20": "within_prev20_range",
     "closed_candles_only": true,
@@ -61,7 +61,7 @@
     "weekly_ma200_rising": true
   },
   "collector_watchdog": {
-    "age_h": 0.33,
+    "age_h": 0.34,
     "auto_recovery": {
       "dispatched": [],
       "max_dispatch_per_check": 2,
@@ -225,72 +225,12 @@
     "workflow_api_reachable": true
   },
   "coverage_gaps": [
-    "macro_etf:ice_dxy_exact_unavailable",
     "live_depth:failed_venues=1",
     "onchain:missing_or_delayed_metrics=3",
+    "derivatives:cme_front_basis_unavailable",
     "live_depth:original_11_selected_markets_not_all_verified",
-    "metric_quality:macro.ice_dxy_exact:unverified:"
+    "metric_quality:derivatives.oi_five:stale:parent_source_not_fresh"
   ],
-  "derivatives": {
-    "cftc_cme_weekly": {
-      "as_of": "2026-10-27",
-      "positions": {
-        "asset_manager_long": 4743,
-        "asset_manager_short": 1989,
-        "dealer_long": 6257,
-        "dealer_short": 5001,
-        "leveraged_long": 5887,
-        "leveraged_short": 9866,
-        "open_interest_btc_equivalent": 103955,
-        "open_interest_contracts": 20791
-      }
-    },
-    "cme_front_basis": {
-      "annualized_basis_pct": 4.01767,
-      "contract": "BTCZ26.CME",
-      "date": "2026-11-02",
-      "days_to_expiry": 52.875,
-      "expiry": "20261225",
-      "futures_usd": 77545.0,
-      "spot_usd": 77096.29,
-      "timestamp": "2026-11-02T19:00:00+00:00"
-    },
-    "dated_futures_matched_expiry": "2026-12-25",
-    "forced_liquidations_24h": {
-      "data_freshness": {
-        "age_h": 0.3,
-        "source": "Edge liquidations",
-        "status": "fresh"
-      },
-      "long_usd": 14233345.54,
-      "short_usd": 4034193.87,
-      "updated": "2026-11-03T20:39:04.482000+00:00"
-    },
-    "funding_settled": {
-      "Binance": {
-        "last": "2026-11-03T16:00:00+00:00",
-        "max_gap_h": 8.0,
-        "rate_8h": 0.0001
-      },
-      "Bybit": {
-        "last": "2026-11-03T16:00:00+00:00",
-        "max_gap_h": 8.0,
-        "rate_8h": 7.425e-05
-      },
-      "OKX": {
-        "last": "2026-11-03T16:00:00+00:00",
-        "max_gap_h": 8.0,
-        "rate_8h": 0.0001
-      }
-    },
-    "oi_1d_7d_30d_pct": {
-      "1d": 0.992,
-      "30d": 2.942,
-      "7d": 0.936
-    },
-    "oi_five_venue_usd": 21460830762.66,
-    "oi_latest_hour": "2026-11-03T20:00:00Z"
-  },
   "family_readiness": {
     "current_all_11_orderbooks_complete_1pct": false,
     "current_all_11_selected_orderbooks": false,
@@ -304,7 +244,7 @@
     "current_spot_orderbook": false,
     "current_spot_orderbook_venues": 0,
     "holder_behavior": true,
-    "macro_exact_ice_dxy": false,
+    "macro_exact_ice_dxy": true,
     "macro_fed_rates": true,
     "macro_liquidity": true,
     "macro_treasury_yields": true,
@@ -312,7 +252,7 @@
     "onchain_independent_cost_basis": true,
     "options": true,
     "orderbook": true,
-    "positioning": true,
+    "positioning": false,
     "price_live_spot_quote": true,
     "price_technical_cross_venue": true,
     "price_technical_verified": true,
@@ -329,19 +269,20 @@
     "us_spot_btc_etf_flows": true
   },
   "issues": [
+    "derivatives:stale",
     "live_depth:stale"
   ],
   "macro": {
     "dxy_exact": {
-      "date": null,
+      "date": "2026-11-03",
       "exact_ice_index": true,
-      "fetched_utc": "2026-11-03T20:58:37.608279+00:00",
-      "intraday_quote_age_h": 2.98,
-      "not_finalized_eod": null,
-      "observation_kind": null,
+      "fetched_utc": "2026-11-03T23:57:23.313545+00:00",
+      "intraday_quote_age_h": 0.0,
+      "not_finalized_eod": true,
+      "observation_kind": "unfinished_current_session",
       "source": "Yahoo Finance, DX-Y.NYB (ICE US Dollar Index indicative public bars)",
-      "status": "unavailable_or_delayed",
-      "value": null
+      "status": "usable",
+      "value": 101.89
     },
     "fred": {
       "fed_balance_sheet_millions": {
@@ -354,8 +295,8 @@
         "value": 6745635.0
       },
       "fed_funds_effective_pct": {
-        "date": "2026-10-30",
-        "lag_days": 4,
+        "date": "2026-11-02",
+        "lag_days": 1,
         "series_id": "DFF",
         "source_url": "https://fred.stlouisfed.org/series/DFF",
         "status": "usable",
@@ -381,22 +322,22 @@
         "value": 4.0
       },
       "treasury_10y_pct": {
-        "date": "2026-10-30",
-        "lag_days": 4,
+        "date": "2026-11-02",
+        "lag_days": 1,
         "series_id": "DGS10",
         "source_url": "https://fred.stlouisfed.org/series/DGS10",
         "status": "usable",
         "unit": "annual interest percentage points",
-        "value": 4.94
+        "value": 4.91
       },
       "treasury_2y_pct": {
-        "date": "2026-10-30",
-        "lag_days": 4,
+        "date": "2026-11-02",
+        "lag_days": 1,
         "series_id": "DGS2",
         "source_url": "https://fred.stlouisfed.org/series/DGS2",
         "status": "usable",
         "unit": "annual interest percentage points",
-        "value": 4.56
+        "value": 4.59
       },
       "usd_broad_trade_weighted": {
         "date": "2026-10-30",
@@ -410,20 +351,20 @@
     },
     "quality": {
       "fed_rates": true,
-      "ice_dxy_exact": false,
+      "ice_dxy_exact": true,
       "spot_etf_flow": true,
       "treasury_yields": true,
       "usd_broad_index": true
     },
     "treasury_curve": {
-      "date": "2026-10-30",
-      "spread_pct_points": 0.38,
+      "date": "2026-11-02",
+      "spread_pct_points": 0.32,
       "status": "usable"
     },
     "usd_broad_index_is_NOT_dxy": true
   },
   "metric_quality": {
-    "checked_utc": "2026-11-03T23:57:18.284858+00:00",
+    "checked_utc": "2026-11-03T23:57:38.098945+00:00",
     "checks": {
       "bybit_depth.bybit_independent_linear.1095d.0.01": {
         "comparison_key": "historical_book|bybit_depth|bybit_independent_linear|1095d|0.01",
@@ -588,65 +529,65 @@
       "derivatives.cftc_cme_weekly": {
         "comparison_key": "CME_COT|standard_BTC_futures|5BTC_contract",
         "observed_at": "2026-10-27",
-        "reason": null,
+        "reason": "parent_source_not_fresh",
         "scope": "weekly Tuesday CFTC observed positions; published with lag; not directional spot sales",
-        "status": "usable",
+        "status": "stale",
         "unit": "CME standard BTC futures contracts of 5 BTC"
       },
       "derivatives.cme_basis": {
         "comparison_key": "CME|BTCZ26.CME",
         "observed_at": "2026-11-02T19:00:00+00:00",
-        "reason": null,
+        "reason": "parent_source_not_fresh",
         "scope": "CME dated futures matched to nearby spot observation; expiry-specific",
-        "status": "usable",
+        "status": "stale",
         "unit": "annualized pct"
       },
       "derivatives.dated_basis_matched": {
         "comparison_key": "matched_expiry_BTC_basis|2026-12-25",
         "observed_at": "2026-11-03T20:03:40.397000+00:00",
-        "reason": null,
+        "reason": "parent_source_not_fresh",
         "scope": "four specific dated BTC future contracts, same exact expiry",
-        "status": "usable",
+        "status": "stale",
         "unit": "annualized basis percentage points"
       },
       "derivatives.funding_8h.Binance": {
         "comparison_key": "settled_funding_8h|Binance",
         "observed_at": "2026-11-03T16:00:00+00:00",
-        "reason": null,
+        "reason": "parent_source_not_fresh",
         "scope": "single venue BTCUSDT perp settled funding, not a forecast",
-        "status": "usable",
+        "status": "stale",
         "unit": "rate fraction per 8h settled interval"
       },
       "derivatives.funding_8h.Bybit": {
         "comparison_key": "settled_funding_8h|Bybit",
         "observed_at": "2026-11-03T16:00:00+00:00",
-        "reason": null,
+        "reason": "parent_source_not_fresh",
         "scope": "single venue BTCUSDT perp settled funding, not a forecast",
-        "status": "usable",
+        "status": "stale",
         "unit": "rate fraction per 8h settled interval"
       },
       "derivatives.funding_8h.OKX": {
         "comparison_key": "settled_funding_8h|OKX",
         "observed_at": "2026-11-03T16:00:00+00:00",
-        "reason": null,
+        "reason": "parent_source_not_fresh",
         "scope": "single venue BTCUSDT perp settled funding, not a forecast",
-        "status": "usable",
+        "status": "stale",
         "unit": "rate fraction per 8h settled interval"
       },
       "derivatives.liquidations_24h": {
         "comparison_key": "liquidation_forced|Binance,Bybit|24h",
         "observed_at": "2026-11-03T20:39:04.482000+00:00",
-        "reason": null,
+        "reason": "parent_source_not_fresh",
         "scope": "reported Binance+Bybit 24h only; not worldwide",
-        "status": "usable",
+        "status": "stale",
         "unit": "USD forced liquidations"
       },
       "derivatives.oi_five": {
         "comparison_key": "same_five_venue_OI_USD",
         "observed_at": "2026-11-03T20:00:00Z",
-        "reason": null,
+        "reason": "parent_source_not_fresh",
         "scope": "Binance,Bybit,OKX,Gate.io,Hyperliquid OI, not worldwide",
-        "status": "usable",
+        "status": "stale",
         "unit": "USD notional"
       },
       "hft_depth.binance_futures.1d.0.01": {
@@ -1534,7 +1475,7 @@
         "observed_at": "2026-11-03",
         "reason": null,
         "scope": "specific macro or ETF family, NOT an interchangeable global macro index",
-        "status": "unverified",
+        "status": "usable",
         "unit": "pct/index as individually labeled"
       },
       "macro.spot_etf_flow": {
@@ -1987,7 +1928,7 @@
       }
     },
     "critical_issues": [
-      "macro.ice_dxy_exact:unverified:",
+      "derivatives.oi_five:stale:parent_source_not_fresh",
       "live_depth.binance_spot:stale:parent_source_not_fresh",
       "live_depth.bybit_spot:stale:parent_source_not_fresh",
       "live_depth.coinbase_spot:stale:parent_source_not_fresh",
@@ -2005,10 +1946,10 @@
       "incomplete": 0,
       "invalid": 0,
       "not_comparable": 0,
-      "stale": 58,
+      "stale": 66,
       "unavailable": 0,
-      "unverified": 1,
-      "usable": 136
+      "unverified": 0,
+      "usable": 129
     }
   },
   "onchain": {
@@ -2732,17 +2673,17 @@
       "status": "fresh"
     },
     "derivatives": {
-      "age_h": 3.0,
+      "age_h": 3.01,
       "collector_health": "ok",
       "measurement_age_h": null,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-derivatives/data/latest.json",
       "source_errors": 0,
       "spot_quote_age_h": null,
       "spot_quote_status": null,
-      "status": "fresh"
+      "status": "stale"
     },
     "hft_depth": {
-      "age_h": 1.35,
+      "age_h": 1.36,
       "collector_health": "errors_present",
       "measurement_age_h": 35.96,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-liquidity/data/hft_latest.json",
@@ -2752,9 +2693,9 @@
       "status": "fresh"
     },
     "live_depth": {
-      "age_h": 2.93,
+      "age_h": 2.94,
       "collector_health": "errors_present",
-      "measurement_age_h": 2.93,
+      "measurement_age_h": 2.94,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-liquidity/data/latest.json",
       "source_errors": 1,
       "spot_quote_age_h": null,
@@ -2762,7 +2703,7 @@
       "status": "stale"
     },
     "macro_etf": {
-      "age_h": 2.98,
+      "age_h": 0.0,
       "collector_health": "ok",
       "measurement_age_h": null,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-macro/data/latest.json",
@@ -2782,7 +2723,7 @@
       "status": "fresh"
     },
     "options": {
-      "age_h": 2.95,
+      "age_h": 2.96,
       "collector_health": "ok",
       "measurement_age_h": null,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-options/data/latest.json",
