@@ -1,12 +1,13 @@
 {
-  "as_of_utc": "2026-11-03T02:53:20.665875+00:00",
+  "as_of_utc": "2026-11-03T02:57:06.163620+00:00",
   "audit": {
     "WARNING": "Bridge generation success DOES NOT imply source freshness or all-market coverage",
     "coverage_gaps": [
       "onchain:missing_or_delayed_metrics=3",
       "derivatives:cme_front_basis_unavailable",
       "live_depth:original_11_selected_markets_not_all_verified",
-      "metric_quality:derivatives.oi_five:stale:parent_source_not_fresh"
+      "metric_quality:derivatives.oi_five:stale:parent_source_not_fresh",
+      "metric_quality:options.deribit.1M:stale:parent_source_not_fresh"
     ],
     "family_readiness": {
       "current_all_11_orderbooks_complete_1pct": false,
@@ -27,7 +28,7 @@
       "macro_treasury_yields": true,
       "macro_usd_broad_not_dxy": true,
       "onchain_independent_cost_basis": true,
-      "options": true,
+      "options": false,
       "orderbook": true,
       "positioning": false,
       "price_live_spot_quote": true,
@@ -45,16 +46,17 @@
       "spot_execution": true,
       "us_spot_btc_etf_flows": true
     },
-    "fresh": 7,
+    "fresh": 6,
     "issues": [
       "derivatives:stale",
+      "options:stale",
       "live_depth:stale"
     ],
     "sources_parsed": 9,
     "sources_total": 9
   },
   "collector_watchdog": {
-    "age_h": 0.69,
+    "age_h": 0.06,
     "auto_recovery": {
       "dispatched": [],
       "max_dispatch_per_check": 2,
@@ -62,11 +64,11 @@
       "pending_or_blocked": []
     },
     "caveat": "This feed is not proof that the scheduled ChatGPT run actually read it",
-    "checked_utc": "2026-11-03T02:11:56.465100+00:00",
+    "checked_utc": "2026-11-03T02:53:42.667081+00:00",
     "sources": {
       "bybit_depth": {
         "coverage_gaps": [],
-        "file_age_h": 0.501,
+        "file_age_h": 1.197,
         "reason": null,
         "recovery": "none",
         "status": "healthy",
@@ -74,7 +76,7 @@
       },
       "derivatives": {
         "coverage_gaps": [],
-        "file_age_h": 2.333,
+        "file_age_h": 3.03,
         "reason": null,
         "recovery": "none",
         "status": "healthy",
@@ -84,7 +86,7 @@
         "coverage_gaps": [
           "20_historical_source_errors"
         ],
-        "file_age_h": 2.303,
+        "file_age_h": 2.999,
         "reason": null,
         "recovery": "none",
         "status": "healthy",
@@ -92,7 +94,7 @@
       },
       "live_depth": {
         "coverage_gaps": [],
-        "file_age_h": 2.311,
+        "file_age_h": 3.007,
         "reason": null,
         "recovery": "none",
         "status": "healthy",
@@ -100,7 +102,7 @@
       },
       "macro_etf": {
         "coverage_gaps": [],
-        "file_age_h": 2.316,
+        "file_age_h": 0.01,
         "reason": null,
         "recovery": "none",
         "status": "healthy",
@@ -109,13 +111,28 @@
       "monitor_bridge": {
         "coverage_gaps": [
           "onchain:missing_or_delayed_metrics=3",
-          "live_depth:0.2pct_complete=10/11_selected_markets",
-          "live_depth:1.0pct_complete=3/11_selected_markets"
+          "derivatives:cme_front_basis_unavailable",
+          "live_depth:original_11_selected_markets_not_all_verified",
+          "metric_quality:derivatives.oi_five:stale:parent_source_not_fresh",
+          "critical_metric:derivatives.oi_five:stale:parent_source_not_fresh",
+          "critical_metric:live_depth.binance_spot:stale:parent_source_not_fresh",
+          "critical_metric:live_depth.bybit_spot:stale:parent_source_not_fresh",
+          "critical_metric:live_depth.coinbase_spot:stale:parent_source_not_fresh",
+          "critical_metric:live_depth.okx_spot:stale:parent_source_not_fresh",
+          "critical_metric:live_depth.bitget_spot:stale:parent_source_not_fresh",
+          "critical_metric:live_depth.gate_spot:stale:parent_source_not_fresh",
+          "critical_metric:live_depth.binance_usdm_perp:stale:parent_source_not_fresh",
+          "critical_metric:live_depth.bybit_usdt_perp:stale:parent_source_not_fresh",
+          "critical_metric:live_depth.okx_usdt_perp:stale:parent_source_not_fresh",
+          "critical_metric:live_depth.bitget_usdt_perp:stale:parent_source_not_fresh",
+          "critical_metric:live_depth.gate_usdt_perp:stale:parent_source_not_fresh",
+          "critical_family_not_fresh:derivatives",
+          "critical_family_not_fresh:live_depth"
         ],
-        "file_age_h": 0.475,
-        "reason": null,
+        "file_age_h": 0.006,
+        "reason": "underlying_source_or_metric_unusable",
         "recovery": "none",
-        "status": "healthy",
+        "status": "degraded_critical_inputs",
         "workflow_api_error": null
       },
       "onchain": {
@@ -124,7 +141,7 @@
           "market_onchain:realized_price: 7 days",
           "market_onchain:sth_realized_price: 7 days"
         ],
-        "file_age_h": 9.576,
+        "file_age_h": 10.272,
         "reason": null,
         "recovery": "none",
         "status": "healthy",
@@ -132,7 +149,7 @@
       },
       "onchain_bitview": {
         "coverage_gaps": [],
-        "file_age_h": 10.4,
+        "file_age_h": 11.096,
         "reason": null,
         "recovery": "none",
         "status": "healthy",
@@ -144,7 +161,7 @@
           "lth_realized_price:missing_or_vendor_delay",
           "realized_price:missing_or_vendor_delay"
         ],
-        "file_age_h": 12.36,
+        "file_age_h": 13.056,
         "reason": null,
         "recovery": "none",
         "status": "healthy",
@@ -152,7 +169,7 @@
       },
       "onchain_whale": {
         "coverage_gaps": [],
-        "file_age_h": 9.713,
+        "file_age_h": 10.409,
         "reason": null,
         "recovery": "none",
         "status": "healthy",
@@ -160,7 +177,7 @@
       },
       "onchain_whale_alerts": {
         "coverage_gaps": [],
-        "file_age_h": 9.622,
+        "file_age_h": 10.318,
         "reason": null,
         "recovery": "none",
         "status": "healthy",
@@ -168,7 +185,7 @@
       },
       "options": {
         "coverage_gaps": [],
-        "file_age_h": 2.301,
+        "file_age_h": 2.998,
         "reason": null,
         "recovery": "none",
         "status": "healthy",
@@ -176,7 +193,7 @@
       },
       "price_technical": {
         "coverage_gaps": [],
-        "file_age_h": 0.488,
+        "file_age_h": 0.016,
         "reason": null,
         "recovery": "none",
         "status": "healthy",
@@ -184,26 +201,26 @@
       },
       "spot_cvd": {
         "coverage_gaps": [],
-        "file_age_h": 0.483,
+        "file_age_h": 1.179,
         "reason": null,
         "recovery": "none",
         "status": "healthy",
         "workflow_api_error": null
       }
     },
-    "status": "healthy",
+    "status": "degraded",
     "unavailable_or_stale": [],
     "workflow_api_reachable": true
   },
   "feed_contract": "Source-level UTC quality bridge; not a standalone reversal signal",
   "feeds": {
     "bybit_depth": {
-      "age_h": 1.19,
+      "age_h": 1.25,
       "collector_health": "ok",
       "family": "orderbook",
       "generated_at": "2026-11-03T01:41:53.173413+00:00",
       "max_age_h": 36.0,
-      "measurement_age_h": 26.89,
+      "measurement_age_h": 26.95,
       "measurement_at": "2026-11-02T00:00:00+00:00",
       "source": "https://github.com/kh827y/btc-market-data/blob/main/btc-liquidity/data/bybit_independent_latest.json",
       "source_errors": 0,
@@ -213,7 +230,7 @@
       "status": "fresh"
     },
     "derivatives": {
-      "age_h": 3.02,
+      "age_h": 3.09,
       "collector_health": "ok",
       "family": "positioning",
       "generated_at": "2026-11-02T23:51:56.093722+00:00",
@@ -228,12 +245,12 @@
       "status": "stale"
     },
     "hft_depth": {
-      "age_h": 2.99,
+      "age_h": 3.06,
       "collector_health": "errors_present",
       "family": "orderbook",
       "generated_at": "2026-11-02T23:53:46.144605+00:00",
       "max_age_h": 36.0,
-      "measurement_age_h": 38.89,
+      "measurement_age_h": 38.95,
       "measurement_at": "2026-11-01T12:00:00+00:00",
       "source": "https://github.com/kh827y/btc-market-data/blob/main/btc-liquidity/data/hft_latest.json",
       "source_errors": 20,
@@ -243,12 +260,12 @@
       "status": "fresh"
     },
     "live_depth": {
-      "age_h": 3.0,
+      "age_h": 3.06,
       "collector_health": "ok",
       "family": "orderbook",
       "generated_at": "2026-11-02T23:53:17.053206+00:00",
       "max_age_h": 2.5,
-      "measurement_age_h": 3.0,
+      "measurement_age_h": 3.06,
       "measurement_at": "2026-11-02T23:53:17.053206+00:00",
       "source": "https://github.com/kh827y/btc-market-data/blob/main/btc-liquidity/data/latest.json",
       "source_errors": 0,
@@ -261,7 +278,7 @@
       "age_h": 0.0,
       "collector_health": "ok",
       "family": "macro_liquidity",
-      "generated_at": "2026-11-03T02:53:07.299057+00:00",
+      "generated_at": "2026-11-03T02:56:48.303307+00:00",
       "max_age_h": 26.0,
       "measurement_age_h": null,
       "measurement_at": null,
@@ -273,7 +290,7 @@
       "status": "fresh"
     },
     "onchain": {
-      "age_h": 10.27,
+      "age_h": 10.33,
       "collector_health": "ok",
       "family": "holder_behavior",
       "generated_at": "2026-11-02T16:37:22.256713+00:00",
@@ -288,7 +305,7 @@
       "status": "fresh"
     },
     "options": {
-      "age_h": 2.99,
+      "age_h": 3.05,
       "collector_health": "ok",
       "family": "options",
       "generated_at": "2026-11-02T23:53:51.494528+00:00",
@@ -300,30 +317,30 @@
       "source_status": null,
       "spot_quote_age_h": null,
       "spot_quote_status": null,
-      "status": "fresh"
+      "status": "stale"
     },
     "price_technical": {
-      "age_h": 0.01,
+      "age_h": 0.07,
       "collector_health": "ok",
       "family": "price_trend",
       "generated_at": "2026-11-03T02:52:44.435269+00:00",
       "max_age_h": 26.0,
-      "measurement_age_h": 2.89,
+      "measurement_age_h": 2.95,
       "measurement_at": "2026-11-03T00:00:00+00:00",
       "source": "https://github.com/kh827y/btc-market-data/blob/main/btc-price/data/latest.json",
       "source_errors": 0,
       "source_status": "ok",
-      "spot_quote_age_h": 0.01,
+      "spot_quote_age_h": 0.07,
       "spot_quote_status": "fresh",
       "status": "fresh"
     },
     "spot_cvd": {
-      "age_h": 1.17,
+      "age_h": 1.24,
       "collector_health": "ok",
       "family": "spot_execution",
       "generated_at": "2026-11-03T01:42:59.158748+00:00",
       "max_age_h": 2.5,
-      "measurement_age_h": 2.89,
+      "measurement_age_h": 2.95,
       "measurement_at": "2026-11-03T00:00:00+00:00",
       "source": "https://github.com/kh827y/btc-market-data/blob/main/btc-spot-cvd/data/latest.json",
       "source_errors": 0,
@@ -334,7 +351,7 @@
     }
   },
   "metric_quality": {
-    "checked_utc": "2026-11-03T02:53:20.665875+00:00",
+    "checked_utc": "2026-11-03T02:57:06.163620+00:00",
     "checks": {
       "bybit_depth.bybit_independent_linear.1095d.0.01": {
         "comparison_key": "historical_book|bybit_depth|bybit_independent_linear|1095d|0.01",
@@ -1813,58 +1830,65 @@
       "options.deribit.1M": {
         "comparison_key": "Deribit|BTC|1M|markIV",
         "observed_at": "2026-11-02T23:53:51.494528+00:00",
+        "reason": "parent_source_not_fresh",
         "required_for_family": true,
         "scope": "Deribit BTC mark-IV, expiry-bracketed approximated 25d call minus put",
         "source": "options",
-        "status": "usable",
+        "status": "stale",
         "unit": "IV pct; RR25 volatility points"
       },
       "options.deribit.1W": {
         "comparison_key": "Deribit|BTC|1W|markIV",
         "observed_at": "2026-11-02T23:53:51.494528+00:00",
+        "reason": "parent_source_not_fresh",
         "scope": "Deribit BTC mark-IV, expiry-bracketed approximated 25d call minus put",
         "source": "options",
-        "status": "usable",
+        "status": "stale",
         "unit": "IV pct; RR25 volatility points"
       },
       "options.deribit.2W": {
         "comparison_key": "Deribit|BTC|2W|markIV",
         "observed_at": "2026-11-02T23:53:51.494528+00:00",
+        "reason": "parent_source_not_fresh",
         "scope": "Deribit BTC mark-IV, expiry-bracketed approximated 25d call minus put",
         "source": "options",
-        "status": "usable",
+        "status": "stale",
         "unit": "IV pct; RR25 volatility points"
       },
       "options.deribit.3M": {
         "comparison_key": "Deribit|BTC|3M|markIV",
         "observed_at": "2026-11-02T23:53:51.494528+00:00",
+        "reason": "parent_source_not_fresh",
         "scope": "Deribit BTC mark-IV, expiry-bracketed approximated 25d call minus put",
         "source": "options",
-        "status": "usable",
+        "status": "stale",
         "unit": "IV pct; RR25 volatility points"
       },
       "options.deribit.6M": {
         "comparison_key": "Deribit|BTC|6M|markIV",
         "observed_at": "2026-11-02T23:53:51.494528+00:00",
+        "reason": "parent_source_not_fresh",
         "scope": "Deribit BTC mark-IV, expiry-bracketed approximated 25d call minus put",
         "source": "options",
-        "status": "usable",
+        "status": "stale",
         "unit": "IV pct; RR25 volatility points"
       },
       "options.derivasys_1m_report": {
         "comparison_key": "Derivasys|BTC|1M|daily_report",
         "observed_at": "2026-11-02",
+        "reason": "parent_source_not_fresh",
         "scope": "dated third-party published BTC options daily 1M research, not live",
         "source": "options",
-        "status": "usable",
+        "status": "stale",
         "unit": "ATM IV pct; RR25 volatility points"
       },
       "options.dvol_closed_daily": {
         "comparison_key": "Deribit|BTC|DVOL|daily_closed",
         "observed_at": "2026-11-01",
+        "reason": "parent_source_not_fresh",
         "scope": "Deribit BTC DVOL expected 30d magnitude; not direction or ATM",
         "source": "options",
-        "status": "usable",
+        "status": "stale",
         "unit": "DVOL percentage index"
       },
       "price.closed_daily_weekly": {
@@ -1987,6 +2011,7 @@
     },
     "critical_issues": [
       "derivatives.oi_five:stale:parent_source_not_fresh",
+      "options.deribit.1M:stale:parent_source_not_fresh",
       "live_depth.binance_spot:stale:parent_source_not_fresh",
       "live_depth.bybit_spot:stale:parent_source_not_fresh",
       "live_depth.coinbase_spot:stale:parent_source_not_fresh",
@@ -2008,10 +2033,10 @@
       "incomplete": 0,
       "invalid": 0,
       "not_comparable": 0,
-      "stale": 66,
+      "stale": 73,
       "unavailable": 0,
       "unverified": 0,
-      "usable": 129
+      "usable": 122
     }
   },
   "metrics": {
@@ -3183,13 +3208,13 @@
       "dxy_exact": {
         "date": "2026-11-03",
         "exact_ice_index": true,
-        "fetched_utc": "2026-11-03T02:53:07.299057+00:00",
+        "fetched_utc": "2026-11-03T02:56:48.303307+00:00",
         "intraday_quote_age_h": 0.0,
         "not_finalized_eod": true,
         "observation_kind": "unfinished_current_session",
         "source": "Yahoo Finance, DX-Y.NYB (ICE US Dollar Index indicative public bars)",
         "status": "usable",
-        "value": 101.861
+        "value": 101.857
       },
       "fred": {
         "fed_balance_sheet_millions": {
@@ -3568,106 +3593,18 @@
     "options": {
       "deribit_as_of": "2026-11-02T23:53:51.494528+00:00",
       "deribit_term": {
-        "1M": {
-          "atm_iv_pct": 37.2876,
-          "bf25_volpts": 1.1594,
-          "call25_iv_pct": 36.2194,
-          "expiry_gap_days": 28.0,
-          "expiry_left": "2026-11-27T08:00:00+00:00",
-          "expiry_right": "2026-12-25T08:00:00+00:00",
-          "method": "variance-time interpolation of 25d option mark IV and ATM; forward delta approximated analytically",
-          "put25_iv_pct": 40.6745,
-          "quality": "standard",
-          "rr25_call_minus_put_volpts": -4.4551,
-          "status": "available",
-          "target_days": 30
-        },
-        "1W": {
-          "atm_iv_pct": 40.2844,
-          "bf25_volpts": 1.0803,
-          "call25_iv_pct": 38.912,
-          "expiry_gap_days": 7.0,
-          "expiry_left": "2026-11-06T08:00:00+00:00",
-          "expiry_right": "2026-11-13T08:00:00+00:00",
-          "method": "variance-time interpolation of 25d option mark IV and ATM; forward delta approximated analytically",
-          "put25_iv_pct": 43.8174,
-          "quality": "standard",
-          "rr25_call_minus_put_volpts": -4.9054,
-          "status": "available",
-          "target_days": 7
-        },
-        "2W": {
-          "atm_iv_pct": 38.5785,
-          "bf25_volpts": 0.9272,
-          "call25_iv_pct": 37.0889,
-          "expiry_gap_days": 7.0,
-          "expiry_left": "2026-11-13T08:00:00+00:00",
-          "expiry_right": "2026-11-20T08:00:00+00:00",
-          "method": "variance-time interpolation of 25d option mark IV and ATM; forward delta approximated analytically",
-          "put25_iv_pct": 41.9225,
-          "quality": "standard",
-          "rr25_call_minus_put_volpts": -4.8336,
-          "status": "available",
-          "target_days": 14
-        },
-        "3M": {
-          "atm_iv_pct": 37.9207,
-          "bf25_volpts": 0.9446,
-          "call25_iv_pct": 37.1374,
-          "expiry_gap_days": 56.0,
-          "expiry_left": "2027-01-29T08:00:00+00:00",
-          "expiry_right": "2027-03-26T08:00:00+00:00",
-          "method": "variance-time interpolation of 25d option mark IV and ATM; forward delta approximated analytically",
-          "put25_iv_pct": 40.5932,
-          "quality": "wide_expiry_bracket",
-          "rr25_call_minus_put_volpts": -3.4558,
-          "status": "available",
-          "target_days": 90
-        },
-        "6M": {
-          "atm_iv_pct": 39.0225,
-          "bf25_volpts": 0.9301,
-          "call25_iv_pct": 38.6746,
-          "expiry_gap_days": 91.0,
-          "expiry_left": "2027-03-26T08:00:00+00:00",
-          "expiry_right": "2027-06-25T08:00:00+00:00",
-          "method": "variance-time interpolation of 25d option mark IV and ATM; forward delta approximated analytically",
-          "put25_iv_pct": 41.2307,
-          "quality": "wide_expiry_bracket",
-          "rr25_call_minus_put_volpts": -2.5561,
-          "status": "available",
-          "target_days": 180
-        }
+        "1M": null,
+        "1W": null,
+        "2W": null,
+        "3M": null,
+        "6M": null
       },
-      "derivasys_1m": {
-        "last_report_day": "2026-11-02",
-        "metrics": {
-          "atmIv": {
-            "change_30d_volpts": 4.39,
-            "change_7d_volpts": 1.4,
-            "current": 37.75,
-            "percentile_available": 76.04
-          },
-          "bf25": {
-            "change_30d_volpts": -1.0,
-            "change_7d_volpts": -1.18,
-            "current": 1.08,
-            "percentile_available": 1.56
-          },
-          "rr25": {
-            "change_30d_volpts": -2.62,
-            "change_7d_volpts": 0.14,
-            "current": -3.88,
-            "percentile_available": 56.25
-          }
-        },
-        "n_published_observations": 192
-      },
+      "derivasys_1m": null,
       "derivasys_report_date": "2026-11-02",
       "dvol": {
         "closed_days": 366,
         "last_date": "2026-11-01",
-        "percent": 40.28,
+        "percent": null,
         "percentile": 44.26
       },
       "rr25_convention": "call IV minus put IV (negative means more expensive downside puts), in volatility POINTS",
