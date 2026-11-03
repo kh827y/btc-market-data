@@ -1,29 +1,29 @@
 {
-  "as_of_utc": "2026-11-03T04:20:20.783298+00:00",
+  "as_of_utc": "2026-11-03T06:41:11.418938+00:00",
   "audit": {
     "WARNING": "Bridge generation success DOES NOT imply source freshness or all-market coverage",
     "coverage_gaps": [
+      "macro_etf:ice_dxy_exact_unavailable",
+      "btc_spot_quote:unavailable_or_stale",
       "onchain:missing_or_delayed_metrics=3",
-      "derivatives:cme_front_basis_unavailable",
-      "live_depth:0.2pct_complete=10/11_selected_markets",
-      "live_depth:1.0pct_complete=4/11_selected_markets",
-      "metric_quality:derivatives.oi_five:stale:parent_source_not_fresh",
-      "metric_quality:options.deribit.1M:stale:parent_source_not_fresh"
+      "live_depth:original_11_selected_markets_not_all_verified",
+      "metric_quality:options.deribit.1M:stale:parent_source_not_fresh",
+      "metric_quality:macro.ice_dxy_exact:unverified:"
     ],
     "family_readiness": {
       "current_all_11_orderbooks_complete_1pct": false,
-      "current_all_11_selected_orderbooks": true,
-      "current_orderbook": true,
-      "current_orderbook_band_001pct_verified_markets": 11,
-      "current_orderbook_band_005pct_verified_markets": 11,
-      "current_orderbook_band_02pct_verified_markets": 10,
-      "current_orderbook_band_1pct_verified_markets": 4,
-      "current_perp_orderbook": true,
-      "current_perp_orderbook_venues": 5,
-      "current_spot_orderbook": true,
-      "current_spot_orderbook_venues": 6,
+      "current_all_11_selected_orderbooks": false,
+      "current_orderbook": false,
+      "current_orderbook_band_001pct_verified_markets": 0,
+      "current_orderbook_band_005pct_verified_markets": 0,
+      "current_orderbook_band_02pct_verified_markets": 0,
+      "current_orderbook_band_1pct_verified_markets": 0,
+      "current_perp_orderbook": false,
+      "current_perp_orderbook_venues": 0,
+      "current_spot_orderbook": false,
+      "current_spot_orderbook_venues": 0,
       "holder_behavior": true,
-      "macro_exact_ice_dxy": true,
+      "macro_exact_ice_dxy": false,
       "macro_fed_rates": true,
       "macro_liquidity": true,
       "macro_treasury_yields": true,
@@ -31,8 +31,8 @@
       "onchain_independent_cost_basis": true,
       "options": false,
       "orderbook": true,
-      "positioning": false,
-      "price_live_spot_quote": true,
+      "positioning": true,
+      "price_live_spot_quote": false,
       "price_technical_cross_venue": true,
       "price_technical_verified": true,
       "price_trend": true,
@@ -49,170 +49,28 @@
     },
     "fresh": 7,
     "issues": [
-      "derivatives:stale",
-      "options:stale"
+      "options:stale",
+      "live_depth:stale"
     ],
     "sources_parsed": 9,
     "sources_total": 9
   },
   "collector_watchdog": {
-    "age_h": 0.0,
-    "auto_recovery": {
-      "dispatched": [],
-      "max_dispatch_per_check": 2,
-      "max_dispatch_per_source_24h": 3,
-      "pending_or_blocked": []
-    },
-    "caveat": "This feed is not proof that the scheduled ChatGPT run actually read it",
+    "age_h": 2.35,
     "checked_utc": "2026-11-03T04:20:06.286321+00:00",
-    "sources": {
-      "bybit_depth": {
-        "coverage_gaps": [],
-        "file_age_h": 2.637,
-        "reason": null,
-        "recovery": "none",
-        "status": "healthy",
-        "workflow_api_error": null
-      },
-      "derivatives": {
-        "coverage_gaps": [],
-        "file_age_h": 4.469,
-        "reason": null,
-        "recovery": "none",
-        "status": "healthy",
-        "workflow_api_error": null
-      },
-      "hft_depth": {
-        "coverage_gaps": [
-          "20_historical_source_errors"
-        ],
-        "file_age_h": 0.204,
-        "reason": null,
-        "recovery": "none",
-        "status": "healthy",
-        "workflow_api_error": null
-      },
-      "live_depth": {
-        "coverage_gaps": [],
-        "file_age_h": 0.383,
-        "reason": null,
-        "recovery": "none",
-        "status": "healthy",
-        "workflow_api_error": null
-      },
-      "macro_etf": {
-        "coverage_gaps": [],
-        "file_age_h": 1.388,
-        "reason": null,
-        "recovery": "none",
-        "status": "healthy",
-        "workflow_api_error": null
-      },
-      "monitor_bridge": {
-        "coverage_gaps": [
-          "onchain:missing_or_delayed_metrics=3",
-          "derivatives:cme_front_basis_unavailable",
-          "live_depth:0.2pct_complete=10/11_selected_markets",
-          "live_depth:1.0pct_complete=4/11_selected_markets",
-          "metric_quality:derivatives.oi_five:stale:parent_source_not_fresh",
-          "metric_quality:options.deribit.1M:stale:parent_source_not_fresh",
-          "critical_metric:derivatives.oi_five:stale:parent_source_not_fresh",
-          "critical_metric:options.deribit.1M:stale:parent_source_not_fresh",
-          "critical_family_not_fresh:derivatives",
-          "critical_family_not_fresh:options"
-        ],
-        "file_age_h": 0.004,
-        "reason": "underlying_source_or_metric_unusable",
-        "recovery": "none",
-        "status": "degraded_critical_inputs",
-        "workflow_api_error": null
-      },
-      "onchain": {
-        "coverage_gaps": [
-          "market_onchain:lth_realized_price: 7 days",
-          "market_onchain:realized_price: 7 days",
-          "market_onchain:sth_realized_price: 7 days"
-        ],
-        "file_age_h": 11.712,
-        "reason": null,
-        "recovery": "none",
-        "status": "healthy",
-        "workflow_api_error": null
-      },
-      "onchain_bitview": {
-        "coverage_gaps": [],
-        "file_age_h": 12.536,
-        "reason": null,
-        "recovery": "none",
-        "status": "healthy",
-        "workflow_api_error": null
-      },
-      "onchain_market": {
-        "coverage_gaps": [
-          "sth_realized_price:missing_or_vendor_delay",
-          "lth_realized_price:missing_or_vendor_delay",
-          "realized_price:missing_or_vendor_delay"
-        ],
-        "file_age_h": 14.496,
-        "reason": null,
-        "recovery": "none",
-        "status": "healthy",
-        "workflow_api_error": null
-      },
-      "onchain_whale": {
-        "coverage_gaps": [],
-        "file_age_h": 11.849,
-        "reason": null,
-        "recovery": "none",
-        "status": "healthy",
-        "workflow_api_error": null
-      },
-      "onchain_whale_alerts": {
-        "coverage_gaps": [],
-        "file_age_h": 11.758,
-        "reason": null,
-        "recovery": "none",
-        "status": "healthy",
-        "workflow_api_error": null
-      },
-      "options": {
-        "coverage_gaps": [],
-        "file_age_h": 4.437,
-        "reason": null,
-        "recovery": "none",
-        "status": "healthy",
-        "workflow_api_error": null
-      },
-      "price_technical": {
-        "coverage_gaps": [],
-        "file_age_h": 1.456,
-        "reason": null,
-        "recovery": "none",
-        "status": "healthy",
-        "workflow_api_error": null
-      },
-      "spot_cvd": {
-        "coverage_gaps": [],
-        "file_age_h": 0.195,
-        "reason": null,
-        "recovery": "none",
-        "status": "healthy",
-        "workflow_api_error": null
-      }
-    },
-    "status": "degraded",
-    "unavailable_or_stale": [],
-    "workflow_api_reachable": true
+    "reason": "independent_watchdog_stopped",
+    "status": "stale",
+    "workflow_api_reachable": false
   },
   "feed_contract": "Source-level UTC quality bridge; not a standalone reversal signal",
   "feeds": {
     "bybit_depth": {
-      "age_h": 2.64,
+      "age_h": 4.99,
       "collector_health": "ok",
       "family": "orderbook",
       "generated_at": "2026-11-03T01:41:53.173413+00:00",
       "max_age_h": 36.0,
-      "measurement_age_h": 28.34,
+      "measurement_age_h": 30.69,
       "measurement_at": "2026-11-02T00:00:00+00:00",
       "source": "https://github.com/kh827y/btc-market-data/blob/main/btc-liquidity/data/bybit_independent_latest.json",
       "source_errors": 0,
@@ -222,10 +80,10 @@
       "status": "fresh"
     },
     "derivatives": {
-      "age_h": 4.47,
+      "age_h": 0.01,
       "collector_health": "ok",
       "family": "positioning",
-      "generated_at": "2026-11-02T23:51:56.093722+00:00",
+      "generated_at": "2026-11-03T06:40:47.705849+00:00",
       "max_age_h": 3.0,
       "measurement_age_h": null,
       "measurement_at": null,
@@ -234,15 +92,15 @@
       "source_status": null,
       "spot_quote_age_h": null,
       "spot_quote_status": null,
-      "status": "stale"
+      "status": "fresh"
     },
     "hft_depth": {
-      "age_h": 0.21,
+      "age_h": 2.56,
       "collector_health": "errors_present",
       "family": "orderbook",
       "generated_at": "2026-11-03T04:07:52.877791+00:00",
       "max_age_h": 36.0,
-      "measurement_age_h": 16.34,
+      "measurement_age_h": 18.69,
       "measurement_at": "2026-11-02T12:00:00+00:00",
       "source": "https://github.com/kh827y/btc-market-data/blob/main/btc-liquidity/data/hft_latest.json",
       "source_errors": 20,
@@ -252,22 +110,22 @@
       "status": "fresh"
     },
     "live_depth": {
-      "age_h": 0.39,
+      "age_h": 2.73,
       "collector_health": "ok",
       "family": "orderbook",
       "generated_at": "2026-11-03T03:57:07.250227+00:00",
       "max_age_h": 2.5,
-      "measurement_age_h": 0.39,
+      "measurement_age_h": 2.73,
       "measurement_at": "2026-11-03T03:57:07.250227+00:00",
       "source": "https://github.com/kh827y/btc-market-data/blob/main/btc-liquidity/data/latest.json",
       "source_errors": 0,
       "source_status": "ok",
       "spot_quote_age_h": null,
       "spot_quote_status": null,
-      "status": "fresh"
+      "status": "stale"
     },
     "macro_etf": {
-      "age_h": 1.39,
+      "age_h": 3.74,
       "collector_health": "ok",
       "family": "macro_liquidity",
       "generated_at": "2026-11-03T02:56:48.303307+00:00",
@@ -282,7 +140,7 @@
       "status": "fresh"
     },
     "onchain": {
-      "age_h": 11.72,
+      "age_h": 14.06,
       "collector_health": "ok",
       "family": "holder_behavior",
       "generated_at": "2026-11-02T16:37:22.256713+00:00",
@@ -297,7 +155,7 @@
       "status": "fresh"
     },
     "options": {
-      "age_h": 4.44,
+      "age_h": 6.79,
       "collector_health": "ok",
       "family": "options",
       "generated_at": "2026-11-02T23:53:51.494528+00:00",
@@ -312,27 +170,27 @@
       "status": "stale"
     },
     "price_technical": {
-      "age_h": 1.46,
+      "age_h": 3.81,
       "collector_health": "ok",
       "family": "price_trend",
       "generated_at": "2026-11-03T02:52:44.435269+00:00",
       "max_age_h": 26.0,
-      "measurement_age_h": 4.34,
+      "measurement_age_h": 6.69,
       "measurement_at": "2026-11-03T00:00:00+00:00",
       "source": "https://github.com/kh827y/btc-market-data/blob/main/btc-price/data/latest.json",
       "source_errors": 0,
       "source_status": "ok",
-      "spot_quote_age_h": 1.46,
-      "spot_quote_status": "fresh",
+      "spot_quote_age_h": 3.81,
+      "spot_quote_status": "unavailable_or_stale",
       "status": "fresh"
     },
     "spot_cvd": {
-      "age_h": 0.0,
+      "age_h": 2.35,
       "collector_health": "ok",
       "family": "spot_execution",
       "generated_at": "2026-11-03T04:20:07.711963+00:00",
       "max_age_h": 2.5,
-      "measurement_age_h": 1.34,
+      "measurement_age_h": 3.69,
       "measurement_at": "2026-11-03T03:00:00+00:00",
       "source": "https://github.com/kh827y/btc-market-data/blob/main/btc-spot-cvd/data/latest.json",
       "source_errors": 0,
@@ -343,7 +201,7 @@
     }
   },
   "metric_quality": {
-    "checked_utc": "2026-11-03T04:20:20.783298+00:00",
+    "checked_utc": "2026-11-03T06:41:11.418938+00:00",
     "checks": {
       "bybit_depth.bybit_independent_linear.1095d.0.01": {
         "comparison_key": "historical_book|bybit_depth|bybit_independent_linear|1095d|0.01",
@@ -508,74 +366,66 @@
       "derivatives.cftc_cme_weekly": {
         "comparison_key": "CME_COT|standard_BTC_futures|5BTC_contract",
         "observed_at": "2026-10-27",
-        "reason": "parent_source_not_fresh",
         "scope": "weekly Tuesday CFTC observed positions; published with lag; not directional spot sales",
         "source": "derivatives",
-        "status": "stale",
+        "status": "usable",
         "unit": "CME standard BTC futures contracts of 5 BTC"
       },
       "derivatives.cme_basis": {
         "comparison_key": "CME|BTCZ26.CME",
         "observed_at": "2026-11-01T08:00:00+00:00",
-        "reason": "parent_source_not_fresh",
         "scope": "CME dated futures matched to nearby spot observation; expiry-specific",
         "source": "derivatives",
-        "status": "stale",
+        "status": "usable",
         "unit": "annualized pct"
       },
       "derivatives.dated_basis_matched": {
         "comparison_key": "matched_expiry_BTC_basis|2026-12-25",
-        "observed_at": "2026-11-02T23:04:47.357000+00:00",
-        "reason": "parent_source_not_fresh",
+        "observed_at": "2026-11-03T06:04:22.033000+00:00",
         "scope": "four specific dated BTC future contracts, same exact expiry",
         "source": "derivatives",
-        "status": "stale",
+        "status": "usable",
         "unit": "annualized basis percentage points"
       },
       "derivatives.funding_8h.Binance": {
         "comparison_key": "settled_funding_8h|Binance",
-        "observed_at": "2026-11-02T16:00:00+00:00",
-        "reason": "parent_source_not_fresh",
+        "observed_at": "2026-11-03T00:00:00+00:00",
         "scope": "single venue BTCUSDT perp settled funding, not a forecast",
         "source": "derivatives",
-        "status": "stale",
+        "status": "usable",
         "unit": "rate fraction per 8h settled interval"
       },
       "derivatives.funding_8h.Bybit": {
         "comparison_key": "settled_funding_8h|Bybit",
-        "observed_at": "2026-11-02T16:00:00+00:00",
-        "reason": "parent_source_not_fresh",
+        "observed_at": "2026-11-03T00:00:00+00:00",
         "scope": "single venue BTCUSDT perp settled funding, not a forecast",
         "source": "derivatives",
-        "status": "stale",
+        "status": "usable",
         "unit": "rate fraction per 8h settled interval"
       },
       "derivatives.funding_8h.OKX": {
         "comparison_key": "settled_funding_8h|OKX",
-        "observed_at": "2026-11-02T16:00:00+00:00",
-        "reason": "parent_source_not_fresh",
+        "observed_at": "2026-11-03T00:00:00+00:00",
         "scope": "single venue BTCUSDT perp settled funding, not a forecast",
         "source": "derivatives",
-        "status": "stale",
+        "status": "usable",
         "unit": "rate fraction per 8h settled interval"
       },
       "derivatives.liquidations_24h": {
         "comparison_key": "liquidation_forced|Binance,Bybit|24h",
-        "observed_at": "2026-11-02T23:49:05.217000+00:00",
-        "reason": "parent_source_not_fresh",
+        "observed_at": "2026-11-03T06:40:51.491000+00:00",
         "scope": "reported Binance+Bybit 24h only; not worldwide",
         "source": "derivatives",
-        "status": "stale",
+        "status": "usable",
         "unit": "USD forced liquidations"
       },
       "derivatives.oi_five": {
         "comparison_key": "same_five_venue_OI_USD",
-        "observed_at": "2026-11-02T23:00:00Z",
-        "reason": "parent_source_not_fresh",
+        "observed_at": "2026-11-03T06:00:00Z",
         "required_for_family": true,
         "scope": "Binance,Bybit,OKX,Gate.io,Hyperliquid OI, not worldwide",
         "source": "derivatives",
-        "status": "stale",
+        "status": "usable",
         "unit": "USD notional"
       },
       "hft_depth.binance_futures.1d.0.01": {
@@ -1013,452 +863,507 @@
       "live_depth.binance_spot": {
         "comparison_key": null,
         "observed_at": "2026-11-03T03:57:08.251842Z",
+        "reason": "parent_source_not_fresh",
         "required_for_family": true,
         "scope": "own book with >=1 complete both-sided price band",
         "source": "live_depth",
-        "status": "usable",
+        "status": "stale",
         "unit": "USD notional"
       },
       "live_depth.binance_spot.0.01": {
         "comparison_key": "live_book|binance_spot|spot|0.01",
         "observed_at": "2026-11-03T03:57:08.251842Z",
+        "reason": "parent_source_not_fresh",
         "scope": "spot BTC book, not executed CVD or guaranteed liquidity",
         "source": "live_depth",
-        "status": "usable",
+        "status": "stale",
         "unit": "visible resting bid/ask approximate USD within 0.01% of own midpoint"
       },
       "live_depth.binance_spot.0.05": {
         "comparison_key": "live_book|binance_spot|spot|0.05",
         "observed_at": "2026-11-03T03:57:08.251842Z",
+        "reason": "parent_source_not_fresh",
         "scope": "spot BTC book, not executed CVD or guaranteed liquidity",
         "source": "live_depth",
-        "status": "usable",
+        "status": "stale",
         "unit": "visible resting bid/ask approximate USD within 0.05% of own midpoint"
       },
       "live_depth.binance_spot.0.2": {
         "comparison_key": "live_book|binance_spot|spot|0.2",
         "observed_at": "2026-11-03T03:57:08.251842Z",
+        "reason": "parent_source_not_fresh",
         "scope": "spot BTC book, not executed CVD or guaranteed liquidity",
         "source": "live_depth",
-        "status": "usable",
+        "status": "stale",
         "unit": "visible resting bid/ask approximate USD within 0.2% of own midpoint"
       },
       "live_depth.binance_spot.1.0": {
         "comparison_key": "live_book|binance_spot|spot|1.0",
         "observed_at": "2026-11-03T03:57:08.251842Z",
+        "reason": "parent_source_not_fresh",
         "scope": "spot BTC book, not executed CVD or guaranteed liquidity",
         "source": "live_depth",
-        "status": "usable",
+        "status": "stale",
         "unit": "visible resting bid/ask approximate USD within 1.0% of own midpoint"
       },
       "live_depth.binance_usdm_perp": {
         "comparison_key": null,
         "observed_at": "2026-11-03T03:57:11.963450Z",
+        "reason": "parent_source_not_fresh",
         "required_for_family": true,
         "scope": "own book with >=1 complete both-sided price band",
         "source": "live_depth",
-        "status": "usable",
+        "status": "stale",
         "unit": "USD notional"
       },
       "live_depth.binance_usdm_perp.0.01": {
         "comparison_key": "live_book|binance_usdm_perp|perpetual|0.01",
         "observed_at": "2026-11-03T03:57:11.651000+00:00",
+        "reason": "parent_source_not_fresh",
         "scope": "perpetual BTC book, not executed CVD or guaranteed liquidity",
         "source": "live_depth",
-        "status": "usable",
+        "status": "stale",
         "unit": "visible resting bid/ask approximate USD within 0.01% of own midpoint"
       },
       "live_depth.binance_usdm_perp.0.05": {
         "comparison_key": "live_book|binance_usdm_perp|perpetual|0.05",
         "observed_at": "2026-11-03T03:57:11.651000+00:00",
+        "reason": "parent_source_not_fresh",
         "scope": "perpetual BTC book, not executed CVD or guaranteed liquidity",
         "source": "live_depth",
-        "status": "usable",
+        "status": "stale",
         "unit": "visible resting bid/ask approximate USD within 0.05% of own midpoint"
       },
       "live_depth.binance_usdm_perp.0.2": {
         "comparison_key": "live_book|binance_usdm_perp|perpetual|0.2",
         "observed_at": "2026-11-03T03:57:11.651000+00:00",
+        "reason": "parent_source_not_fresh",
         "scope": "perpetual BTC book, not executed CVD or guaranteed liquidity",
         "source": "live_depth",
-        "status": "incomplete",
+        "status": "stale",
         "unit": "visible resting bid/ask approximate USD within 0.2% of own midpoint"
       },
       "live_depth.binance_usdm_perp.1.0": {
         "comparison_key": "live_book|binance_usdm_perp|perpetual|1.0",
         "observed_at": "2026-11-03T03:57:11.651000+00:00",
+        "reason": "parent_source_not_fresh",
         "scope": "perpetual BTC book, not executed CVD or guaranteed liquidity",
         "source": "live_depth",
-        "status": "incomplete",
+        "status": "stale",
         "unit": "visible resting bid/ask approximate USD within 1.0% of own midpoint"
       },
       "live_depth.bitget_spot": {
         "comparison_key": null,
         "observed_at": "2026-11-03T03:57:14.652646Z",
+        "reason": "parent_source_not_fresh",
         "required_for_family": true,
         "scope": "own book with >=1 complete both-sided price band",
         "source": "live_depth",
-        "status": "usable",
+        "status": "stale",
         "unit": "USD notional"
       },
       "live_depth.bitget_spot.0.01": {
         "comparison_key": "live_book|bitget_spot|spot|0.01",
         "observed_at": "2026-11-03T03:57:14.561000+00:00",
+        "reason": "parent_source_not_fresh",
         "scope": "spot BTC book, not executed CVD or guaranteed liquidity",
         "source": "live_depth",
-        "status": "usable",
+        "status": "stale",
         "unit": "visible resting bid/ask approximate USD within 0.01% of own midpoint"
       },
       "live_depth.bitget_spot.0.05": {
         "comparison_key": "live_book|bitget_spot|spot|0.05",
         "observed_at": "2026-11-03T03:57:14.561000+00:00",
+        "reason": "parent_source_not_fresh",
         "scope": "spot BTC book, not executed CVD or guaranteed liquidity",
         "source": "live_depth",
-        "status": "usable",
+        "status": "stale",
         "unit": "visible resting bid/ask approximate USD within 0.05% of own midpoint"
       },
       "live_depth.bitget_spot.0.2": {
         "comparison_key": "live_book|bitget_spot|spot|0.2",
         "observed_at": "2026-11-03T03:57:14.561000+00:00",
+        "reason": "parent_source_not_fresh",
         "scope": "spot BTC book, not executed CVD or guaranteed liquidity",
         "source": "live_depth",
-        "status": "usable",
+        "status": "stale",
         "unit": "visible resting bid/ask approximate USD within 0.2% of own midpoint"
       },
       "live_depth.bitget_spot.1.0": {
         "comparison_key": "live_book|bitget_spot|spot|1.0",
         "observed_at": "2026-11-03T03:57:14.561000+00:00",
+        "reason": "parent_source_not_fresh",
         "scope": "spot BTC book, not executed CVD or guaranteed liquidity",
         "source": "live_depth",
-        "status": "incomplete",
+        "status": "stale",
         "unit": "visible resting bid/ask approximate USD within 1.0% of own midpoint"
       },
       "live_depth.bitget_usdt_perp": {
         "comparison_key": null,
         "observed_at": "2026-11-03T03:57:14.876708Z",
+        "reason": "parent_source_not_fresh",
         "required_for_family": true,
         "scope": "own book with >=1 complete both-sided price band",
         "source": "live_depth",
-        "status": "usable",
+        "status": "stale",
         "unit": "USD notional"
       },
       "live_depth.bitget_usdt_perp.0.01": {
         "comparison_key": "live_book|bitget_usdt_perp|perpetual|0.01",
         "observed_at": "2026-11-03T03:57:14.788000+00:00",
+        "reason": "parent_source_not_fresh",
         "scope": "perpetual BTC book, not executed CVD or guaranteed liquidity",
         "source": "live_depth",
-        "status": "usable",
+        "status": "stale",
         "unit": "visible resting bid/ask approximate USD within 0.01% of own midpoint"
       },
       "live_depth.bitget_usdt_perp.0.05": {
         "comparison_key": "live_book|bitget_usdt_perp|perpetual|0.05",
         "observed_at": "2026-11-03T03:57:14.788000+00:00",
+        "reason": "parent_source_not_fresh",
         "scope": "perpetual BTC book, not executed CVD or guaranteed liquidity",
         "source": "live_depth",
-        "status": "usable",
+        "status": "stale",
         "unit": "visible resting bid/ask approximate USD within 0.05% of own midpoint"
       },
       "live_depth.bitget_usdt_perp.0.2": {
         "comparison_key": "live_book|bitget_usdt_perp|perpetual|0.2",
         "observed_at": "2026-11-03T03:57:14.788000+00:00",
+        "reason": "parent_source_not_fresh",
         "scope": "perpetual BTC book, not executed CVD or guaranteed liquidity",
         "source": "live_depth",
-        "status": "usable",
+        "status": "stale",
         "unit": "visible resting bid/ask approximate USD within 0.2% of own midpoint"
       },
       "live_depth.bitget_usdt_perp.1.0": {
         "comparison_key": "live_book|bitget_usdt_perp|perpetual|1.0",
         "observed_at": "2026-11-03T03:57:14.788000+00:00",
+        "reason": "parent_source_not_fresh",
         "scope": "perpetual BTC book, not executed CVD or guaranteed liquidity",
         "source": "live_depth",
-        "status": "incomplete",
+        "status": "stale",
         "unit": "visible resting bid/ask approximate USD within 1.0% of own midpoint"
       },
       "live_depth.bybit_spot": {
         "comparison_key": null,
         "observed_at": "2026-11-03T03:57:10.484374Z",
+        "reason": "parent_source_not_fresh",
         "required_for_family": true,
         "scope": "own book with >=1 complete both-sided price band",
         "source": "live_depth",
-        "status": "usable",
+        "status": "stale",
         "unit": "USD notional"
       },
       "live_depth.bybit_spot.0.01": {
         "comparison_key": "live_book|bybit_spot|spot|0.01",
         "observed_at": "2026-11-03T03:57:06.752000+00:00",
+        "reason": "parent_source_not_fresh",
         "scope": "spot BTC book, not executed CVD or guaranteed liquidity",
         "source": "live_depth",
-        "status": "usable",
+        "status": "stale",
         "unit": "visible resting bid/ask approximate USD within 0.01% of own midpoint"
       },
       "live_depth.bybit_spot.0.05": {
         "comparison_key": "live_book|bybit_spot|spot|0.05",
         "observed_at": "2026-11-03T03:57:06.752000+00:00",
+        "reason": "parent_source_not_fresh",
         "scope": "spot BTC book, not executed CVD or guaranteed liquidity",
         "source": "live_depth",
-        "status": "usable",
+        "status": "stale",
         "unit": "visible resting bid/ask approximate USD within 0.05% of own midpoint"
       },
       "live_depth.bybit_spot.0.2": {
         "comparison_key": "live_book|bybit_spot|spot|0.2",
         "observed_at": "2026-11-03T03:57:06.752000+00:00",
+        "reason": "parent_source_not_fresh",
         "scope": "spot BTC book, not executed CVD or guaranteed liquidity",
         "source": "live_depth",
-        "status": "usable",
+        "status": "stale",
         "unit": "visible resting bid/ask approximate USD within 0.2% of own midpoint"
       },
       "live_depth.bybit_spot.1.0": {
         "comparison_key": "live_book|bybit_spot|spot|1.0",
         "observed_at": "2026-11-03T03:57:06.752000+00:00",
+        "reason": "parent_source_not_fresh",
         "scope": "spot BTC book, not executed CVD or guaranteed liquidity",
         "source": "live_depth",
-        "status": "incomplete",
+        "status": "stale",
         "unit": "visible resting bid/ask approximate USD within 1.0% of own midpoint"
       },
       "live_depth.bybit_usdt_perp": {
         "comparison_key": null,
         "observed_at": "2026-11-03T03:57:13.564586Z",
+        "reason": "parent_source_not_fresh",
         "required_for_family": true,
         "scope": "own book with >=1 complete both-sided price band",
         "source": "live_depth",
-        "status": "usable",
+        "status": "stale",
         "unit": "USD notional"
       },
       "live_depth.bybit_usdt_perp.0.01": {
         "comparison_key": "live_book|bybit_usdt_perp|perpetual|0.01",
         "observed_at": "2026-11-03T03:57:12.559000+00:00",
+        "reason": "parent_source_not_fresh",
         "scope": "perpetual BTC book, not executed CVD or guaranteed liquidity",
         "source": "live_depth",
-        "status": "usable",
+        "status": "stale",
         "unit": "visible resting bid/ask approximate USD within 0.01% of own midpoint"
       },
       "live_depth.bybit_usdt_perp.0.05": {
         "comparison_key": "live_book|bybit_usdt_perp|perpetual|0.05",
         "observed_at": "2026-11-03T03:57:12.559000+00:00",
+        "reason": "parent_source_not_fresh",
         "scope": "perpetual BTC book, not executed CVD or guaranteed liquidity",
         "source": "live_depth",
-        "status": "usable",
+        "status": "stale",
         "unit": "visible resting bid/ask approximate USD within 0.05% of own midpoint"
       },
       "live_depth.bybit_usdt_perp.0.2": {
         "comparison_key": "live_book|bybit_usdt_perp|perpetual|0.2",
         "observed_at": "2026-11-03T03:57:12.559000+00:00",
+        "reason": "parent_source_not_fresh",
         "scope": "perpetual BTC book, not executed CVD or guaranteed liquidity",
         "source": "live_depth",
-        "status": "usable",
+        "status": "stale",
         "unit": "visible resting bid/ask approximate USD within 0.2% of own midpoint"
       },
       "live_depth.bybit_usdt_perp.1.0": {
         "comparison_key": "live_book|bybit_usdt_perp|perpetual|1.0",
         "observed_at": "2026-11-03T03:57:12.559000+00:00",
+        "reason": "parent_source_not_fresh",
         "scope": "perpetual BTC book, not executed CVD or guaranteed liquidity",
         "source": "live_depth",
-        "status": "incomplete",
+        "status": "stale",
         "unit": "visible resting bid/ask approximate USD within 1.0% of own midpoint"
       },
       "live_depth.coinbase_spot": {
         "comparison_key": null,
         "observed_at": "2026-11-03T03:57:08.827325Z",
+        "reason": "parent_source_not_fresh",
         "required_for_family": true,
         "scope": "own book with >=1 complete both-sided price band",
         "source": "live_depth",
-        "status": "usable",
+        "status": "stale",
         "unit": "USD notional"
       },
       "live_depth.coinbase_spot.0.01": {
         "comparison_key": "live_book|coinbase_spot|spot|0.01",
         "observed_at": "2026-11-03T03:57:08.827325Z",
+        "reason": "parent_source_not_fresh",
         "scope": "spot BTC book, not executed CVD or guaranteed liquidity",
         "source": "live_depth",
-        "status": "usable",
+        "status": "stale",
         "unit": "visible resting bid/ask approximate USD within 0.01% of own midpoint"
       },
       "live_depth.coinbase_spot.0.05": {
         "comparison_key": "live_book|coinbase_spot|spot|0.05",
         "observed_at": "2026-11-03T03:57:08.827325Z",
+        "reason": "parent_source_not_fresh",
         "scope": "spot BTC book, not executed CVD or guaranteed liquidity",
         "source": "live_depth",
-        "status": "usable",
+        "status": "stale",
         "unit": "visible resting bid/ask approximate USD within 0.05% of own midpoint"
       },
       "live_depth.coinbase_spot.0.2": {
         "comparison_key": "live_book|coinbase_spot|spot|0.2",
         "observed_at": "2026-11-03T03:57:08.827325Z",
+        "reason": "parent_source_not_fresh",
         "scope": "spot BTC book, not executed CVD or guaranteed liquidity",
         "source": "live_depth",
-        "status": "usable",
+        "status": "stale",
         "unit": "visible resting bid/ask approximate USD within 0.2% of own midpoint"
       },
       "live_depth.coinbase_spot.1.0": {
         "comparison_key": "live_book|coinbase_spot|spot|1.0",
         "observed_at": "2026-11-03T03:57:08.827325Z",
+        "reason": "parent_source_not_fresh",
         "scope": "spot BTC book, not executed CVD or guaranteed liquidity",
         "source": "live_depth",
-        "status": "usable",
+        "status": "stale",
         "unit": "visible resting bid/ask approximate USD within 1.0% of own midpoint"
       },
       "live_depth.gate_spot": {
         "comparison_key": null,
         "observed_at": "2026-11-03T03:57:15.877095Z",
+        "reason": "parent_source_not_fresh",
         "required_for_family": true,
         "scope": "own book with >=1 complete both-sided price band",
         "source": "live_depth",
-        "status": "usable",
+        "status": "stale",
         "unit": "USD notional"
       },
       "live_depth.gate_spot.0.01": {
         "comparison_key": "live_book|gate_spot|spot|0.01",
         "observed_at": "2026-11-03T03:56:28.915000+00:00",
+        "reason": "parent_source_not_fresh",
         "scope": "spot BTC book, not executed CVD or guaranteed liquidity",
         "source": "live_depth",
-        "status": "usable",
+        "status": "stale",
         "unit": "visible resting bid/ask approximate USD within 0.01% of own midpoint"
       },
       "live_depth.gate_spot.0.05": {
         "comparison_key": "live_book|gate_spot|spot|0.05",
         "observed_at": "2026-11-03T03:56:28.915000+00:00",
+        "reason": "parent_source_not_fresh",
         "scope": "spot BTC book, not executed CVD or guaranteed liquidity",
         "source": "live_depth",
-        "status": "usable",
+        "status": "stale",
         "unit": "visible resting bid/ask approximate USD within 0.05% of own midpoint"
       },
       "live_depth.gate_spot.0.2": {
         "comparison_key": "live_book|gate_spot|spot|0.2",
         "observed_at": "2026-11-03T03:56:28.915000+00:00",
+        "reason": "parent_source_not_fresh",
         "scope": "spot BTC book, not executed CVD or guaranteed liquidity",
         "source": "live_depth",
-        "status": "usable",
+        "status": "stale",
         "unit": "visible resting bid/ask approximate USD within 0.2% of own midpoint"
       },
       "live_depth.gate_spot.1.0": {
         "comparison_key": "live_book|gate_spot|spot|1.0",
         "observed_at": "2026-11-03T03:56:28.915000+00:00",
+        "reason": "parent_source_not_fresh",
         "scope": "spot BTC book, not executed CVD or guaranteed liquidity",
         "source": "live_depth",
-        "status": "usable",
+        "status": "stale",
         "unit": "visible resting bid/ask approximate USD within 1.0% of own midpoint"
       },
       "live_depth.gate_usdt_perp": {
         "comparison_key": null,
         "observed_at": "2026-11-03T03:57:17.326024Z",
+        "reason": "parent_source_not_fresh",
         "required_for_family": true,
         "scope": "own book with >=1 complete both-sided price band",
         "source": "live_depth",
-        "status": "usable",
+        "status": "stale",
         "unit": "USD notional"
       },
       "live_depth.gate_usdt_perp.0.01": {
         "comparison_key": "live_book|gate_usdt_perp|perpetual|0.01",
         "observed_at": "2026-11-03T03:57:16.554000+00:00",
+        "reason": "parent_source_not_fresh",
         "scope": "perpetual BTC book, not executed CVD or guaranteed liquidity",
         "source": "live_depth",
-        "status": "usable",
+        "status": "stale",
         "unit": "visible resting bid/ask approximate USD within 0.01% of own midpoint"
       },
       "live_depth.gate_usdt_perp.0.05": {
         "comparison_key": "live_book|gate_usdt_perp|perpetual|0.05",
         "observed_at": "2026-11-03T03:57:16.554000+00:00",
+        "reason": "parent_source_not_fresh",
         "scope": "perpetual BTC book, not executed CVD or guaranteed liquidity",
         "source": "live_depth",
-        "status": "usable",
+        "status": "stale",
         "unit": "visible resting bid/ask approximate USD within 0.05% of own midpoint"
       },
       "live_depth.gate_usdt_perp.0.2": {
         "comparison_key": "live_book|gate_usdt_perp|perpetual|0.2",
         "observed_at": "2026-11-03T03:57:16.554000+00:00",
+        "reason": "parent_source_not_fresh",
         "scope": "perpetual BTC book, not executed CVD or guaranteed liquidity",
         "source": "live_depth",
-        "status": "usable",
+        "status": "stale",
         "unit": "visible resting bid/ask approximate USD within 0.2% of own midpoint"
       },
       "live_depth.gate_usdt_perp.1.0": {
         "comparison_key": "live_book|gate_usdt_perp|perpetual|1.0",
         "observed_at": "2026-11-03T03:57:16.554000+00:00",
+        "reason": "parent_source_not_fresh",
         "scope": "perpetual BTC book, not executed CVD or guaranteed liquidity",
         "source": "live_depth",
-        "status": "incomplete",
+        "status": "stale",
         "unit": "visible resting bid/ask approximate USD within 1.0% of own midpoint"
       },
       "live_depth.okx_spot": {
         "comparison_key": null,
         "observed_at": "2026-11-03T03:57:11.172781Z",
+        "reason": "parent_source_not_fresh",
         "required_for_family": true,
         "scope": "own book with >=1 complete both-sided price band",
         "source": "live_depth",
-        "status": "usable",
+        "status": "stale",
         "unit": "USD notional"
       },
       "live_depth.okx_spot.0.01": {
         "comparison_key": "live_book|okx_spot|spot|0.01",
         "observed_at": "2026-11-03T03:57:11.008000+00:00",
+        "reason": "parent_source_not_fresh",
         "scope": "spot BTC book, not executed CVD or guaranteed liquidity",
         "source": "live_depth",
-        "status": "usable",
+        "status": "stale",
         "unit": "visible resting bid/ask approximate USD within 0.01% of own midpoint"
       },
       "live_depth.okx_spot.0.05": {
         "comparison_key": "live_book|okx_spot|spot|0.05",
         "observed_at": "2026-11-03T03:57:11.008000+00:00",
+        "reason": "parent_source_not_fresh",
         "scope": "spot BTC book, not executed CVD or guaranteed liquidity",
         "source": "live_depth",
-        "status": "usable",
+        "status": "stale",
         "unit": "visible resting bid/ask approximate USD within 0.05% of own midpoint"
       },
       "live_depth.okx_spot.0.2": {
         "comparison_key": "live_book|okx_spot|spot|0.2",
         "observed_at": "2026-11-03T03:57:11.008000+00:00",
+        "reason": "parent_source_not_fresh",
         "scope": "spot BTC book, not executed CVD or guaranteed liquidity",
         "source": "live_depth",
-        "status": "usable",
+        "status": "stale",
         "unit": "visible resting bid/ask approximate USD within 0.2% of own midpoint"
       },
       "live_depth.okx_spot.1.0": {
         "comparison_key": "live_book|okx_spot|spot|1.0",
         "observed_at": "2026-11-03T03:57:11.008000+00:00",
+        "reason": "parent_source_not_fresh",
         "scope": "spot BTC book, not executed CVD or guaranteed liquidity",
         "source": "live_depth",
-        "status": "usable",
+        "status": "stale",
         "unit": "visible resting bid/ask approximate USD within 1.0% of own midpoint"
       },
       "live_depth.okx_usdt_perp": {
         "comparison_key": null,
         "observed_at": "2026-11-03T03:57:14.378647Z",
+        "reason": "parent_source_not_fresh",
         "required_for_family": true,
         "scope": "own book with >=1 complete both-sided price band",
         "source": "live_depth",
-        "status": "usable",
+        "status": "stale",
         "unit": "USD notional"
       },
       "live_depth.okx_usdt_perp.0.01": {
         "comparison_key": "live_book|okx_usdt_perp|perpetual|0.01",
         "observed_at": "2026-11-03T03:57:14.008000+00:00",
+        "reason": "parent_source_not_fresh",
         "scope": "perpetual BTC book, not executed CVD or guaranteed liquidity",
         "source": "live_depth",
-        "status": "usable",
+        "status": "stale",
         "unit": "visible resting bid/ask approximate USD within 0.01% of own midpoint"
       },
       "live_depth.okx_usdt_perp.0.05": {
         "comparison_key": "live_book|okx_usdt_perp|perpetual|0.05",
         "observed_at": "2026-11-03T03:57:14.008000+00:00",
+        "reason": "parent_source_not_fresh",
         "scope": "perpetual BTC book, not executed CVD or guaranteed liquidity",
         "source": "live_depth",
-        "status": "usable",
+        "status": "stale",
         "unit": "visible resting bid/ask approximate USD within 0.05% of own midpoint"
       },
       "live_depth.okx_usdt_perp.0.2": {
         "comparison_key": "live_book|okx_usdt_perp|perpetual|0.2",
         "observed_at": "2026-11-03T03:57:14.008000+00:00",
+        "reason": "parent_source_not_fresh",
         "scope": "perpetual BTC book, not executed CVD or guaranteed liquidity",
         "source": "live_depth",
-        "status": "usable",
+        "status": "stale",
         "unit": "visible resting bid/ask approximate USD within 0.2% of own midpoint"
       },
       "live_depth.okx_usdt_perp.1.0": {
         "comparison_key": "live_book|okx_usdt_perp|perpetual|1.0",
         "observed_at": "2026-11-03T03:57:14.008000+00:00",
+        "reason": "parent_source_not_fresh",
         "scope": "perpetual BTC book, not executed CVD or guaranteed liquidity",
         "source": "live_depth",
-        "status": "incomplete",
+        "status": "stale",
         "unit": "visible resting bid/ask approximate USD within 1.0% of own midpoint"
       },
       "macro.fed_rates": {
@@ -1476,7 +1381,7 @@
         "required_for_family": true,
         "scope": "specific macro or ETF family, NOT an interchangeable global macro index",
         "source": "macro_etf",
-        "status": "usable",
+        "status": "unverified",
         "unit": "pct/index as individually labeled"
       },
       "macro.spot_etf_flow": {
@@ -1839,10 +1744,10 @@
       },
       "price.live_spot_quote": {
         "comparison_key": null,
-        "observed_at": "2026-11-03T02:52:44.435269+00:00",
+        "observed_at": null,
         "scope": "Binance SPOT ticker, not Coinbase BTCUSD",
         "source": "price_technical",
-        "status": "usable",
+        "status": "stale",
         "unit": "BTCUSDT spot USDT per BTC"
       },
       "spot_cvd.fixed_ex_coinbase.168h": {
@@ -1947,8 +1852,19 @@
       }
     },
     "critical_issues": [
-      "derivatives.oi_five:stale:parent_source_not_fresh",
-      "options.deribit.1M:stale:parent_source_not_fresh"
+      "options.deribit.1M:stale:parent_source_not_fresh",
+      "macro.ice_dxy_exact:unverified:",
+      "live_depth.binance_spot:stale:parent_source_not_fresh",
+      "live_depth.bybit_spot:stale:parent_source_not_fresh",
+      "live_depth.coinbase_spot:stale:parent_source_not_fresh",
+      "live_depth.okx_spot:stale:parent_source_not_fresh",
+      "live_depth.bitget_spot:stale:parent_source_not_fresh",
+      "live_depth.gate_spot:stale:parent_source_not_fresh",
+      "live_depth.binance_usdm_perp:stale:parent_source_not_fresh",
+      "live_depth.bybit_usdt_perp:stale:parent_source_not_fresh",
+      "live_depth.okx_usdt_perp:stale:parent_source_not_fresh",
+      "live_depth.bitget_usdt_perp:stale:parent_source_not_fresh",
+      "live_depth.gate_usdt_perp:stale:parent_source_not_fresh"
     ],
     "do_not_sum_independent_factors_from_same_family": true,
     "metrics_checked": 195,
@@ -1956,13 +1872,13 @@
     "schema": 1,
     "status": "complete_audit",
     "status_counts": {
-      "incomplete": 8,
+      "incomplete": 0,
       "invalid": 0,
       "not_comparable": 0,
-      "stale": 18,
+      "stale": 66,
       "unavailable": 0,
-      "unverified": 0,
-      "usable": 169
+      "unverified": 1,
+      "usable": 128
     }
   },
   "metrics": {
@@ -2202,21 +2118,100 @@
     "derivatives": {
       "cftc_cme_weekly": {
         "as_of": "2026-10-27",
-        "positions": null
+        "positions": {
+          "asset_manager_long": 4743,
+          "asset_manager_short": 1989,
+          "dealer_long": 6257,
+          "dealer_short": 5001,
+          "leveraged_long": 5887,
+          "leveraged_short": 9866,
+          "open_interest_btc_equivalent": 103955,
+          "open_interest_contracts": 20791
+        }
       },
-      "cme_front_basis": null,
-      "dated_futures_basis": null,
-      "dated_futures_matched_expiry": null,
+      "cme_front_basis": {
+        "annualized_basis_pct": 1.41607,
+        "contract": "BTCZ26.CME",
+        "date": "2026-11-01",
+        "days_to_expiry": 54.3333,
+        "expiry": "20261225",
+        "futures_usd": 78450.0,
+        "spot_usd": 78284.98,
+        "timestamp": "2026-11-01T08:00:00+00:00"
+      },
+      "dated_futures_basis": {
+        "Binance": {
+          "annualized_basis_pct_vendor": 5.8407,
+          "contract": "BTCUSDT_261225",
+          "days_to_expiry": 52.08,
+          "expiry": "2026-12-25",
+          "futures_usd": 77232.6,
+          "spot_usd": 76611.235,
+          "timestamp": "2026-11-03T06:04:21.145000+00:00"
+        },
+        "Bybit": {
+          "annualized_basis_pct_vendor": 6.1948,
+          "contract": "BTCUSDT-25DEC26",
+          "days_to_expiry": 52.08,
+          "expiry": "2026-12-25",
+          "futures_usd": 77220.7,
+          "spot_usd": 76614.1,
+          "timestamp": "2026-11-03T06:04:21.147000+00:00"
+        },
+        "Deribit": {
+          "annualized_basis_pct_vendor": 5.9407,
+          "contract": "BTC-25DEC26",
+          "days_to_expiry": 52.08,
+          "expiry": "2026-12-25",
+          "futures_usd": 77117.5,
+          "spot_usd": 76479.22,
+          "timestamp": "2026-11-03T06:04:22.033000+00:00"
+        },
+        "OKX": {
+          "annualized_basis_pct_vendor": 6.1505,
+          "contract": "BTC-USD-261225",
+          "days_to_expiry": 52.08,
+          "expiry": "2026-12-25",
+          "futures_usd": 77152.6,
+          "spot_usd": 76479.6,
+          "timestamp": "2026-11-03T06:04:21.146000+00:00"
+        }
+      },
+      "dated_futures_matched_expiry": "2026-12-25",
       "forced_liquidations_24h": {
-        "data_freshness": "unusable",
-        "long_usd": null,
-        "short_usd": null,
-        "updated": null
+        "data_freshness": {
+          "age_h": -0.0,
+          "source": "Edge liquidations",
+          "status": "fresh"
+        },
+        "long_usd": 47419985.36,
+        "short_usd": 3369887.75,
+        "updated": "2026-11-03T06:40:51.491000+00:00"
       },
-      "funding_settled": {},
-      "oi_1d_7d_30d_pct": null,
-      "oi_five_venue_usd": null,
-      "oi_latest_hour": "2026-11-02T23:00:00Z",
+      "funding_settled": {
+        "Binance": {
+          "last": "2026-11-03T00:00:00+00:00",
+          "max_gap_h": 8.0,
+          "rate_8h": 0.0001
+        },
+        "Bybit": {
+          "last": "2026-11-03T00:00:00+00:00",
+          "max_gap_h": 8.0,
+          "rate_8h": 0.0001
+        },
+        "OKX": {
+          "last": "2026-11-03T00:00:00+00:00",
+          "max_gap_h": 8.0,
+          "rate_8h": 0.0001
+        }
+      },
+      "oi_1d_7d_30d_pct": {
+        "1d": 0.664,
+        "30d": 2.607,
+        "7d": 0.608
+      },
+      "oi_five_venue_usd": 21391082308.55,
+      "oi_latest_hour": "2026-11-03T06:00:00Z",
       "source_coverage": {
         "cme_basis_available": true,
         "complete": true,
@@ -3118,452 +3113,11 @@
       "unverifiable_hour_files_total": 5959
     },
     "live_depth": {
-      "perp_usable_venues": 5,
+      "perp_usable_venues": 0,
       "resting_orders_not_executed_trades": true,
       "source_errors": [],
-      "spot_usable_venues": 6,
-      "venues": {
-        "binance_spot": {
-          "bands": {
-            "0.01": {
-              "ask_usd": 956147.31,
-              "bid_share": 0.62947,
-              "bid_usd": 1624366.13,
-              "complete": true
-            },
-            "0.05": {
-              "ask_usd": 4940390.44,
-              "bid_share": 0.36446,
-              "bid_usd": 2833178.64,
-              "complete": true
-            },
-            "0.2": {
-              "ask_usd": 13207010.41,
-              "bid_share": 0.36214,
-              "bid_usd": 7498057.46,
-              "complete": true
-            },
-            "1.0": {
-              "ask_usd": 17871126.5,
-              "bid_share": 0.60027,
-              "bid_usd": 26836629.92,
-              "complete": true
-            }
-          },
-          "captured_at": "2026-11-03T03:57:08.251842Z",
-          "market": "spot",
-          "reach_pct": {
-            "ask": 1.247,
-            "bid": 1.2126
-          },
-          "snapshot_type": "rest_snapshot",
-          "source_timestamp": null,
-          "source_url": "https://data-api.binance.vision/api/v3/depth",
-          "spread_bps": 0.001,
-          "symbol": "BTCUSDT",
-          "transport": "official_public_rest"
-        },
-        "binance_usdm_perp": {
-          "bands": {
-            "0.01": {
-              "ask_usd": 385162.47,
-              "bid_share": 0.8151,
-              "bid_usd": 1697942.54,
-              "complete": true
-            },
-            "0.05": {
-              "ask_usd": 11472650.22,
-              "bid_share": 0.48896,
-              "bid_usd": 10977026.43,
-              "complete": true
-            },
-            "0.2": {
-              "ask_usd": null,
-              "bid_share": null,
-              "bid_usd": null,
-              "complete": false
-            },
-            "1.0": {
-              "ask_usd": null,
-              "bid_share": null,
-              "bid_usd": null,
-              "complete": false
-            }
-          },
-          "captured_at": "2026-11-03T03:57:11.963450Z",
-          "market": "perpetual",
-          "reach_pct": {
-            "ask": 0.1533,
-            "bid": 0.1671
-          },
-          "snapshot_type": "orderbook_snapshot",
-          "source_timestamp": "2026-11-03T03:57:11.651000+00:00",
-          "source_url": "wss://ws-fapi.binance.com/ws-fapi/v1",
-          "spread_bps": 0.013,
-          "symbol": "BTCUSDT",
-          "transport": "binance_official_ws_api_depth"
-        },
-        "bitget_spot": {
-          "bands": {
-            "0.01": {
-              "ask_usd": 56857.32,
-              "bid_share": 0.57746,
-              "bid_usd": 77703.23,
-              "complete": true
-            },
-            "0.05": {
-              "ask_usd": 4010078.83,
-              "bid_share": 0.26984,
-              "bid_usd": 1481989.57,
-              "complete": true
-            },
-            "0.2": {
-              "ask_usd": 9508992.34,
-              "bid_share": 0.23581,
-              "bid_usd": 2934275.13,
-              "complete": true
-            },
-            "1.0": {
-              "ask_usd": null,
-              "bid_share": null,
-              "bid_usd": null,
-              "complete": false
-            }
-          },
-          "captured_at": "2026-11-03T03:57:14.652646Z",
-          "market": "spot",
-          "reach_pct": {
-            "ask": 0.69,
-            "bid": 0.8956
-          },
-          "snapshot_type": "rest_snapshot",
-          "source_timestamp": "2026-11-03T03:57:14.561000+00:00",
-          "source_url": "https://api.bitget.com/api/v3/market/orderbook",
-          "spread_bps": 0.001,
-          "symbol": "BTCUSDT",
-          "transport": "official_public_rest"
-        },
-        "bitget_usdt_perp": {
-          "bands": {
-            "0.01": {
-              "ask_usd": 706525.72,
-              "bid_share": 0.73137,
-              "bid_usd": 1923603.48,
-              "complete": true
-            },
-            "0.05": {
-              "ask_usd": 20979526.53,
-              "bid_share": 0.2806,
-              "bid_usd": 8183127.34,
-              "complete": true
-            },
-            "0.2": {
-              "ask_usd": 76204763.96,
-              "bid_share": 0.44938,
-              "bid_usd": 62193582.38,
-              "complete": true
-            },
-            "1.0": {
-              "ask_usd": null,
-              "bid_share": null,
-              "bid_usd": null,
-              "complete": false
-            }
-          },
-          "captured_at": "2026-11-03T03:57:14.876708Z",
-          "market": "perpetual",
-          "reach_pct": {
-            "ask": 0.4194,
-            "bid": 0.5837
-          },
-          "snapshot_type": "rest_snapshot",
-          "source_timestamp": "2026-11-03T03:57:14.788000+00:00",
-          "source_url": "https://api.bitget.com/api/v3/market/orderbook",
-          "spread_bps": 0.013,
-          "symbol": "BTCUSDT",
-          "transport": "official_public_rest"
-        },
-        "bybit_spot": {
-          "bands": {
-            "0.01": {
-              "ask_usd": 17624.2,
-              "bid_share": 0.84687,
-              "bid_usd": 97469.16,
-              "complete": true
-            },
-            "0.05": {
-              "ask_usd": 688791.5,
-              "bid_share": 0.42183,
-              "bid_usd": 502538.63,
-              "complete": true
-            },
-            "0.2": {
-              "ask_usd": 3924274.6,
-              "bid_share": 0.40873,
-              "bid_usd": 2712784.63,
-              "complete": true
-            },
-            "1.0": {
-              "ask_usd": null,
-              "bid_share": null,
-              "bid_usd": null,
-              "complete": false
-            }
-          },
-          "captured_at": "2026-11-03T03:57:10.484374Z",
-          "market": "spot",
-          "reach_pct": {
-            "ask": 0.9458,
-            "bid": 0.8653
-          },
-          "snapshot_type": "snapshot",
-          "source_timestamp": "2026-11-03T03:57:06.752000+00:00",
-          "source_url": "wss://stream.bybit.com/v5/public/spot",
-          "spread_bps": 0.013,
-          "symbol": "BTCUSDT",
-          "transport": "bybit_official_ws_snapshot"
-        },
-        "bybit_usdt_perp": {
-          "bands": {
-            "0.01": {
-              "ask_usd": 1766857.91,
-              "bid_share": 0.40385,
-              "bid_usd": 1196903.05,
-              "complete": true
-            },
-            "0.05": {
-              "ask_usd": 14149913.16,
-              "bid_share": 0.43003,
-              "bid_usd": 10675878.51,
-              "complete": true
-            },
-            "0.2": {
-              "ask_usd": 55745142.09,
-              "bid_share": 0.46949,
-              "bid_usd": 49333806.76,
-              "complete": true
-            },
-            "1.0": {
-              "ask_usd": null,
-              "bid_share": null,
-              "bid_usd": null,
-              "complete": false
-            }
-          },
-          "captured_at": "2026-11-03T03:57:13.564586Z",
-          "market": "perpetual",
-          "reach_pct": {
-            "ask": 0.2464,
-            "bid": 0.2962
-          },
-          "snapshot_type": "snapshot",
-          "source_timestamp": "2026-11-03T03:57:12.559000+00:00",
-          "source_url": "wss://stream.bybit.com/v5/public/linear",
-          "spread_bps": 0.013,
-          "symbol": "BTCUSDT",
-          "transport": "bybit_official_ws_snapshot"
-        },
-        "coinbase_spot": {
-          "bands": {
-            "0.01": {
-              "ask_usd": 31715.57,
-              "bid_share": 0.79532,
-              "bid_usd": 123240.17,
-              "complete": true
-            },
-            "0.05": {
-              "ask_usd": 867489.43,
-              "bid_share": 0.49504,
-              "bid_usd": 850450.97,
-              "complete": true
-            },
-            "0.2": {
-              "ask_usd": 7177519.33,
-              "bid_share": 0.4308,
-              "bid_usd": 5432277.34,
-              "complete": true
-            },
-            "1.0": {
-              "ask_usd": 8982524.48,
-              "bid_share": 0.63128,
-              "bid_usd": 15379069.72,
-              "complete": true
-            }
-          },
-          "captured_at": "2026-11-03T03:57:08.827325Z",
-          "market": "spot",
-          "reach_pct": {
-            "ask": 180845.5346,
-            "bid": 100.0
-          },
-          "snapshot_type": "rest_snapshot",
-          "source_timestamp": null,
-          "source_url": "https://api.exchange.coinbase.com/products/BTC-USD/book",
-          "spread_bps": 0.001,
-          "symbol": "BTCUSD",
-          "transport": "official_public_rest"
-        },
-        "gate_spot": {
-          "bands": {
-            "0.01": {
-              "ask_usd": 39922.19,
-              "bid_share": 0.18162,
-              "bid_usd": 8859.52,
-              "complete": true
-            },
-            "0.05": {
-              "ask_usd": 238040.65,
-              "bid_share": 0.33556,
-              "bid_usd": 120214.27,
-              "complete": true
-            },
-            "0.2": {
-              "ask_usd": 637028.32,
-              "bid_share": 0.46358,
-              "bid_usd": 550521.67,
-              "complete": true
-            },
-            "1.0": {
-              "ask_usd": 6775072.76,
-              "bid_share": 0.59492,
-              "bid_usd": 9950159.15,
-              "complete": true
-            }
-          },
-          "captured_at": "2026-11-03T03:57:15.877095Z",
-          "market": "spot",
-          "reach_pct": {
-            "ask": 4.9728,
-            "bid": 5.5628
-          },
-          "snapshot_type": "rest_snapshot",
-          "source_timestamp": "2026-11-03T03:56:28.915000+00:00",
-          "source_url": "https://api.gateio.ws/api/v4/spot/order_book",
-          "spread_bps": 0.013,
-          "symbol": "BTCUSDT",
-          "transport": "official_public_rest"
-        },
-        "gate_usdt_perp": {
-          "bands": {
-            "0.01": {
-              "ask_usd": 242818.57,
-              "bid_share": 0.44977,
-              "bid_usd": 198483.58,
-              "complete": true
-            },
-            "0.05": {
-              "ask_usd": 3157556.37,
-              "bid_share": 0.46298,
-              "bid_usd": 2722215.72,
-              "complete": true
-            },
-            "0.2": {
-              "ask_usd": 8224759.94,
-              "bid_share": 0.44343,
-              "bid_usd": 6552889.34,
-              "complete": true
-            },
-            "1.0": {
-              "ask_usd": null,
-              "bid_share": null,
-              "bid_usd": null,
-              "complete": false
-            }
-          },
-          "captured_at": "2026-11-03T03:57:17.326024Z",
-          "market": "perpetual",
-          "reach_pct": {
-            "ask": 0.2075,
-            "bid": 0.3733
-          },
-          "snapshot_type": "native_full_400_snapshot",
-          "source_timestamp": "2026-11-03T03:57:16.554000+00:00",
-          "source_url": "wss://fx-ws.gateio.ws/v4/ws/usdt",
-          "spread_bps": 0.013,
-          "symbol": "BTCUSDT",
-          "transport": "gate_official_ws_v2_full_snapshot"
-        },
-        "okx_spot": {
-          "bands": {
-            "0.01": {
-              "ask_usd": 230519.24,
-              "bid_share": 0.31177,
-              "bid_usd": 104427.54,
-              "complete": true
-            },
-            "0.05": {
-              "ask_usd": 1831511.56,
-              "bid_share": 0.49873,
-              "bid_usd": 1822230.49,
-              "complete": true
-            },
-            "0.2": {
-              "ask_usd": 5126586.61,
-              "bid_share": 0.52649,
-              "bid_usd": 5700296.16,
-              "complete": true
-            },
-            "1.0": {
-              "ask_usd": 8012211.5,
-              "bid_share": 0.62249,
-              "bid_usd": 13211889.59,
-              "complete": true
-            }
-          },
-          "captured_at": "2026-11-03T03:57:11.172781Z",
-          "market": "spot",
-          "reach_pct": {
-            "ask": 1.1699,
-            "bid": 1.3194
-          },
-          "snapshot_type": "rest_snapshot",
-          "source_timestamp": "2026-11-03T03:57:11.008000+00:00",
-          "source_url": "https://www.okx.com/api/v5/market/books-full",
-          "spread_bps": 0.013,
-          "symbol": "BTCUSDT",
-          "transport": "official_public_rest"
-        },
-        "okx_usdt_perp": {
-          "bands": {
-            "0.01": {
-              "ask_usd": 547583.33,
-              "bid_share": 0.85492,
-              "bid_usd": 3226805.28,
-              "complete": true
-            },
-            "0.05": {
-              "ask_usd": 14325822.83,
-              "bid_share": 0.44779,
-              "bid_usd": 11617059.74,
-              "complete": true
-            },
-            "0.2": {
-              "ask_usd": 43470120.44,
-              "bid_share": 0.44682,
-              "bid_usd": 35111545.06,
-              "complete": true
-            },
-            "1.0": {
-              "ask_usd": null,
-              "bid_share": null,
-              "bid_usd": null,
-              "complete": false
-            }
-          },
-          "captured_at": "2026-11-03T03:57:14.378647Z",
-          "market": "perpetual",
-          "reach_pct": {
-            "ask": 0.8976,
-            "bid": 0.9152
-          },
-          "snapshot_type": "rest_snapshot",
-          "source_timestamp": "2026-11-03T03:57:14.008000+00:00",
-          "source_url": "https://www.okx.com/api/v5/market/books-full",
-          "spread_bps": 0.013,
-          "symbol": "BTCUSDT",
-          "transport": "official_public_rest"
-        }
-      }
+      "spot_usable_venues": 0,
+      "venues": {}
     },
     "macro_etf": {
       "caveats": [
@@ -3573,15 +3127,15 @@
         "Rising Treasury yields, DXY and risk assets are not mechanically causal"
       ],
       "dxy_exact": {
-        "date": "2026-11-03",
+        "date": null,
         "exact_ice_index": true,
         "fetched_utc": "2026-11-03T02:56:48.303307+00:00",
-        "intraday_quote_age_h": 1.39,
-        "not_finalized_eod": true,
-        "observation_kind": "unfinished_current_session",
+        "intraday_quote_age_h": 3.74,
+        "not_finalized_eod": null,
+        "observation_kind": null,
         "source": "Yahoo Finance, DX-Y.NYB (ICE US Dollar Index indicative public bars)",
-        "status": "usable",
-        "value": 101.857
+        "status": "unavailable_or_delayed",
+        "value": null
       },
       "fred": {
         "fed_balance_sheet_millions": {
@@ -3650,7 +3204,7 @@
       },
       "quality": {
         "fed_rates": true,
-        "ice_dxy_exact": true,
+        "ice_dxy_exact": false,
         "spot_etf_flow": true,
         "treasury_yields": true,
         "usd_broad_index": true
@@ -4007,12 +3561,12 @@
       "last_closed_day_utc": "2026-11-02",
       "last_closed_week_monday_utc": "2026-10-26",
       "latest_closed_day_price_usdt": 76816.0,
-      "latest_spot_observed_utc": "2026-11-03T02:52:44.435269+00:00",
-      "latest_spot_price_usdt": 76895.37,
+      "latest_spot_observed_utc": null,
+      "latest_spot_price_usdt": null,
       "rsi14_previous": 39.435,
       "source": "Binance BTCUSDT spot (USDT); not worldwide BTC/USD index",
       "spot_not_futures": true,
-      "spot_quote_status": "fresh",
+      "spot_quote_status": "unavailable_or_stale",
       "swings": {
         "classification": "LH_LL",
         "confirmed_right_bars": 3,
