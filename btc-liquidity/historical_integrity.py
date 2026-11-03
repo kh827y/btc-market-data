@@ -31,10 +31,9 @@ def audit_bybit(history,status,latest):
     require(latest["full_source_crc_verified"] is False,
             "Bybit partial ZIP is not a complete CRC validation")
     require(latest["snapshot_not_daily_average"] is True,"Bybit point snapshot label")
-    # The daily Bybit collector can publish newer snapshots than the
-    # one-off parallel bulk backfill. Audit each at its own date cutoff.
+    # Bulk and daily collectors publish on independent schedules. Neither
+    # coverage denominator may be compared against the other's date cutoff.
     latest_through=dt.date.fromisoformat(latest["target_day"])
-    require(latest_through>=through,"Bybit daily snapshot older than bulk backfill")
     result={}
     for venue,start in BYBIT_START.items():
         rows=history["records"][venue]
@@ -42,9 +41,9 @@ def audit_bybit(history,status,latest):
         reported=status["day_audit"][venue]
         expected=(through-start).days+1
         latest_expected=(latest_through-start).days+1
-        require(expected>0,"Bybit source date range invalid")
+        require(expected>0 and latest_expected>0,"Bybit source date range invalid")
         verified=0;latest_verified=0;explicit=0;missing=[]
-        for offset in range(latest_expected):
+        for offset in range(max(expected,latest_expected)):
             day=(start+dt.timedelta(days=offset)).isoformat()
             row=rows.get(day)
             err=errs.get(venue+":"+day)
@@ -62,7 +61,7 @@ def audit_bybit(history,status,latest):
                         require(band.get("bid_coverage_complete") and band.get("ask_coverage_complete")
                                 and band.get("bid_usd") is not None and band.get("ask_usd") is not None,
                                 "Bybit partial band reported complete "+venue+":"+day)
-                latest_verified+=1
+                if offset<latest_expected:latest_verified+=1
                 if offset<expected:verified+=1
             elif offset<expected:
                 if err is not None:explicit+=1
