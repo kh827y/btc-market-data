@@ -14,6 +14,8 @@ from pathlib import Path
 import subprocess
 import sys
 
+from utc_candles import pending_short_publication_lag
+
 UTC = dt.timezone.utc
 STATE = Path("btc-monitor/data/critical_refresh_state.json")
 ROOT = Path(os.environ.get("RUNNER_TEMP", "/tmp"))
@@ -145,6 +147,12 @@ def refresh(now=None):
     for name, spec in SPECS.items():
         before = read_json(spec["source"])
         if not needs_refresh(name, before, now):
+            continue
+        if name == "price_technical" and pending_short_publication_lag(before, now):
+            # The exchange has a brief normal publication window after
+            # midnight UTC. Old daily/weekly bars stay ineligible for trend
+            # inference; do not needlessly re-fetch them every bridge run.
+            print("CRITICAL_FRESHNESS_UTC_CLOSE_PENDING", name, flush=True)
             continue
         receipt = (session.get("last_attempts") or {}).get(name) or {}
         if receipt.get("status") == "refreshed" and restore_cached(name, now):
