@@ -52,6 +52,10 @@ class ConsolidationReferenceTests(unittest.TestCase):
           "whale_history.json":{"whale_exchange_deposit_count":{
              recent:700},"whale_exchange_deposit_volume_btc":{old:2500}},
         }
+        # Simulate yesterday's stale cached lag_days next to genuinely old
+        # source observation dates: consolidation must recompute each age.
+        components["whale_latest.json"]["latest"]["whale_exchange_deposit_volume_btc"]["lag_days"]=1
+        components["latest.json"]["latest"]["realized_price"]["lag_days"]=2
         with tempfile.TemporaryDirectory() as temp:
             directory=Path(temp)
             for filename,blob in components.items():
@@ -65,6 +69,8 @@ class ConsolidationReferenceTests(unittest.TestCase):
         optional=data["reference_only_delayed"]
         self.assertEqual(len(optional),4)
         self.assertEqual(len({(v["group"],v["metric"]) for v in optional}),4)
+        self.assertTrue(all(v["lag_days"]>=9 for v in optional))
+        self.assertEqual(data["components"]["whale_deposits"]["latest"]["whale_exchange_deposit_volume_btc"]["lag_days"],9)
         self.assertTrue(all(v["signal_eligible"] is False for v in optional))
         self.assertFalse(any("realized_price" in x for x in data["stale"]))
         self.assertFalse(any("whale_exchange_deposit_volume" in x for x in data["stale"]))
