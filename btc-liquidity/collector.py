@@ -186,8 +186,11 @@ def collect_live(now, errors):
                 # REST returns 403/451 from GitHub runners; official native
                 # public WS returns timestamped FULL snapshots of identical
                 # venue/instrument. No proxies or different exchanges.
-                from official_ws import read_official_book
-                raw=read_official_book(name)
+                from official_ws import read_official_book, read_binance_futures_book
+                # Only Binance USD-M gets one additional same-origin WS
+                # attempt when the first connection transiently times out.
+                raw=(read_binance_futures_book() if name=="binance_usdm_perp"
+                     else read_official_book(name))
             elif name == "gate_spot":
                 # Native 5000 depth, only if complete, fresh and same book ID;
                 # otherwise the separately verified REST 1000 is used.
@@ -249,6 +252,10 @@ def collect_live(now, errors):
                 record["quantity_conversion"] = ("Gate contracts times quanto_multiplier into BTC"
                                                 if name == "gate_usdt_perp" else
                                                 "OKX contracts times ctVal times ctMult into BTC")
+            if name == "binance_usdm_perp":
+                record["exchange_update_id"]=raw["lastUpdateId"]
+                record["native_depth_levels_requested"]=1000
+                record["ws_connection_attempts"]=raw.get("_connection_attempts",1)
             if name == "gate_spot":
                 record["exchange_update_id"]=raw["id"]
                 record["native_depth_levels_requested"]=(
