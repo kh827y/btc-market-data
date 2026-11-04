@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parent))
 from metric_quality import assess as assess_metric_quality
+from utc_candles import assess_price_dates
 
 SOURCES={
  "macro_etf":("btc-macro/data/latest.json",26.0,"macro_liquidity"),
@@ -415,13 +416,11 @@ def build(source,now):
   # BTC trades every day; a completed day's indicators are usable throughout
   # the following UTC day, even if the hourly GitHub cron was delayed.
   if key=="price_technical" and status=="fresh":
-   day=timeparse(j.get("last_closed_day_utc"))
-   week=timeparse(j.get("last_closed_week_monday_utc"))
-   expected_day=now.date()-dt.timedelta(days=1)
-   expected_week=now.date()-dt.timedelta(days=now.weekday()+7)
-   if (day is None or day.date()!=expected_day or
-       week is None or week.date()!=expected_week or
+   candle_state=assess_price_dates(
+       j.get("last_closed_day_utc"),j.get("last_closed_week_monday_utc"),now)
+   if (candle_state["status"]!="current" or
        sample_age is None or sample_age<-.2 or sample_age>24.2):
+    # A pending new UTC close is never a usable trend observation.
     status="stale_observation"
   quote_at=timeparse(val(j,"spot_quote","observed_utc")) if key=="price_technical" else None
   quote_age=dt_age(now,quote_at)
