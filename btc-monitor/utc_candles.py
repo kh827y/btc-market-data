@@ -46,8 +46,11 @@ def assess_price_dates(day: str | None, week: str | None, now: dt.datetime) -> d
         earlier_week = (
             dt.date.fromisoformat(expected_week) - dt.timedelta(days=7)
         ).isoformat()
-        if (day in (expected_day, earlier_day)
-                and week in (expected_week, earlier_week)):
+        # A weekly rollover only happens at Monday 00:00 UTC.
+        # On Tue-Sun an older week means a genuine multi-day outage.
+        acceptable_week = (week == expected_week or
+                           (now.weekday() == 0 and week == earlier_week))
+        if (day in (expected_day, earlier_day) and acceptable_week):
             status = "publication_pending"
     return {
         "status": status,
