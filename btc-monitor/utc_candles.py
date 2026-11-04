@@ -8,6 +8,7 @@ current or makes them eligible for a trend signal.
 from __future__ import annotations
 
 import datetime as dt
+import math
 
 UTC = dt.timezone.utc
 PUBLICATION_GRACE_MINUTES = 15
@@ -82,7 +83,7 @@ def pending_short_publication_lag(record: dict, now: dt.datetime) -> bool:
     now = utc_now(now)
     if generated is None or observed is None:
         return False
-    if not isinstance(price, (int, float)) or isinstance(price, bool) or price <= 0:
+    if not isinstance(price, (int, float)) or isinstance(price, bool) or not math.isfinite(price) or price <= 0:
         return False
     generated_age = (now - generated).total_seconds() / 3600
     quote_age = (now - observed).total_seconds() / 3600
