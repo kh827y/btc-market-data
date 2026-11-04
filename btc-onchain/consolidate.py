@@ -3,6 +3,19 @@ import json
 import datetime as dt
 from pathlib import Path
 ROOT = Path("btc-onchain/data")
+# Nonessential vendor-specific series: keep dated archive observations but do
+# not turn chronic upstream publication lag into a current risk-signal outage.
+# The Bitview 150-day UTXO series is distinct from entity 155d cost basis.
+REFERENCE_ONLY = {
+    ("market_onchain", "sth_realized_price"):
+        "BGeometrics source-original STH; delayed free publication",
+    ("market_onchain", "lth_realized_price"):
+        "BGeometrics source-original LTH; delayed free publication",
+    ("market_onchain", "realized_price"):
+        "BGeometrics source-original network price; delayed free publication",
+    ("whale_deposits", "whale_exchange_deposit_volume_btc"):
+        "CoinGlass dated entity-classified whale BTC volume; delayed publication",
+}
 FILES = {
     "market_onchain":"latest.json",
     "lth_sth_bitview":"bitview_latest.json",
@@ -14,6 +27,7 @@ def main():
     components={}
     missing=[]
     stale=[]
+    reference_only_delayed=[]
     for name, filename in FILES.items():
         try:
             obj=json.loads((ROOT/filename).read_text())
@@ -34,9 +48,22 @@ def main():
             missing.append(name+": "+str(error)[:150])
     for name,group in components.items():
         for metric,item in group["latest"].items():
+            lag=item.get("lag_days")
+            reference_key=(name,metric)
+            behind=(item.get("value") is None or
+                    not isinstance(lag,int) or lag<0 or lag>3 or
+                    item.get("status") in ("missing","delayed","error","stale"))
+            if reference_key in REFERENCE_ONLY and behind:
+                reference_only_delayed.append({
+                    "group":name,"metric":metric,
+                    "last_observed_date":item.get("date"),
+                    "lag_days":lag,
+                    "reason":REFERENCE_ONLY[reference_key],
+                    "signal_eligible":False,
+                })
+                continue
             if item.get("value") is None:
                 missing.append(name+":"+metric)
-            lag=item.get("lag_days")
             if isinstance(lag,int) and lag>3:
                 stale.append(name+":"+metric+": "+str(lag)+" days")
         for issue in group["errors"]:
@@ -76,6 +103,7 @@ def main():
         "historical_public_whale_alert_subset_available":whale_coverage.get("whale_alert_observed_exchange_deposits",{}).get("daily_observations",0)>=730,
         "missing":sorted(set(missing)),
         "stale":sorted(set(stale)),
+        "reference_only_delayed":reference_only_delayed,
         "known_limits":[
             "Bitview long/short holders use UTXO 150d, not 155d entity-weighted",
             "CoinGlass entity-classified whale deposit count and volume do not have verified free multi-year raw daily histories; only accumulated dated observations. CoinGlass 1d/7d/30d changes and historical percentiles are vendor-calculated, not self-recomputed.",
