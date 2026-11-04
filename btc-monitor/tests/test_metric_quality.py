@@ -49,6 +49,21 @@ def live():
     return payload
 
 class QualityTests(unittest.TestCase):
+    def test_completed_utc_week_is_usable_midweek_not_stale(self):
+        now=dt.datetime(2026,11,4,1,20,tzinfo=dt.timezone.utc)
+        p={"closed_candles_only":True,
+           "last_closed_day_utc":"2026-11-03",
+           "last_closed_week_monday_utc":"2026-10-26",
+           "spot_quote_status":"fresh",
+           "latest_spot_observed_utc":"2026-11-04T01:19:00Z"}
+        report=q.assess({"price_technical":{}},fresh("price_technical"),
+                        {"price_technical":p},now)
+        self.assertEqual(report["checks"]["price.closed_daily_weekly"]["status"],"usable")
+        p["last_closed_week_monday_utc"]="2026-11-02"  # unclosed week
+        report=q.assess({"price_technical":{}},fresh("price_technical"),
+                        {"price_technical":p},now)
+        self.assertEqual(report["checks"]["price.closed_daily_weekly"]["status"],"invalid")
+
     def test_cvd_five_venue_real_arithmetic_proof(self):
         raw=cvd()
         transformed=metrics_cvd()
