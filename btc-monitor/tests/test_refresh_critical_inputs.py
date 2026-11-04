@@ -1,6 +1,10 @@
 """Offline regression tests for bounded freshness fallback (no API calls)."""
 import datetime as dt
+import json
+import os
+import tempfile
 import sys
+from unittest import mock
 import unittest
 from pathlib import Path
 
@@ -69,6 +73,34 @@ class CriticalFreshnessTests(unittest.TestCase):
     def test_missing_and_future_timestamps_are_not_fresh(self):
         self.assertTrue(refresh.too_old(None, self.now, 2))
         self.assertTrue(refresh.too_old("2026-11-05T00:00:00Z", self.now, 2))
+
+    def test_successful_refresh_survives_git_reset_without_new_api_request(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path.cwd()
+            try:
+                os.chdir(tmp)
+                Path("option").mkdir()
+                fresh = {
+                    "generated_utc": self.current,
+                    "results": {"deribit_live_surface": {"as_of_utc": self.current}},
+                }
+                Path("option/latest.json").write_text(json.dumps(fresh), encoding="utf-8")
+                changed_spec = {
+                    "source": "option/latest.json",
+                    "outputs": ["option/latest.json"],
+                    "preempt_age_h": 2.0,
+                    "retry_minutes": 75,
+                    "timeout_seconds": 5,
+                }
+                with mock.patch.dict(refresh.SPECS, {"options": changed_spec}), mock.patch.object(
+                        refresh, "CACHE", Path(tmp) / "cache"):
+                    self.assertTrue(refresh.save_cached("options"))
+                    # A failed Git push resets checkout to the older stale source.
+                    Path("option/latest.json").write_text('{"generated_utc":"2026-10-01T00:00:00Z"}', encoding="utf-8")
+                    self.assertTrue(refresh.restore_cached("options", self.now))
+                    self.assertEqual(json.loads(Path("option/latest.json").read_text()), fresh)
+            finally:
+                os.chdir(cwd)
 
 if __name__ == "__main__":
     unittest.main()
