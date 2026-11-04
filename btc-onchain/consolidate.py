@@ -41,6 +41,17 @@ def main():
                 lag=(now.date()-dt.date.fromisoformat(day)).days
                 latest={key:{"date":day,"value":value,"lag_days":lag}
                         for key,value in obj.get("last_observed_day_data",{}).items()}
+            # The upstream last-run lag_days may be from yesterday. Recompute
+            # every observation's TRUE age against today's UTC calendar before
+            # deciding its signal eligibility or diagnostic classification.
+            for metric,item in latest.items():
+                if not isinstance(item,dict):
+                    continue
+                try:
+                    observed=dt.date.fromisoformat(item.get("date",""))
+                    item["lag_days"]=(now.date()-observed).days
+                except (TypeError,ValueError):
+                    item["lag_days"]=None
             components[name]={"feed_age_hours":round(hours,2),"latest":latest,"errors":obj.get("errors",[]),"source":obj.get("source"),"scope":obj.get("scope"),"observed_days":obj.get("observed_days")}
             if hours>36:
                 stale.append(name+": feed "+str(round(hours,1))+" hours old")
