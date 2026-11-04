@@ -116,6 +116,112 @@ class OfficialWSTests(unittest.TestCase):
         self.assertTrue(fake.closed)
 
 
+    def test_binance_timeout_retries_once_and_keeps_same_native_book(self):
+        attempts=[];sleep_calls=[]
+        class FirstConnection(FakeConnection):
+            def recv(self):
+                raise TimeoutError("temporary network recv timeout")
+        class SecondConnection(FakeConnection):
+            def recv(self):
+                return json.dumps(binance_response(self.sent[0]["id"]))
+        def factory(url, **kwargs):
+            self.assertEqual(url,ws.BINANCE_URL)
+            fake=(FirstConnection([]) if not attempts else SecondConnection([]))
+            attempts.append(fake)
+            return fake
+        out=ws.read_binance_futures_book(factory,sleep_calls.append)
+        self.assertEqual(len(attempts),2)
+        self.assertEqual(sleep_calls,[ws.BINANCE_RETRY_DELAY_S])
+        self.assertTrue(all(x.closed for x in attempts))
+        self.assertEqual(out["_connection_attempts"],2)
+        self.assertEqual(out["_transport"],"binance_official_ws_api_depth")
+        self.assertEqual(out["_source_url"],ws.BINANCE_URL)
+        self.assertEqual(out["lastUpdateId"],19402)
+        self.assertEqual(len(out["bids"]),1000)
+        self.assertEqual(len(out["asks"]),1000)
+        for connection in attempts:
+            self.assertEqual(connection.sent[0]["method"],"depth")
+            self.assertEqual(connection.sent[0]["params"],{"symbol":"BTCUSDT","limit":1000})
+
+    def test_binance_double_timeout_fails_closed_without_third_request(self):
+        calls=[];delays=[]
+        class TimeoutConnection(FakeConnection):
+            def recv(self):
+                raise TimeoutError("timed out")
+        def factory(*args,**kwargs):
+            fake=TimeoutConnection([])
+            calls.append(fake)
+            return fake
+        with self.assertRaisesRegex(TimeoutError,"timed out"):
+            ws.read_binance_futures_book(factory,delays.append)
+        self.assertEqual(len(calls),2)
+        self.assertEqual(delays,[ws.BINANCE_RETRY_DELAY_S])
+        self.assertTrue(all(c.closed for c in calls))
+
+    def test_binance_429_server_refusal_is_never_retried(self):
+        calls=[];delays=[]
+        class RejectConnection(FakeConnection):
+            def recv(self):
+                return json.dumps({"id":self.sent[0]["id"],"status":429,"result":None,
+                                   "error":{"code":-1003,"msg":"Too many requests"}})
+        def factory(*args,**kwargs):
+            fake=RejectConnection([])
+            calls.append(fake)
+            return fake
+        with self.assertRaisesRegex(ws.UnverifiedBook,"non-success"):
+            ws.read_binance_futures_book(factory,delays.append)
+        self.assertEqual(len(calls),1)
+        self.assertEqual(delays,[])
+        self.assertTrue(calls[0].closed)
+
+    def test_binance_invalid_snapshot_does_not_trigger_extra_request(self):
+        calls=[]
+        class BadConnection(FakeConnection):
+            def recv(self):
+                msg=binance_response(self.sent[0]["id"])
+                msg["result"]["lastUpdateId"]=None
+                return json.dumps(msg)
+        def factory(*args,**kwargs):
+            fake=BadConnection([])
+            calls.append(fake)
+            return fake
+        with self.assertRaises(ws.UnverifiedBook):
+            ws.read_binance_futures_book(factory,lambda _:None)
+        self.assertEqual(len(calls),1)
+        self.assertTrue(calls[0].closed)
+
+    def test_binance_websocket_client_named_timeout_is_retryable(self):
+        class WebSocketTimeoutException(Exception):
+            pass
+        self.assertTrue(ws._transient_binance_ws_error(WebSocketTimeoutException("timeout")))
+        self.assertFalse(ws._transient_binance_ws_error(ws.UnverifiedBook("invalid")))
+        self.assertFalse(ws._transient_binance_ws_error(ValueError("bad input")))
+
+    def test_binance_collector_preserves_ws_native_provenance(self):
+        from unittest.mock import patch
+        now=dt.datetime.now(book.UTC)
+        raw=binance_response("verified")
+        native=raw["result"]
+        snapshot={"bids":native["bids"],"asks":native["asks"],
+                  "E":native["E"],"lastUpdateId":native["lastUpdateId"],
+                  "_connection_attempts":2,"_transport":"binance_official_ws_api_depth",
+                  "_source_url":ws.BINANCE_URL,"_snapshot_type":"orderbook_snapshot"}
+        errors=[]
+        with patch.object(book,"VENUES",{"binance_usdm_perp":book.VENUES["binance_usdm_perp"]}), \
+             patch.object(ws,"read_binance_futures_book",return_value=snapshot) as getter, \
+             patch.object(book,"fetch",side_effect=AssertionError("do not use blocked futures REST")):
+            data=book.collect_live(now,errors)
+        getter.assert_called_once_with()
+        self.assertFalse(errors)
+        record=data["venues"]["binance_usdm_perp"]
+        self.assertEqual(record["exchange_update_id"],19402)
+        self.assertEqual(record["native_depth_levels_requested"],1000)
+        self.assertEqual(record["ws_connection_attempts"],2)
+        self.assertEqual(record["market"],"perpetual")
+        self.assertEqual(record["source_url"],ws.BINANCE_URL)
+        self.assertEqual(record["snapshot_type"],"orderbook_snapshot")
+        self.assertIsNotNone(record["source_timestamp"])
+
     def test_gate_v2_native_400_full_book_is_accepted(self):
         b,a=sides(400)
         ts=int(dt.datetime.now(ws.UTC).timestamp()*1000)
