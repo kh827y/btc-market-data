@@ -530,10 +530,14 @@ def assess(source,feeds,metrics,now):
     # Price has its own verified candle/RSI/Wilder/MA20+50+200 cross checks.
     p=metrics.get("price_technical")
     if isinstance(p,dict):
+        # The completed weekly bar is dated by its open Monday. Age-based
+        # 8-day gates wrongly reject it midway through the following week.
+        expected_day=(now.date()-dt.timedelta(days=1)).isoformat()
+        expected_week=(now.date()-dt.timedelta(days=now.weekday()+7)).isoformat()
         g.add("price.closed_daily_weekly","price_technical","usable" if
               p.get("closed_candles_only") is True and
-              date_age(now,p.get("last_closed_day_utc"),1)=="usable" and
-              date_age(now,p.get("last_closed_week_monday_utc"),8)=="usable"
+              p.get("last_closed_day_utc")==expected_day and
+              p.get("last_closed_week_monday_utc")==expected_week
               else "invalid",
               "BTCUSDT price, RSI Wilder, UTC daily/weekly",
               "Binance SPOT completed candles; not current unclosed week",
