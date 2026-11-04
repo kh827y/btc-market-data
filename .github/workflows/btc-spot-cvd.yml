@@ -43,23 +43,49 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          for attempt in 1 2 3 4; do
-            echo "CVD write attempt $attempt: fetch latest canonical checkpoint"
+          # Free trade APIs must not be called four times merely because
+          # unrelated GitHub workflows push a commit during collection.
+          # Rebase a validated snapshot ONLY over changes to unrelated paths.
+          # A truly changed CVD checkpoint requires a fresh calculation.
+          for collection_attempt in 1 2; do
             git fetch origin main
             git reset --hard origin/main
+            echo "CVD source collection $collection_attempt from latest checkpoint"
             python -u btc-spot-cvd/collector.py
             git add btc-spot-cvd/data/state.json btc-spot-cvd/data/latest.json
             if git diff --cached --quiet; then
-              echo "No changes to save"
+              echo "Current CVD state unchanged"
               exit 0
             fi
             git commit -m "data: update verified BTC spot CVD checkpoint"
-            if git push origin HEAD:main; then
-              echo "Saved CVD checkpoint"
-              exit 0
+            source_collision=0
+            for safe_push in 1 2 3 4 5 6; do
+              if git push origin HEAD:main; then
+                echo "Saved verified BTC CVD"
+                exit 0
+              fi
+              git fetch origin main
+              if ! git diff --quiet HEAD^ origin/main -- \
+                    btc-spot-cvd/data/state.json \
+                    btc-spot-cvd/data/latest.json \
+                    btc-spot-cvd/collector.py \
+                    btc-spot-cvd/coinbase_recent_repair.py \
+                    btc-spot-cvd/coinbase_parallel_backfill.py; then
+                source_collision=1
+                echo "Actual CVD state or code advanced; recalculate once"
+                break
+              fi
+              if ! git rebase origin/main; then
+                git rebase --abort || true
+                echo "Cannot safely rebase BTC CVD; no blind overwrite" >&2
+                exit 1
+              fi
+              echo "Rebased validated CVD on unrelated commit; retry push $safe_push"
+            done
+            if [ "$source_collision" -eq 0 ]; then
+              echo "CVD publication raced too many times; source calls not repeated" >&2
+              exit 1
             fi
-            echo "Concurrent write conflict; recalculate from newest checkpoint"
-            sleep 3
           done
-          echo "CVD checkpoint could not be committed after retries" >&2
+          echo "CVD source changed twice during collection; defer to next automatic run" >&2
           exit 1
