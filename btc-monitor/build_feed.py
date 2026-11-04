@@ -120,6 +120,15 @@ def compact_options(j):
          "derivasys_1m":val(dr,"standard_tenors","1M"),
          "rr25_convention":"call IV minus put IV (negative means more expensive downside puts), in volatility POINTS"}
 
+# Optional original-vendor series and one dated whale-volume series, only
+# retained as references when delayed. Distinct Bitview cohorts remain current.
+ONCHAIN_REFERENCE_ONLY={
+ ("market_onchain","sth_realized_price"),
+ ("market_onchain","lth_realized_price"),
+ ("market_onchain","realized_price"),
+ ("whale_deposits","whale_exchange_deposit_volume_btc"),
+}
+
 def compact_onchain(j,now):
  out={}
  for group,fields in {
@@ -136,7 +145,9 @@ def compact_onchain(j,now):
    ok=(lag is not None and 0<=lag<=3 and num(row.get("value")) is not None
        and row.get("status") not in ("missing","error","delayed")
        and (component_age is None or 0<=component_age<=30))
-   values[key]={"date":row.get("date"),"lag_days":lag,"status":"usable" if ok else "missing_or_delayed",
+   reference=(group,key) in ONCHAIN_REFERENCE_ONLY
+   values[key]={"date":row.get("date"),"lag_days":lag,
+                "status":"usable" if ok else "reference_only_delayed" if reference else "missing_or_delayed",
                 "value":num(row.get("value")) if ok else None}
   out[group]={"metrics":values,"scope":val(j,"components",group,"scope"),
               "source":val(j,"components",group,"source")}
@@ -159,6 +170,7 @@ def compact_onchain(j,now):
  return {"groups":out,"cost_basis_independent":alternatives,
          "cost_basis_all_three_usable":all(x["status"]=="usable" for x in alternatives.values()),
          "known_stale":j.get("stale",[]),"missing":j.get("missing",[]),
+         "reference_only_delayed":j.get("reference_only_delayed",[]),
          "whale_alert_subset_not_all_transfers":True,
          "historical_exact_whale_entity_flows":j.get("exact_multiyear_whale_deposit_history_available") is True}
 
@@ -472,7 +484,9 @@ def build(source,now):
  if "live_depth" in feeds and feeds["live_depth"].get("source_errors",0):
   coverage_gaps.append("live_depth:failed_venues="+str(feeds["live_depth"]["source_errors"]))
  if "onchain" in metrics:
-  delayed=sum(v.get("status")!="usable" for g in metrics["onchain"]["groups"].values() for v in g["metrics"].values())
+  delayed=sum(v.get("status") not in ("usable","reference_only_delayed")
+              for group in metrics["onchain"]["groups"].values()
+              for v in group["metrics"].values())
   if delayed:coverage_gaps.append("onchain:missing_or_delayed_metrics="+str(delayed))
  if "derivatives" in metrics and val(metrics,"derivatives","cme_front_basis") is None:
   coverage_gaps.append("derivatives:cme_front_basis_unavailable")
@@ -659,6 +673,7 @@ def make_brief(report):
   summary["onchain"]={group:{name:{"value":v["value"],"date":v["date"],"status":v["status"]}
           for name,v in item["metrics"].items()} for group,item in j.items()}
   summary["onchain_cost_basis_independent"]=metrics["onchain"]["cost_basis_independent"]
+  summary["onchain_reference_only_delayed"]=metrics["onchain"].get("reference_only_delayed",[])
  if good("live_depth"):
   j=metrics["live_depth"]
   summary["orderbook_live"]={"spot_venues":j["spot_usable_venues"],
