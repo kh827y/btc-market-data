@@ -20,6 +20,8 @@ BYBIT={
 BINANCE_URL="wss://ws-fapi.binance.com/ws-fapi/v1"
 RESPONSE_TIMEOUT_S=12
 MAX_FRAMES=12
+BINANCE_CONNECTION_ATTEMPTS=2
+BINANCE_RETRY_DELAY_S=1.25
 
 class UnverifiedBook(ValueError):
     pass
@@ -109,6 +111,46 @@ def read_official_book(venue,connection_factory=None):
     finally:
         if connection is not None:
             connection.close()
+
+def _transient_binance_ws_error(exc):
+    """Only short-lived transport/server failures warrant one more request.
+
+    Handshake denial, source-identity/timestamp mismatches, 429 and invalid
+    book data do not trigger retries or silently become a smaller book.
+    WebSocketTimeoutException/ConnectionClosedException are websocket-client
+    exceptions (not subclasses of built-in TimeoutError).
+    """
+    if isinstance(exc, UnverifiedBook):
+        return False
+    if isinstance(exc, (TimeoutError, ConnectionError, OSError, EOFError)):
+        return True
+    return type(exc).__name__ in (
+        "WebSocketTimeoutException",
+        "WebSocketConnectionClosedException",
+    )
+
+
+def read_binance_futures_book(connection_factory=None, sleep_fn=None):
+    """Bounded official USD-M BTCUSDT depth snapshot, with one safe retry.
+
+    The same official ws-fapi endpoint, same symbol, same 1000-level request
+    is used on both attempts. No REST 403/451 workaround, proxy, replayed
+    snapshot, artificial padding, or substitution from another market.
+    """
+    if sleep_fn is None:
+        sleep_fn=time.sleep
+    for attempt in range(BINANCE_CONNECTION_ATTEMPTS):
+        try:
+            result=read_official_book("binance_usdm_perp",connection_factory)
+            result["_connection_attempts"]=attempt+1
+            return result
+        except Exception as exc:
+            if (attempt+1>=BINANCE_CONNECTION_ATTEMPTS or
+                    not _transient_binance_ws_error(exc)):
+                raise
+            sleep_fn(BINANCE_RETRY_DELAY_S)
+    raise AssertionError("unreachable Binance retry loop")
+
 
 # Gate's public V2 "futures.obu" channel provides native 400-level
 # initial FULL snapshots (unlike Bybit full-depth delta-only channel).
