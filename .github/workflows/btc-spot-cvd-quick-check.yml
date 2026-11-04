@@ -59,13 +59,11 @@ jobs:
           # A verification workflow must NEVER overwrite canonical live
           # state/latest with a 12-page partial Coinbase smoke result.
           # Real source collection takes place only in the CVD collector job.
-          cp -a btc-spot-cvd /tmp/btc-cvd-smoke
           mkdir -p /tmp/btc-cvd-smoke-work/btc-spot-cvd
           cp -a btc-spot-cvd/. /tmp/btc-cvd-smoke-work/btc-spot-cvd/
           set +e
           (cd /tmp/btc-cvd-smoke-work &&
-            BTC_CVD_ARCHIVE_BATCH=2 BTC_CVD_COINBASE_RECENT_PAGES=0 BTC_CVD_COINBASE_DEEP_PAGES=0
-            python -u btc-spot-cvd/collector.py) > /tmp/cvd-live.log 2>&1
+            env BTC_CVD_ARCHIVE_BATCH=2 BTC_CVD_COINBASE_RECENT_PAGES=0 BTC_CVD_COINBASE_DEEP_PAGES=0 python -u btc-spot-cvd/collector.py) > /tmp/cvd-live.log 2>&1
           collect_status=$?
           (cd /tmp/btc-cvd-smoke-work && python -u btc-spot-cvd/probe_free_archive.py) > /tmp/cvd-probe.log 2>&1
           probe_status=$?
