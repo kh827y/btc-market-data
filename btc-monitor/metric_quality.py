@@ -306,7 +306,12 @@ def gate_options(g,raw,metrics):
     observed=surface.get("as_of_utc")
     age=interval_age(g.now,observed,5.5)
     for term,row in (surface.get("term_structure") or {}).items():
-        status="invalid"
+        # A tenor outside the ACTUALLY LISTED Deribit expiries is a
+        # legitimate absent observation, not a corrupt option quote.
+        # Do not interpolate/extrapolate 1W from the first listed 9d+ expiry.
+        status=("unavailable" if row.get("status")=="unavailable" and
+                row.get("reason")=="tenor outside observed maturities"
+                else "invalid")
         if row.get("status")=="available" and row.get("quality") in ("standard","wide_expiry_bracket"):
             fields=[amount(row.get(k)) for k in ("atm_iv_pct","call25_iv_pct","put25_iv_pct","rr25_call_minus_put_volpts")]
             left,right=at(row.get("expiry_left")),at(row.get("expiry_right"))
