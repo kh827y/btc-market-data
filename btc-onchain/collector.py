@@ -27,23 +27,33 @@ def parse_rows(data):
         out[d]=v
     if not out:raise ValueError("no numerical dated observations")
     return out
-def selected_metrics(data,today):
-    """Budget exactly nine core and one optional call per scheduled day.
+# Original BGeometrics realized prices are optional historical reference
+# data, not current cost-basis signals. Bitview daily 150d UTXO series
+# separately supplies the timely network / short- and long-holder inputs.
+# Three free diagnostic requests per WEEK; do not consume one request every
+# day simply because the vendor's observations remain a week behind.
+OPTIONAL_REALIZED_WEEKDAYS={
+    0:"sth_realized_price", # Monday UTC
+    2:"lth_realized_price", # Wednesday UTC
+    4:"realized_price",     # Friday UTC
+}
+CORE_NAMES=("mvrv","mvrv_zscore","nupl","sth_sopr","lth_sopr",
+            "lth_realized_profit","lth_realized_loss",
+            "sth_realized_profit","sth_realized_loss")
 
-    The LTH primary series is prioritized until a genuine dated observation
-    is saved; never consume a further 11th request against the 10/hour cap.
-    The original rotating schedule resumes after that genuine seeding.
+def selected_metrics(data,today,previous_latest=None):
+    """Nine important daily free requests; at most one optional per week-day.
+
+    The optional series are polled once a week each, with a same-day receipt
+    check to prevent redundant manual / scheduled repeats. Do not re-prioritize
+    a lagging vendor response forever; do not fill a missing row with a proxy.
     """
-    required=["mvrv","mvrv_zscore","nupl","sth_sopr","lth_sopr",
-              "lth_realized_profit","lth_realized_loss",
-              "sth_realized_profit","sth_realized_loss"]
-    optional=["sth_realized_price","lth_realized_price","realized_price"]
-    rotation=optional[today.toordinal()%len(optional)]
-    # Only 10 free calls/hour. Do NOT issue an 11th request to bootstrap LTH:
-    # prioritize the missing original series in the existing optional slot.
-    if not data.get("lth_realized_price"):
-        rotation="lth_realized_price"
-    return required+[rotation]
+    optional=OPTIONAL_REALIZED_WEEKDAYS.get(today.weekday())
+    if (optional and isinstance(previous_latest,dict) and
+            previous_latest.get("optional_checked_utc_day")==today.isoformat() and
+            previous_latest.get("optional_requested")==optional):
+        optional=None
+    return list(CORE_NAMES)+([optional] if optional else [])
 
 def main():
     ROOT.mkdir(parents=True,exist_ok=True)
@@ -51,10 +61,17 @@ def main():
     previous=ROOT/"history.json"
     data=json.loads(previous.read_text()) if previous.exists() else {}
     errors=[]
-    # Free BGeometrics has BOTH an hourly (10) and daily (15) limit.
-    # Bootstrap missing original LTH using the existing optional slot.
-    # Never exceed 10 source requests in a single daily collection.
-    for name in selected_metrics(data,now.date()):
+    prior_file=ROOT/"latest.json"
+    try:
+        previous_latest=json.loads(prior_file.read_text()) if prior_file.exists() else {}
+    except (OSError,ValueError):
+        previous_latest={}
+    # BGeometrics documents a free request budget. The primary feed uses
+    # nine core requests per daily collection, with one optional on only
+    # three weekdays. Never retry stale optional data in the same run.
+    planned=selected_metrics(data,now.date(),previous_latest)
+    optional=next((name for name in planned if name in OPTIONAL_REALIZED_WEEKDAYS.values()),None)
+    for name in planned:
         slug=METRICS[name]
         try:
             rows=parse_rows(fetch("https://bitcoin-data.com/v1/"+slug+"?startday=2022-11-01"))
@@ -85,7 +102,10 @@ def main():
         last=max(series)
         lag=(today-dt.date.fromisoformat(last)).days
         latest[name]={"status":"fresh" if lag<=2 else "delayed","value":series[last],"date":last,"lag_days":lag,"count":len(series)}
-    out={"generated_utc":now.isoformat(),"data_source":{"bgeometrics":"free tier last four years; LTH/STH last seven days may be delayed","coinmetrics":"community API free exchange metrics; data revisions/status possible"},"latest":latest,"errors":errors}
+    out={"generated_utc":now.isoformat(),"data_source":{"bgeometrics":"free tier last four years; optional realized-price endpoints historically delayed","coinmetrics":"community API free exchange metrics; data revisions/status possible"},"latest":latest,"errors":errors,
+         "optional_requested":optional,
+         "optional_checked_utc_day":now.date().isoformat() if optional else previous_latest.get("optional_checked_utc_day"),
+         "optional_poll_policy":"reference-only BGeometrics cost basis, maximum one optional request on Monday/Wednesday/Friday; never treat delayed source as a current signal"}
     previous.write_text(json.dumps(data,separators=(",",":"),sort_keys=True)+"\n")
     (ROOT/"latest.json").write_text(json.dumps(out,ensure_ascii=False,indent=2)+"\n")
     print(json.dumps({"generated_utc":out["generated_utc"],"metric_status":{k:(v["status"],v["date"],v["count"]) for k,v in latest.items()},"errors":errors},ensure_ascii=False))
