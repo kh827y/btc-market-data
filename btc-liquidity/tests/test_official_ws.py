@@ -207,8 +207,11 @@ class OfficialWSTests(unittest.TestCase):
                   "_connection_attempts":2,"_transport":"binance_official_ws_api_depth",
                   "_source_url":ws.BINANCE_URL,"_snapshot_type":"orderbook_snapshot"}
         errors=[]
+        # collector imports official_ws by its normal module name; the ws
+        # fixture above is a separately loaded importlib test module.
+        import official_ws as production_ws
         with patch.object(book,"VENUES",{"binance_usdm_perp":book.VENUES["binance_usdm_perp"]}), \
-             patch.object(ws,"read_binance_futures_book",return_value=snapshot) as getter, \
+             patch.object(production_ws,"read_binance_futures_book",return_value=snapshot) as getter, \
              patch.object(book,"fetch",side_effect=AssertionError("do not use blocked futures REST")):
             data=book.collect_live(now,errors)
         getter.assert_called_once_with()
