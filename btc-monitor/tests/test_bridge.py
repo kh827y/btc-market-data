@@ -263,6 +263,59 @@ class BridgeTests(unittest.TestCase):
   self.assertEqual(brief["orderbook_history"]["hft_12utc"]["binance_spot"]["coverage_30d"]["eligible_days"],30)
   self.assertFalse(report["audit"]["family_readiness"]["current_orderbook"])
 
+ def test_optional_original_cost_basis_and_whale_volume_do_not_mask_current_independent_metrics(self):
+  current="2026-11-01"
+  old="2026-10-26"
+  market=("mvrv","mvrv_zscore","nupl","sth_sopr","lth_sopr",
+          "lth_realized_profit","lth_realized_loss","sth_realized_profit",
+          "sth_realized_loss","sth_realized_price","lth_realized_price",
+          "realized_price","exchange_in_btc","exchange_out_btc","exchange_reserves_btc")
+  bitview=("lth_supply_150d","sth_supply_150d","lth_change_7d_150d",
+           "lth_change_30d_150d","lth_realized_price_150d",
+           "sth_realized_price_150d","realized_price_bitview",
+           "lth_nupl_150d","sth_nupl_150d")
+  whales=("whale_exchange_deposit_count","whale_exchange_deposit_volume_btc",
+          "whale_only_top10_deposit_ratio","swiss_whale_deposit_count_ge50")
+  alert=("observed_alert_count","observed_btc_volume",
+         "count_ge_100_btc","count_ge_1000_btc")
+  def group(names):
+   return {"feed_age_hours":1,"latest":{
+      name:{"date":current,"value":100,"lag_days":1} for name in names}}
+  raw={"generated_utc":"2026-11-02T07:10:00Z","components":{
+       "market_onchain":group(market),"lth_sth_bitview":group(bitview),
+       "whale_deposits":group(whales),"historical_whale_alerts":group(alert)},
+       "reference_only_delayed":[
+        {"group":"market_onchain","metric":"realized_price","last_observed_date":old,
+         "signal_eligible":False}]}
+  for key in ("sth_realized_price","lth_realized_price","realized_price"):
+   raw["components"]["market_onchain"]["latest"][key]={
+       "date":old,"value":12345,"status":"delayed","lag_days":7}
+  raw["components"]["whale_deposits"]["latest"]["whale_exchange_deposit_volume_btc"]={
+      "date":old,"value":1200,"lag_days":7}
+  result=m.build({"onchain":raw},NOW)
+  self.assertEqual(result["feeds"]["onchain"]["status"],"fresh")
+  self.assertTrue(result["audit"]["family_readiness"]["onchain_independent_cost_basis"])
+  self.assertFalse(any(g.startswith("onchain:missing_or_delayed_metrics=")
+                       for g in result["audit"]["coverage_gaps"]))
+  for group,key in (("market_onchain","sth_realized_price"),
+                    ("market_onchain","lth_realized_price"),
+                    ("market_onchain","realized_price"),
+                    ("whale_deposits","whale_exchange_deposit_volume_btc")):
+   item=result["metrics"]["onchain"]["groups"][group]["metrics"][key]
+   self.assertEqual(item["status"],"reference_only_delayed")
+   self.assertIsNone(item["value"])
+   self.assertNotIn("onchain."+group+"."+key,result["metric_quality"]["checks"])
+  brief=m.make_brief(result)
+  self.assertEqual(brief["onchain_cost_basis_independent"]["network_realized_price"]["status"],"usable")
+  self.assertEqual(len(brief["onchain_reference_only_delayed"]),1)
+  # A genuinely missing current Bitview source still creates a real issue.
+  raw["components"]["lth_sth_bitview"]["latest"]["lth_realized_price_150d"]={
+      "date":old,"value":48900,"lag_days":7,"status":"delayed"}
+  degraded=m.build({"onchain":raw},NOW)
+  self.assertTrue(any(g.startswith("onchain:missing_or_delayed_metrics=")
+                      for g in degraded["audit"]["coverage_gaps"]))
+  self.assertFalse(degraded["audit"]["family_readiness"]["onchain_independent_cost_basis"])
+
  def test_bitview_cost_basis_separately_usable_when_original_provider_delayed(self):
   src={"generated_utc":"2026-11-02T07:10:00Z","components":{
    "market_onchain":{"feed_age_hours":1,"latest":{
