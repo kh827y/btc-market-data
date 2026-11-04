@@ -22,7 +22,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Verify free daily request cap and LTH bootstrap
+      - name: Verify free daily request budget and weekly reference cadence
         run: |
           python -m unittest discover -s btc-onchain/tests -p test_primary_selection.py -v
       - name: Update and persist verified onchain history from newest checkpoint
@@ -32,15 +32,34 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # Run public onchain API collection ONCE, not four times if an
+          # unrelated collector happens to commit during this daily task.
+          git fetch origin main
+          git reset --hard origin/main
+          python -u btc-onchain/collector.py
+          git add btc-onchain/data/history.json btc-onchain/data/latest.json
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "data: update BTC onchain historical metrics"
           for attempt in 1 2 3 4; do
+            if git push origin HEAD:main; then
+              echo "Persisted single onchain collector snapshot"
+              exit 0
+            fi
             git fetch origin main
-            git reset --hard origin/main
-            python -u btc-onchain/collector.py
-            git add btc-onchain/data/history.json btc-onchain/data/latest.json
-            if git diff --cached --quiet; then exit 0; fi
-            git commit -m "data: update BTC onchain historical metrics"
-            if git push origin HEAD:main; then exit 0; fi
-            echo "Concurrent data updates; reload canonical checkpoint and retry"
-            sleep 3
+            # Rebase only if source history and collector code have not
+            # advanced upstream. Otherwise DO NOT replay free API calls.
+            if ! git diff --quiet HEAD^ origin/main -- \
+                 btc-onchain/data/history.json \
+                 btc-onchain/data/latest.json \
+                 btc-onchain/collector.py; then
+              echo "Onchain checkpoint advanced independently; avoid blind overwrite or repeated free requests" >&2
+              exit 1
+            fi
+            if ! git rebase origin/main; then
+              git rebase --abort || true
+              echo "Could not safely rebase collected onchain snapshot" >&2
+              exit 1
+            fi
           done
+          echo "Exhausted safe publication retries; do not repeat API calls" >&2
           exit 1
