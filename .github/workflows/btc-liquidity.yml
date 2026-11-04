@@ -35,8 +35,10 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           for attempt in 1 2 3 4; do
-            # Never rebase a generated time-series over concurrently changed JSON:
-            # restart from the canonical latest main and derive forward from it.
+            # Start from the canonical source and recompute a real fresh book.
+            # If a concurrent writer changed our own data/code, repeat from
+            # that source. Unrelated pushes may be safely rebased after proof
+            # they did NOT touch the generated series or its collectors.
             git fetch origin main
             git reset --hard origin/main
             python btc-liquidity/collector.py
@@ -50,8 +52,32 @@ jobs:
               echo "Persisted independent BTC liquidity time-series"
               exit 0
             fi
-            echo "Concurrent repository update; refresh and retry ($attempt)"
-            sleep 3
+            echo "Concurrent repository update; examine safe fast-forward ($attempt)"
+            for safe_retry in 1 2 3; do
+              git fetch origin main
+              # HEAD^ is the exact canonical snapshot used to build this
+              # commit. Rebase is permitted only if none of these source/data
+              # paths changed upstream. Otherwise recalculate from main.
+              if ! git diff --quiet HEAD^ origin/main -- \
+                   btc-liquidity/data/latest.json \
+                   btc-liquidity/data/history.json \
+                   btc-liquidity/collector.py \
+                   btc-liquidity/official_ws.py; then
+                echo "Liquidity source or history advanced upstream; must recollect"
+                break
+              fi
+              if ! git rebase origin/main; then
+                git rebase --abort || true
+                echo "Safe rebase failed; must recollect"
+                break
+              fi
+              if git push origin HEAD:main; then
+                echo "Persisted real Binance and other native books after safe unrelated-commit rebase"
+                exit 0
+              fi
+              echo "Another unrelated writer raced; safe retry ($safe_retry)"
+            done
+            sleep 2
           done
           echo "Exhausted retry attempts" >&2
           exit 1
