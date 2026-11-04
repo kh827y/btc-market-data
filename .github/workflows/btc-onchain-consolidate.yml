@@ -3,6 +3,7 @@ on:
   push:
     paths:
       - "btc-onchain/consolidate.py"
+      - "btc-onchain/tests/test_consolidate.py"
       - ".github/workflows/btc-onchain-consolidate.yml"
   workflow_dispatch:
   schedule:
@@ -21,6 +22,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Validate required and optional onchain data classification
+        run: |
+          python -m py_compile btc-onchain/consolidate.py
+          python -m unittest discover -s btc-onchain/tests -p test_consolidate.py -v
       - run: python btc-onchain/consolidate.py
       - name: Save feed
         run: |
