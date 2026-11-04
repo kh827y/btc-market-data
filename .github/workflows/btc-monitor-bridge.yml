@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - "btc-monitor/build_feed.py"
+      - "btc-monitor/refresh_critical_inputs.py"
       - "btc-monitor/metric_quality.py"
       - "btc-monitor/quality_acceptance.py"
       - "btc-monitor/coverage_audit.py"
@@ -36,15 +37,17 @@ jobs:
   validate-and-publish:
     if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 18
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Install official WebSocket client used only by stale live-book recovery
+        run: pip install --disable-pip-version-check websocket-client
       - name: Verify data quality and stale/missing indicator unit tests
         run: |
-          python -m py_compile btc-monitor/build_feed.py btc-monitor/metric_quality.py btc-monitor/quality_acceptance.py btc-monitor/coverage_audit.py
+          python -m py_compile btc-monitor/build_feed.py btc-monitor/refresh_critical_inputs.py btc-monitor/metric_quality.py btc-monitor/quality_acceptance.py btc-monitor/coverage_audit.py
           python -m unittest discover -s btc-monitor/tests -p "test_*.py" -v
       - name: Publish validated source bridge
         run: |
@@ -53,6 +56,9 @@ jobs:
           for attempt in 1 2 3 4; do
             git fetch origin main
             git reset --hard origin/main
+            # A missed/delayed collector cron must not silently age out a risk family.
+            # Source-specific refreshes are quality-gated and cooldown-limited.
+            python -u btc-monitor/refresh_critical_inputs.py
             python -u btc-monitor/build_feed.py
             # Verify the FULL and BRIEF outputs agree before they can reach
             # the scheduled ChatGPT risk monitor.
@@ -76,6 +82,7 @@ jobs:
           path.write_text(json.dumps(status,ensure_ascii=False,indent=2)+"\n")
           PY
             git add btc-monitor/data/latest.json btc-monitor/data/brief.json btc-monitor/data/policy_test_status.json btc-monitor/data/metric_quality_acceptance.json btc-monitor/data/coverage_latest.json
+            git add btc-monitor/data/critical_refresh_state.json btc-price/data/latest.json btc-price/data/history.json btc-derivatives/data/latest.json btc-options/data/latest.json btc-options/data/derived_history.json btc-liquidity/data/latest.json btc-liquidity/data/history.json
             if git diff --cached --quiet; then exit 0; fi
             git commit -m "data: BTC risk monitor source freshness and metric snapshot"
             if git push origin HEAD:main; then exit 0; fi
