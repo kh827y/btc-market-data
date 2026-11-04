@@ -277,6 +277,22 @@ def summarise(state,now,errors):
     return out
 
 
+
+def historical_coinbase_gaps(state,end,horizon=720,recent_hours=30):
+    """Only gaps older than the handled recent window need deep backfill.
+
+    A present but non-ID-verified older Coinbase record is NOT a verified
+    executed-trade hour, even when an old legacy collector tagged it complete.
+    """
+    if horizon<recent_hours or recent_hours<1:
+        raise ValueError("Invalid Coinbase deep/recent horizon")
+    known=state.get("hourly",{}).get("coinbase",{})
+    return [key(end-dt.timedelta(hours=i)) for i in range(recent_hours,horizon)
+            if (known.get(key(end-dt.timedelta(hours=i)),{}).get("complete") is not True
+                or known[key(end-dt.timedelta(hours=i))].get("integrity")
+                   !="id_continuous_verified")]
+
+
 def main():
     now=dt.datetime.now(UTC)
     path=Path("btc-spot-cvd/data/state.json")
@@ -298,15 +314,9 @@ def main():
     # Historical cursor progresses until 720h are really complete. Once the
     # verified 30d archive is present, avoid endlessly refetching all history.
     end=now.replace(minute=0,second=0,microsecond=0)-dt.timedelta(hours=2)
-    coinbase_known=state.get("hourly",{}).get("coinbase",{})
-    # A new missing hour in the latest 30h is handled by exact-ID recent
-    # repair above. Never spend another 120 Coinbase pages walking the
-    # separate deep cursor through already verified history solely because
-    # the newest rolling hour is not yet complete.
-    deep_missing=[key(end-dt.timedelta(hours=i)) for i in range(30,720)
-                  if (not coinbase_known.get(key(end-dt.timedelta(hours=i)),{}).get("complete")
-                      or coinbase_known[key(end-dt.timedelta(hours=i))].get("integrity")
-                         !="id_continuous_verified")]
+    # Do not spend deep Coinbase pages just because the newest rolling
+    # hour is incomplete; recent ID-verified repair handles that hour.
+    deep_missing=historical_coinbase_gaps(state,end)
     if deep_pages and deep_missing:
         coinbase(state,now,errors,pages=deep_pages)
     cutoff=now-dt.timedelta(days=31)
