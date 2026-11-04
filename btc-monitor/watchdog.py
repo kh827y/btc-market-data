@@ -16,6 +16,10 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
+# Use the same UTC day/week boundary logic as the monitoring bridge.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from utc_candles import assess_price_dates, pending_short_publication_lag
+
 UTC = dt.timezone.utc
 ROOT = Path("btc-monitor/data")
 OWNER_REPO = os.environ.get("GITHUB_REPOSITORY", "kh827y/btc-market-data")
@@ -181,19 +185,25 @@ def assess(name, record, now):
                 result.update(status="invalid_schema",reason="bridge_readiness_missing",
                               needs_recovery=True)
     if name == "price_technical":
-        day = parse_time(record.get("last_closed_day_utc"))
-        week = parse_time(record.get("last_closed_week_monday_utc"))
-        expected_week = now.date()-dt.timedelta(days=now.weekday()+7)
-        valid_day = day is not None and day.date() == now.date()-dt.timedelta(days=1)
-        valid_week = week is not None and week.date() == expected_week
+        candle_dates = assess_price_dates(
+            record.get("last_closed_day_utc"),
+            record.get("last_closed_week_monday_utc"), now)
         result["closed_day_utc"] = record.get("last_closed_day_utc")
         result["closed_week_utc"] = record.get("last_closed_week_monday_utc")
+        result["closed_candles_valid"] = candle_dates["status"] == "current"
+        result["utc_candle_date_status"] = candle_dates["status"]
         quote_age = age_h(now, get(record, "spot_quote", "observed_utc"))
         result["live_quote_age_h"] = quote_age
-        result["closed_candles_valid"] = bool(valid_day and valid_week)
-        if not valid_day or not valid_week:
-            result.update(status="stale_observation", reason="closed_utc_candles_missing",
-                          needs_recovery=True)
+        if candle_dates["status"] != "current":
+            result["coverage_gaps"].append("closed_utc_candles_not_current")
+            if pending_short_publication_lag(record, now) and result["status"] == "healthy":
+                # Publication delay is NOT source corruption. Never treat
+                # prior-day candles as current; defer only the repair attempt.
+                result.update(status="pending_utc_close", reason="normal_close_publication_grace",
+                              needs_recovery=False)
+            else:
+                result.update(status="stale_observation", reason="closed_utc_candles_missing",
+                              needs_recovery=True)
         elif quote_age is None or not (-0.2 <= quote_age <= 2.5) or not get(record, "spot_quote", "price_usdt"):
             result["coverage_gaps"].append("live_quote_stale_or_missing")
             if result["status"] == "healthy":
