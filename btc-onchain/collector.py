@@ -103,7 +103,7 @@ def main():
         lag=(today-dt.date.fromisoformat(last)).days
         latest[name]={"status":"fresh" if lag<=2 else "delayed","value":series[last],"date":last,"lag_days":lag,"count":len(series)}
     out={"generated_utc":now.isoformat(),"data_source":{"bgeometrics":"free tier last four years; optional realized-price endpoints historically delayed","coinmetrics":"community API free exchange metrics; data revisions/status possible"},"latest":latest,"errors":errors,
-         "optional_requested":optional,
+         "optional_requested":optional if optional else previous_latest.get("optional_requested"),
          "optional_checked_utc_day":now.date().isoformat() if optional else previous_latest.get("optional_checked_utc_day"),
          "optional_poll_policy":"reference-only BGeometrics cost basis, maximum one optional request on Monday/Wednesday/Friday; never treat delayed source as a current signal"}
     previous.write_text(json.dumps(data,separators=(",",":"),sort_keys=True)+"\n")
