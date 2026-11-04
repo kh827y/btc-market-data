@@ -1,21 +1,22 @@
 {
-  "as_of_utc": "2026-11-04T00:00:40.463585+00:00",
+  "as_of_utc": "2026-11-04T01:15:31.126740+00:00",
   "collector_watchdog": {
-    "age_h": 0.05,
+    "age_h": 1.24,
     "auto_recovery": {
       "dispatched": [],
       "max_dispatch_per_check": 2,
       "max_dispatch_per_source_24h": 3,
       "pending_or_blocked": [
+        "price_technical",
         "live_depth"
       ]
     },
     "caveat": "This feed is not proof that the scheduled ChatGPT run actually read it",
-    "checked_utc": "2026-11-03T23:57:55.528558+00:00",
+    "checked_utc": "2026-11-04T00:00:52.794610+00:00",
     "sources": {
       "bybit_depth": {
         "coverage_gaps": [],
-        "file_age_h": 0.427,
+        "file_age_h": 0.476,
         "reason": null,
         "recovery": "none",
         "status": "healthy",
@@ -23,7 +24,7 @@
       },
       "derivatives": {
         "coverage_gaps": [],
-        "file_age_h": 3.011,
+        "file_age_h": 3.06,
         "reason": null,
         "recovery": "none",
         "status": "healthy",
@@ -33,7 +34,7 @@
         "coverage_gaps": [
           "20_historical_source_errors"
         ],
-        "file_age_h": 1.361,
+        "file_age_h": 1.411,
         "reason": null,
         "recovery": "none",
         "status": "healthy",
@@ -44,7 +45,7 @@
           "live_orderbook:binance_usdm_perp:missing",
           "1_failed_live_book_venues"
         ],
-        "file_age_h": 2.941,
+        "file_age_h": 2.99,
         "reason": "selected_live_depth_markets_unavailable_or_unverified",
         "recovery": "exhausted",
         "status": "partial_market_coverage",
@@ -52,7 +53,7 @@
       },
       "macro_etf": {
         "coverage_gaps": [],
-        "file_age_h": 0.009,
+        "file_age_h": 0.008,
         "reason": null,
         "recovery": "none",
         "status": "healthy",
@@ -60,12 +61,16 @@
       },
       "monitor_bridge": {
         "coverage_gaps": [
+          "btc_technicals:unavailable_or_stale",
           "live_depth:failed_venues=1",
-          "onchain:missing_or_delayed_metrics=3",
+          "onchain:missing_or_delayed_metrics=4",
           "derivatives:cme_front_basis_unavailable",
           "live_depth:original_11_selected_markets_not_all_verified",
           "metric_quality:derivatives.oi_five:stale:parent_source_not_fresh",
+          "metric_quality:options.deribit.1M:stale:parent_source_not_fresh",
+          "metric_quality:price.closed_daily_weekly:stale:parent_source_not_fresh",
           "critical_metric:derivatives.oi_five:stale:parent_source_not_fresh",
+          "critical_metric:options.deribit.1M:stale:parent_source_not_fresh",
           "critical_metric:live_depth.binance_spot:stale:parent_source_not_fresh",
           "critical_metric:live_depth.bybit_spot:stale:parent_source_not_fresh",
           "critical_metric:live_depth.coinbase_spot:stale:parent_source_not_fresh",
@@ -77,10 +82,13 @@
           "critical_metric:live_depth.okx_usdt_perp:stale:parent_source_not_fresh",
           "critical_metric:live_depth.bitget_usdt_perp:stale:parent_source_not_fresh",
           "critical_metric:live_depth.gate_usdt_perp:stale:parent_source_not_fresh",
+          "critical_metric:price.closed_daily_weekly:stale:parent_source_not_fresh",
+          "critical_family_not_fresh:price_technical",
           "critical_family_not_fresh:derivatives",
+          "critical_family_not_fresh:options",
           "critical_family_not_fresh:live_depth"
         ],
-        "file_age_h": 0.005,
+        "file_age_h": 0.003,
         "reason": "underlying_source_or_metric_unusable",
         "recovery": "none",
         "status": "degraded_critical_inputs",
@@ -92,7 +100,7 @@
           "market_onchain:realized_price: 8 days",
           "market_onchain:sth_realized_price: 7 days"
         ],
-        "file_age_h": 9.268,
+        "file_age_h": 9.318,
         "reason": null,
         "recovery": "none",
         "status": "healthy",
@@ -100,7 +108,7 @@
       },
       "onchain_bitview": {
         "coverage_gaps": [],
-        "file_age_h": 9.785,
+        "file_age_h": 9.834,
         "reason": null,
         "recovery": "none",
         "status": "healthy",
@@ -112,7 +120,7 @@
           "lth_realized_price:missing_or_vendor_delay",
           "realized_price:missing_or_vendor_delay"
         ],
-        "file_age_h": 10.966,
+        "file_age_h": 11.015,
         "reason": null,
         "recovery": "none",
         "status": "healthy",
@@ -120,7 +128,7 @@
       },
       "onchain_whale": {
         "coverage_gaps": [],
-        "file_age_h": 9.369,
+        "file_age_h": 9.418,
         "reason": null,
         "recovery": "none",
         "status": "healthy",
@@ -128,7 +136,7 @@
       },
       "onchain_whale_alerts": {
         "coverage_gaps": [],
-        "file_age_h": 9.292,
+        "file_age_h": 9.341,
         "reason": null,
         "recovery": "none",
         "status": "healthy",
@@ -136,7 +144,7 @@
       },
       "options": {
         "coverage_gaps": [],
-        "file_age_h": 2.962,
+        "file_age_h": 3.011,
         "reason": null,
         "recovery": "none",
         "status": "healthy",
@@ -144,15 +152,15 @@
       },
       "price_technical": {
         "coverage_gaps": [],
-        "file_age_h": 0.015,
-        "reason": null,
-        "recovery": "none",
-        "status": "healthy",
+        "file_age_h": 0.065,
+        "reason": "closed_utc_candles_missing",
+        "recovery": "exhausted",
+        "status": "stale_observation",
         "workflow_api_error": null
       },
       "spot_cvd": {
         "coverage_gaps": [],
-        "file_age_h": 0.348,
+        "file_age_h": 0.398,
         "reason": null,
         "recovery": "none",
         "status": "healthy",
@@ -161,6 +169,7 @@
     },
     "status": "degraded",
     "unavailable_or_stale": [
+      "price_technical",
       "live_depth"
     ],
     "workflow_api_reachable": true
@@ -310,7 +319,7 @@
     "usd_broad_index_is_NOT_dxy": true
   },
   "metric_quality": {
-    "checked_utc": "2026-11-04T00:00:40.463585+00:00",
+    "checked_utc": "2026-11-04T01:15:31.126740+00:00",
     "checks": {
       "bybit_depth.bybit_independent_linear.1095d.0.01": {
         "comparison_key": "historical_book|bybit_depth|bybit_independent_linear|1095d|0.01",
@@ -2564,9 +2573,9 @@
   "schema": 1,
   "sources": {
     "bybit_depth": {
-      "age_h": 0.47,
+      "age_h": 1.72,
       "collector_health": "ok",
-      "measurement_age_h": 48.01,
+      "measurement_age_h": 49.26,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-liquidity/data/bybit_independent_latest.json",
       "source_errors": 0,
       "spot_quote_age_h": null,
@@ -2574,7 +2583,7 @@
       "status": "fresh"
     },
     "derivatives": {
-      "age_h": 3.06,
+      "age_h": 4.3,
       "collector_health": "ok",
       "measurement_age_h": null,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-derivatives/data/latest.json",
@@ -2584,9 +2593,9 @@
       "status": "stale"
     },
     "hft_depth": {
-      "age_h": 1.41,
+      "age_h": 2.65,
       "collector_health": "errors_present",
-      "measurement_age_h": 36.01,
+      "measurement_age_h": 37.26,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-liquidity/data/hft_latest.json",
       "source_errors": 20,
       "spot_quote_age_h": null,
@@ -2594,9 +2603,9 @@
       "status": "fresh"
     },
     "live_depth": {
-      "age_h": 2.99,
+      "age_h": 4.23,
       "collector_health": "errors_present",
-      "measurement_age_h": 2.99,
+      "measurement_age_h": 4.23,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-liquidity/data/latest.json",
       "source_errors": 1,
       "spot_quote_age_h": null,
@@ -2604,7 +2613,7 @@
       "status": "stale"
     },
     "macro_etf": {
-      "age_h": 0.0,
+      "age_h": 1.25,
       "collector_health": "ok",
       "measurement_age_h": null,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-macro/data/latest.json",
@@ -2614,7 +2623,7 @@
       "status": "fresh"
     },
     "onchain": {
-      "age_h": 9.31,
+      "age_h": 10.56,
       "collector_health": "ok",
       "measurement_age_h": null,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-onchain/data/monitor_latest.json",
@@ -2624,7 +2633,7 @@
       "status": "fresh"
     },
     "options": {
-      "age_h": 3.01,
+      "age_h": 4.25,
       "collector_health": "ok",
       "measurement_age_h": null,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-options/data/latest.json",
@@ -2634,19 +2643,19 @@
       "status": "stale"
     },
     "price_technical": {
-      "age_h": 0.06,
+      "age_h": 1.31,
       "collector_health": "ok",
-      "measurement_age_h": 24.01,
+      "measurement_age_h": 25.26,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-price/data/latest.json",
       "source_errors": 0,
-      "spot_quote_age_h": 0.06,
+      "spot_quote_age_h": 1.31,
       "spot_quote_status": "unavailable_or_stale",
       "status": "stale_observation"
     },
     "spot_cvd": {
-      "age_h": 0.39,
+      "age_h": 1.64,
       "collector_health": "ok",
-      "measurement_age_h": 2.01,
+      "measurement_age_h": 3.26,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-spot-cvd/data/latest.json",
       "source_errors": 0,
       "spot_quote_age_h": null,
