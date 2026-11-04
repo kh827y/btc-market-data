@@ -74,6 +74,33 @@ class CVDTests(unittest.TestCase):
         self.assertEqual(state["coinbase_recent_cursor"]["after"],"6666")
         self.assertEqual(state["coinbase_cursor"],deep)
 
+    def test_recent_coinbase_gap_does_not_trigger_expensive_deep_history(self):
+        from collector import historical_coinbase_gaps
+        now=dt.datetime(2026,11,4,8,42,tzinfo=UTC)
+        end=now.replace(minute=0,second=0,microsecond=0)-dt.timedelta(hours=2)
+        verified={"complete":True,"integrity":"id_continuous_verified"}
+        known={key(end-dt.timedelta(hours=i)):dict(verified) for i in range(720) if i not in (0,1)}
+        state={"hourly":{"coinbase":known}}
+        self.assertEqual(historical_coinbase_gaps(state,end),[])
+        self.assertNotIn(key(end),known)
+        # The fresh rolling gap must still show incomplete in the fixed five.
+        latest=summarise(state,now,[])
+        self.assertFalse(latest["windows"]["1h"]["by_venue"]["coinbase"]["complete"])
+
+    def test_missing_or_unverified_older_coinbase_hour_requires_deep_scan(self):
+        from collector import historical_coinbase_gaps
+        now=dt.datetime(2026,11,4,8,42,tzinfo=UTC)
+        end=now.replace(minute=0,second=0,microsecond=0)-dt.timedelta(hours=2)
+        verified={"complete":True,"integrity":"id_continuous_verified"}
+        known={key(end-dt.timedelta(hours=i)):dict(verified) for i in range(720)}
+        old_missing=key(end-dt.timedelta(hours=31))
+        old_unverified=key(end-dt.timedelta(hours=33))
+        del known[old_missing]
+        known[old_unverified]["integrity"]="legacy_without_id_proof"
+        gaps=historical_coinbase_gaps({"hourly":{"coinbase":known}},end)
+        self.assertEqual(set(gaps),{old_missing,old_unverified})
+        self.assertNotIn(key(end),gaps)
+
     def test_fixed_five_without_coinbase_is_not_original_five(self):
         from collector import ALT_FIVE, OBSERVED
         now=dt.datetime(2026,11,2,14,5,tzinfo=UTC)
