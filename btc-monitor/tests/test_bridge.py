@@ -319,6 +319,31 @@ class BridgeTests(unittest.TestCase):
   self.assertEqual(brief["btc_technicals"]["daily_rsi14_wilder"],37.5)
   self.assertEqual(brief["btc_technicals"]["latest_spot_price_usdt"],78800)
   self.assertTrue(brief["btc_technicals"]["closed_candles_only"])
+ def test_post_midnight_close_grace_never_launders_yesterday_into_current_signal(self):
+  now=dt.datetime(2026,11,4,0,5,tzinfo=UTC)
+  j={"generated_utc":"2026-11-04T00:04:00Z","status":"ok",
+     "instrument":{"symbol":"BTCUSDT"},
+     "last_closed_day_utc":"2026-11-02",
+     "last_closed_week_monday_utc":"2026-10-26",
+     "coverage":{"daily_complete":799,"weekly_complete":299,"daily_missing":0,"weekly_missing":0},
+     "daily":{"close_usdt":78500,"ma":{"ma20":79000,"ma50":81000,"ma200":85000},
+              "rsi14_wilder":37.5,"rsi14_previous":39.1,
+              "change_pct":{"1d":-1.8},"breakout20":"within_prev20_range"},
+     "weekly":{"last_close_usdt":78600,"ma200":68000,"prev_ma200":67700},
+     "trend":{"classification":"mixed"},
+     "cross_checks":{"same_venue_daily_weekly_weeks":8},
+     "spot_quote":{"price_usdt":78800,"observed_utc":"2026-11-04T00:04:00Z"}}
+  pending=m.build({"price_technical":j},now)
+  self.assertEqual(pending["feeds"]["price_technical"]["status"],"stale_observation")
+  self.assertFalse(pending["audit"]["family_readiness"]["price_technical_verified"])
+  self.assertFalse(pending["audit"]["family_readiness"]["price_live_spot_quote"])
+  self.assertNotIn("btc_technicals",m.make_brief(pending))
+  j["last_closed_day_utc"]="2026-11-03"
+  current=m.build({"price_technical":j},now)
+  self.assertEqual(current["feeds"]["price_technical"]["status"],"fresh")
+  self.assertTrue(current["audit"]["family_readiness"]["price_technical_verified"])
+  self.assertIn("btc_technicals",m.make_brief(current))
+
  def test_closed_price_remains_valid_after_delayed_hourly_cron_but_quote_expires(self):
   review=dt.datetime(2026,11,2,18,40,tzinfo=UTC)
   src={"generated_utc":"2026-11-02T09:57:00Z","status":"ok",
