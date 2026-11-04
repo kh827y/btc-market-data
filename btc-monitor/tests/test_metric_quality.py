@@ -128,6 +128,35 @@ class QualityTests(unittest.TestCase):
         self.assertEqual(result["checks"]["live_depth.bybit_usdt_perp.1.0"]["status"],"incomplete")
         self.assertIsNone(transformed["live_depth"]["venues"]["bybit_usdt_perp"]["bands"]["1.0"]["bid_usd"])
 
+    def test_deribit_unlisted_1w_is_unavailable_not_bad_data_or_fabricated_iv(self):
+        raw={"results":{"deribit_live_surface":{
+            "as_of_utc":"2026-11-02T20:42:00Z",
+            "term_structure":{
+               "1W":{"status":"unavailable","reason":"tenor outside observed maturities"},
+               "1M":{"status":"available","quality":"standard",
+                     "atm_iv_pct":39,"call25_iv_pct":41,"put25_iv_pct":44,
+                     "rr25_call_minus_put_volpts":-3,
+                     "expiry_left":"2026-11-27T08:00:00Z",
+                     "expiry_right":"2026-12-25T08:00:00Z"}
+            }}}}
+        transformed={"options":{"deribit_term":{
+           k:v for k,v in raw["results"]["deribit_live_surface"]["term_structure"].items()},
+           "dvol":{}}}
+        r=q.assess({"options":raw},fresh("options"),transformed,NOW)
+        self.assertEqual(r["checks"]["options.deribit.1W"]["status"],"unavailable")
+        self.assertEqual(r["checks"]["options.deribit.1M"]["status"],"usable")
+        self.assertIsNone(transformed["options"]["deribit_term"]["1W"])
+        self.assertIsNotNone(transformed["options"]["deribit_term"]["1M"])
+        raw["results"]["deribit_live_surface"]["term_structure"]["1W"]={
+             "status":"available","quality":"standard",
+             "atm_iv_pct":39,"call25_iv_pct":42,"put25_iv_pct":44,
+             "rr25_call_minus_put_volpts":2,
+             "expiry_left":"2026-11-27T08:00:00Z",
+             "expiry_right":"2026-12-25T08:00:00Z"}
+        transformed["options"]["deribit_term"]["1W"]=raw["results"]["deribit_live_surface"]["term_structure"]["1W"]
+        invalid=q.assess({"options":raw},fresh("options"),transformed,NOW)
+        self.assertEqual(invalid["checks"]["options.deribit.1W"]["status"],"invalid")
+
     def test_options_invalid_rr25_sign_and_math_is_rejected(self):
         raw={"results":{"deribit_live_surface":{
               "as_of_utc":"2026-11-02T20:42:00Z",
