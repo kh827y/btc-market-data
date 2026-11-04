@@ -380,8 +380,20 @@ def gate_macro(g,raw,metrics):
 def gate_onchain(g,raw,metrics):
     m=metrics.get("onchain") or {}
     groups=m.get("groups") or {}
+    reference_only={
+        ("market_onchain","sth_realized_price"),
+        ("market_onchain","lth_realized_price"),
+        ("market_onchain","realized_price"),
+        ("whale_deposits","whale_exchange_deposit_volume_btc"),
+    }
     for group,row in groups.items():
         for key,value in row.get("metrics",{}).items():
+            if ((group,key) in reference_only and
+                    value.get("status")=="reference_only_delayed"):
+                # Explicit historical context, not an unavailable REQUIRED
+                # current market factor. Still retain source date and null.
+                value["value"]=None
+                continue
             good=(value.get("status")=="usable" and
                   amount(value.get("value")) is not None and
                   value.get("lag_days") is not None and
