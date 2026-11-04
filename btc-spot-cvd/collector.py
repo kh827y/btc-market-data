@@ -299,9 +299,16 @@ def main():
     # verified 30d archive is present, avoid endlessly refetching all history.
     end=now.replace(minute=0,second=0,microsecond=0)-dt.timedelta(hours=2)
     coinbase_known=state.get("hourly",{}).get("coinbase",{})
-    full_coinbase=all(coinbase_known.get(key(end-dt.timedelta(hours=i)),{}).get("complete")
-                      for i in range(720))
-    if deep_pages and not full_coinbase: coinbase(state,now,errors,pages=deep_pages)
+    # A new missing hour in the latest 30h is handled by exact-ID recent
+    # repair above. Never spend another 120 Coinbase pages walking the
+    # separate deep cursor through already verified history solely because
+    # the newest rolling hour is not yet complete.
+    deep_missing=[key(end-dt.timedelta(hours=i)) for i in range(30,720)
+                  if (not coinbase_known.get(key(end-dt.timedelta(hours=i)),{}).get("complete")
+                      or coinbase_known[key(end-dt.timedelta(hours=i))].get("integrity")
+                         !="id_continuous_verified")]
+    if deep_pages and deep_missing:
+        coinbase(state,now,errors,pages=deep_pages)
     cutoff=now-dt.timedelta(days=31)
     for failures in state.get("archive_retry_after",{}).values():
         for k in list(failures):
