@@ -9,6 +9,7 @@ from __future__ import annotations
 import datetime as dt
 import json
 import os
+import shutil
 from pathlib import Path
 import subprocess
 import sys
@@ -17,6 +18,7 @@ UTC = dt.timezone.utc
 STATE = Path("btc-monitor/data/critical_refresh_state.json")
 ROOT = Path(os.environ.get("RUNNER_TEMP", "/tmp"))
 SESSION = ROOT / ("btc-critical-refresh-" + os.environ.get("GITHUB_RUN_ID", "local") + ".json")
+CACHE = ROOT / ("btc-critical-cache-" + os.environ.get("GITHUB_RUN_ID", "local"))
 SPECS = {
     "price_technical": {
         "source": "btc-price/data/latest.json",
@@ -101,6 +103,32 @@ def cooldown_active(name, state, now):
     minutes = (now - instant).total_seconds() / 60
     return -2 <= minutes < SPECS[name]["retry_minutes"]
 
+def save_cached(name):
+    """Keep freshly fetched files outside the checkout across git push races."""
+    for output in SPECS[name]["outputs"]:
+        source = Path(output)
+        if not source.is_file():
+            return False
+    for output in SPECS[name]["outputs"]:
+        dest = CACHE / output
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(output, dest)
+    return True
+
+def restore_cached(name, now):
+    """Restore only if canonical upstream is stale and our snapshot is valid."""
+    spec = SPECS[name]
+    cached = CACHE / spec["source"]
+    if needs_refresh(name, read_json(cached), now):
+        return False
+    if any(not (CACHE / p).is_file() for p in spec["outputs"]):
+        return False
+    for output in spec["outputs"]:
+        target = Path(output)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(CACHE / output, target)
+    return True
+
 def refresh(now=None):
     now = now or dt.datetime.now(UTC)
     STATE.parent.mkdir(parents=True, exist_ok=True)
@@ -118,7 +146,19 @@ def refresh(now=None):
         before = read_json(spec["source"])
         if not needs_refresh(name, before, now):
             continue
+        receipt = (session.get("last_attempts") or {}).get(name) or {}
+        if receipt.get("status") == "refreshed" and restore_cached(name, now):
+            # A concurrent writer moved main forward after our successful
+            # collection. Reuse the exact checked bytes, never re-call APIs.
+            attempts[name] = dict(receipt)
+            attempted.append(name)
+            print("CRITICAL_FRESHNESS_RESTORED_FROM_SESSION", name, flush=True)
+            continue
         if cooldown_active(name, state, now) or cooldown_active(name, session, now):
+            # Persist the attempt receipt even when the first git push raced.
+            if receipt and not attempts.get(name):
+                attempts[name] = dict(receipt)
+                attempted.append(name)
             print("CRITICAL_FRESHNESS_COOLDOWN", name, flush=True)
             continue
         stamp = dt.datetime.now(UTC).isoformat()
@@ -137,7 +177,7 @@ def refresh(now=None):
             if run.returncode == 0:
                 after = read_json(spec["source"])
                 if not needs_refresh(name, after, dt.datetime.now(UTC)):
-                    outcome = "refreshed"
+                    outcome = "refreshed" if save_cached(name) else "collector_missing_output"
                 else:
                     outcome = "collector_returned_without_fresh_observation"
             else:
