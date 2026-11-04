@@ -3,6 +3,7 @@ on:
   push:
     paths:
       - "btc-spot-cvd/collector.py"
+      - "btc-spot-cvd/coinbase_recent_repair.py"
       - "btc-spot-cvd/tests/**"
       - "btc-monitor/build_feed.py"
       - "btc-monitor/tests/**"
@@ -55,22 +56,26 @@ jobs:
           tail -15 /tmp/bitget-smoke.log
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          for attempt in 1 2 3 4; do
-            git fetch origin main
-            git reset --hard origin/main
-            # Short REAL collection, not just mocks: save compact verified
-            # spot trades and progress even if Coinbase deep history is incomplete.
-            BTC_CVD_ARCHIVE_BATCH=3 BTC_CVD_COINBASE_RECENT_PAGES=12 BTC_CVD_COINBASE_DEEP_PAGES=12 python -u btc-spot-cvd/collector.py > /tmp/cvd-live.log 2>&1
-            collect_status=$?
-            tail -25 /tmp/cvd-live.log
-            python -u btc-spot-cvd/probe_free_archive.py > /tmp/cvd-probe.log 2>&1
-            probe_status=$?
-            tail -6 /tmp/cvd-probe.log
-            BTC_CVD_TEST_STATUS="$cvd_status" BTC_BRIDGE_TEST_STATUS="$bridge_status" BTC_BITGET_SMOKE_STATUS="$bitget_status" BTC_COLLECT_STATUS="$collect_status" BTC_PROBE_STATUS="$probe_status" python - <<'PY'
+          # A verification workflow must NEVER overwrite canonical live
+          # state/latest with a 12-page partial Coinbase smoke result.
+          # Real source collection takes place only in the CVD collector job.
+          cp -a btc-spot-cvd /tmp/btc-cvd-smoke
+          mkdir -p /tmp/btc-cvd-smoke-work/btc-spot-cvd
+          cp -a btc-spot-cvd/. /tmp/btc-cvd-smoke-work/btc-spot-cvd/
+          set +e
+          (cd /tmp/btc-cvd-smoke-work &&
+            BTC_CVD_ARCHIVE_BATCH=2 BTC_CVD_COINBASE_RECENT_PAGES=0 BTC_CVD_COINBASE_DEEP_PAGES=0
+            python -u btc-spot-cvd/collector.py) > /tmp/cvd-live.log 2>&1
+          collect_status=$?
+          (cd /tmp/btc-cvd-smoke-work && python -u btc-spot-cvd/probe_free_archive.py) > /tmp/cvd-probe.log 2>&1
+          probe_status=$?
+          set -e
+          tail -18 /tmp/cvd-live.log
+          tail -6 /tmp/cvd-probe.log
+          BTC_CVD_TEST_STATUS="$cvd_status" BTC_BRIDGE_TEST_STATUS="$bridge_status" BTC_BITGET_SMOKE_STATUS="$bitget_status" BTC_COLLECT_STATUS="$collect_status" BTC_PROBE_STATUS="$probe_status" python - <<'PY' > /tmp/cvd-quick-check.json
           import datetime
           import json
           import os
-          from pathlib import Path
           row = {
              "tested_commit_sha":os.getenv("GITHUB_SHA"),
              "completed_utc":datetime.datetime.now(datetime.timezone.utc).isoformat(),
@@ -79,17 +84,19 @@ jobs:
              "bitget_actual_hour_smoke_ok":os.getenv("BTC_BITGET_SMOKE_STATUS") == "0",
              "short_actual_collector_ok":os.getenv("BTC_COLLECT_STATUS") == "0",
              "historical_sample_probe_ok":os.getenv("BTC_PROBE_STATUS") == "0",
-             "short_actual_collector_scope":"3 new hours per non-Coinbase venue plus 24 Coinbase REST pages",
-             "bitget_smoke_hour_utc":"2026-11-01T12:00:00Z",
-             "scope":"unit tests only; does NOT prove successful new trade data download or full 24h/7d/30d CVD",
+             "short_actual_collector_scope":"isolated temp-directory non-Coinbase sample, NOT authoritative current BTC CVD",
+             "canonical_cvd_data_modified":False,
+             "scope":"CI unit and limited source checks only; full original-five window checked exclusively in production",
           }
-          path=Path("btc-spot-cvd/data/quick_check.json")
-          path.parent.mkdir(parents=True,exist_ok=True)
-          path.write_text(json.dumps(row,indent=2)+"\n")
+          print(json.dumps(row, indent=2))
           PY
-            git add btc-spot-cvd/data/quick_check.json btc-spot-cvd/data/latest.json btc-spot-cvd/data/state.json btc-spot-cvd/data/archive_probe.json
+          for attempt in 1 2 3 4; do
+            git fetch origin main
+            git reset --hard origin/main
+            cp /tmp/cvd-quick-check.json btc-spot-cvd/data/quick_check.json
+            git add btc-spot-cvd/data/quick_check.json
             if git diff --cached --quiet; then break; fi
-            git commit -m "test: BTC CVD and bridge unit check result"
+            git commit -m "test: BTC CVD isolated unit and integration result"
             if git push origin HEAD:main; then break; fi
             if [ "$attempt" -eq 4 ]; then exit 1; fi
             sleep 2
