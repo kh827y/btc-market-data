@@ -1,5 +1,5 @@
 {
-  "as_of_utc": "2026-11-05T14:55:49.326035+00:00",
+  "as_of_utc": "2026-11-05T14:59:19.573827+00:00",
   "btc_technicals": {
     "breakout20": "within_prev20_range",
     "closed_candles_only": true,
@@ -61,15 +61,160 @@
     "weekly_ma200_rising": true
   },
   "collector_watchdog": {
-    "age_h": 2.52,
-    "checked_utc": "2026-11-05T12:24:55.015226+00:00",
-    "reason": "independent_watchdog_stopped",
-    "status": "stale",
-    "workflow_api_reachable": false
+    "age_h": 0.05,
+    "auto_recovery": {
+      "dispatched": [
+        "macro_etf"
+      ],
+      "max_dispatch_per_check": 2,
+      "max_dispatch_per_source_24h": 3,
+      "pending_or_blocked": []
+    },
+    "caveat": "This feed is not proof that the scheduled ChatGPT run actually read it",
+    "checked_utc": "2026-11-05T14:56:04.947172+00:00",
+    "sources": {
+      "bybit_depth": {
+        "coverage_gaps": [],
+        "file_age_h": 3.658,
+        "reason": null,
+        "recovery": "none",
+        "status": "healthy",
+        "workflow_api_error": null
+      },
+      "derivatives": {
+        "coverage_gaps": [],
+        "file_age_h": 0.015,
+        "reason": null,
+        "recovery": "none",
+        "status": "healthy",
+        "workflow_api_error": null
+      },
+      "hft_depth": {
+        "coverage_gaps": [
+          "6_historical_source_errors"
+        ],
+        "file_age_h": 2.534,
+        "reason": null,
+        "recovery": "none",
+        "status": "healthy",
+        "workflow_api_error": null
+      },
+      "live_depth": {
+        "coverage_gaps": [],
+        "file_age_h": 0.007,
+        "reason": null,
+        "recovery": "none",
+        "status": "healthy",
+        "workflow_api_error": null
+      },
+      "macro_etf": {
+        "coverage_gaps": [],
+        "file_age_h": 8.308,
+        "reason": "collector_not_publishing",
+        "recovery": "dispatched",
+        "status": "stale_file",
+        "workflow_api_error": null
+      },
+      "monitor_bridge": {
+        "coverage_gaps": [
+          "macro_etf:ice_dxy_exact_unavailable",
+          "onchain:missing_or_delayed_metrics=6",
+          "live_depth:0.2pct_complete=8/11_selected_markets",
+          "live_depth:1.0pct_complete=2/11_selected_markets",
+          "metric_quality:macro.ice_dxy_exact:unverified:",
+          "critical_metric:macro.ice_dxy_exact:unverified:"
+        ],
+        "file_age_h": 0.004,
+        "reason": "underlying_source_or_metric_unusable",
+        "recovery": "none",
+        "status": "degraded_critical_inputs",
+        "workflow_api_error": null
+      },
+      "onchain": {
+        "coverage_gaps": [
+          "whale_deposits:whale_exchange_deposit_count: 4 days"
+        ],
+        "file_age_h": 24.033,
+        "reason": null,
+        "recovery": "none",
+        "status": "healthy",
+        "workflow_api_error": null
+      },
+      "onchain_bitview": {
+        "coverage_gaps": [],
+        "file_age_h": 0.313,
+        "reason": null,
+        "recovery": "none",
+        "status": "healthy",
+        "workflow_api_error": null
+      },
+      "onchain_market": {
+        "coverage_gaps": [
+          "mvrv:missing_or_vendor_delay",
+          "mvrv_zscore:missing_or_vendor_delay",
+          "nupl:missing_or_vendor_delay",
+          "sth_sopr:missing_or_vendor_delay",
+          "lth_sopr:missing_or_vendor_delay",
+          "sth_realized_price:missing_or_vendor_delay",
+          "lth_realized_price:missing_or_vendor_delay",
+          "realized_price:missing_or_vendor_delay"
+        ],
+        "file_age_h": 1.445,
+        "reason": null,
+        "recovery": "none",
+        "status": "healthy",
+        "workflow_api_error": null
+      },
+      "onchain_whale": {
+        "coverage_gaps": [],
+        "file_age_h": 0.035,
+        "reason": null,
+        "recovery": "none",
+        "status": "healthy",
+        "workflow_api_error": null
+      },
+      "onchain_whale_alerts": {
+        "coverage_gaps": [],
+        "file_age_h": 24.044,
+        "reason": null,
+        "recovery": "none",
+        "status": "healthy",
+        "workflow_api_error": null
+      },
+      "options": {
+        "coverage_gaps": [],
+        "file_age_h": 0.011,
+        "reason": null,
+        "recovery": "none",
+        "status": "healthy",
+        "workflow_api_error": null
+      },
+      "price_technical": {
+        "coverage_gaps": [],
+        "file_age_h": 0.015,
+        "reason": null,
+        "recovery": "none",
+        "status": "healthy",
+        "workflow_api_error": null
+      },
+      "spot_cvd": {
+        "coverage_gaps": [],
+        "file_age_h": 0.029,
+        "reason": null,
+        "recovery": "none",
+        "status": "healthy",
+        "workflow_api_error": null
+      }
+    },
+    "status": "degraded",
+    "unavailable_or_stale": [
+      "macro_etf"
+    ],
+    "workflow_api_reachable": true
   },
   "coverage_gaps": [
     "macro_etf:ice_dxy_exact_unavailable",
-    "onchain:missing_or_delayed_metrics=6",
+    "onchain:missing_or_delayed_metrics=5",
     "live_depth:0.2pct_complete=8/11_selected_markets",
     "live_depth:1.0pct_complete=2/11_selected_markets",
     "metric_quality:macro.ice_dxy_exact:unverified:"
@@ -177,7 +322,7 @@
       "date": null,
       "exact_ice_index": true,
       "fetched_utc": "2026-11-05T06:37:36.909896+00:00",
-      "intraday_quote_age_h": 8.3,
+      "intraday_quote_age_h": 8.36,
       "not_finalized_eod": null,
       "observation_kind": null,
       "source": "Yahoo Finance, DX-Y.NYB (ICE US Dollar Index indicative public bars)",
@@ -264,7 +409,7 @@
     "usd_broad_index_is_NOT_dxy": true
   },
   "metric_quality": {
-    "checked_utc": "2026-11-05T14:55:49.326035+00:00",
+    "checked_utc": "2026-11-05T14:59:19.573827+00:00",
     "checks": {
       "bybit_depth.bybit_independent_linear.1095d.0.01": {
         "comparison_key": "historical_book|bybit_depth|bybit_independent_linear|1095d|0.01",
@@ -1412,7 +1557,7 @@
       },
       "onchain.historical_whale_alerts.count_ge_1000_btc": {
         "comparison_key": "onchain|historical_whale_alerts|count_ge_1000_btc",
-        "observed_at": "2026-11-03",
+        "observed_at": "2026-11-04",
         "reason": null,
         "scope": "onchain collector-specific metric/UTXO cohort; must be source dated",
         "status": "usable",
@@ -1420,7 +1565,7 @@
       },
       "onchain.historical_whale_alerts.count_ge_100_btc": {
         "comparison_key": "onchain|historical_whale_alerts|count_ge_100_btc",
-        "observed_at": "2026-11-03",
+        "observed_at": "2026-11-04",
         "reason": null,
         "scope": "onchain collector-specific metric/UTXO cohort; must be source dated",
         "status": "usable",
@@ -1428,7 +1573,7 @@
       },
       "onchain.historical_whale_alerts.observed_alert_count": {
         "comparison_key": "onchain|historical_whale_alerts|observed_alert_count",
-        "observed_at": "2026-11-03",
+        "observed_at": "2026-11-04",
         "reason": null,
         "scope": "onchain collector-specific metric/UTXO cohort; must be source dated",
         "status": "usable",
@@ -1436,7 +1581,7 @@
       },
       "onchain.historical_whale_alerts.observed_btc_volume": {
         "comparison_key": "onchain|historical_whale_alerts|observed_btc_volume",
-        "observed_at": "2026-11-03",
+        "observed_at": "2026-11-04",
         "reason": null,
         "scope": "onchain collector-specific metric/UTXO cohort; must be source dated",
         "status": "usable",
@@ -1444,7 +1589,7 @@
       },
       "onchain.lth_sth_bitview.lth_change_30d_150d": {
         "comparison_key": "onchain|lth_sth_bitview|lth_change_30d_150d",
-        "observed_at": "2026-11-03",
+        "observed_at": "2026-11-04",
         "reason": null,
         "scope": "onchain collector-specific metric/UTXO cohort; must be source dated",
         "status": "usable",
@@ -1452,7 +1597,7 @@
       },
       "onchain.lth_sth_bitview.lth_change_7d_150d": {
         "comparison_key": "onchain|lth_sth_bitview|lth_change_7d_150d",
-        "observed_at": "2026-11-03",
+        "observed_at": "2026-11-04",
         "reason": null,
         "scope": "onchain collector-specific metric/UTXO cohort; must be source dated",
         "status": "usable",
@@ -1460,7 +1605,7 @@
       },
       "onchain.lth_sth_bitview.lth_nupl_150d": {
         "comparison_key": "onchain|lth_sth_bitview|lth_nupl_150d",
-        "observed_at": "2026-11-03",
+        "observed_at": "2026-11-04",
         "reason": null,
         "scope": "onchain collector-specific metric/UTXO cohort; must be source dated",
         "status": "usable",
@@ -1468,7 +1613,7 @@
       },
       "onchain.lth_sth_bitview.lth_realized_price_150d": {
         "comparison_key": "onchain|lth_sth_bitview|lth_realized_price_150d",
-        "observed_at": "2026-11-03",
+        "observed_at": "2026-11-04",
         "reason": null,
         "scope": "onchain collector-specific metric/UTXO cohort; must be source dated",
         "status": "usable",
@@ -1476,7 +1621,7 @@
       },
       "onchain.lth_sth_bitview.lth_supply_150d": {
         "comparison_key": "onchain|lth_sth_bitview|lth_supply_150d",
-        "observed_at": "2026-11-03",
+        "observed_at": "2026-11-04",
         "reason": null,
         "scope": "onchain collector-specific metric/UTXO cohort; must be source dated",
         "status": "usable",
@@ -1484,7 +1629,7 @@
       },
       "onchain.lth_sth_bitview.realized_price_bitview": {
         "comparison_key": "onchain|lth_sth_bitview|realized_price_bitview",
-        "observed_at": "2026-11-03",
+        "observed_at": "2026-11-04",
         "reason": null,
         "scope": "onchain collector-specific metric/UTXO cohort; must be source dated",
         "status": "usable",
@@ -1492,7 +1637,7 @@
       },
       "onchain.lth_sth_bitview.sth_nupl_150d": {
         "comparison_key": "onchain|lth_sth_bitview|sth_nupl_150d",
-        "observed_at": "2026-11-03",
+        "observed_at": "2026-11-04",
         "reason": null,
         "scope": "onchain collector-specific metric/UTXO cohort; must be source dated",
         "status": "usable",
@@ -1500,7 +1645,7 @@
       },
       "onchain.lth_sth_bitview.sth_realized_price_150d": {
         "comparison_key": "onchain|lth_sth_bitview|sth_realized_price_150d",
-        "observed_at": "2026-11-03",
+        "observed_at": "2026-11-04",
         "reason": null,
         "scope": "onchain collector-specific metric/UTXO cohort; must be source dated",
         "status": "usable",
@@ -1508,7 +1653,7 @@
       },
       "onchain.lth_sth_bitview.sth_supply_150d": {
         "comparison_key": "onchain|lth_sth_bitview|sth_supply_150d",
-        "observed_at": "2026-11-03",
+        "observed_at": "2026-11-04",
         "reason": null,
         "scope": "onchain collector-specific metric/UTXO cohort; must be source dated",
         "status": "usable",
@@ -1516,7 +1661,7 @@
       },
       "onchain.market_onchain.exchange_in_btc": {
         "comparison_key": "onchain|market_onchain|exchange_in_btc",
-        "observed_at": "2026-11-03",
+        "observed_at": "2026-11-04",
         "reason": null,
         "scope": "onchain collector-specific metric/UTXO cohort; must be source dated",
         "status": "usable",
@@ -1524,7 +1669,7 @@
       },
       "onchain.market_onchain.exchange_out_btc": {
         "comparison_key": "onchain|market_onchain|exchange_out_btc",
-        "observed_at": "2026-11-03",
+        "observed_at": "2026-11-04",
         "reason": null,
         "scope": "onchain collector-specific metric/UTXO cohort; must be source dated",
         "status": "usable",
@@ -1532,7 +1677,7 @@
       },
       "onchain.market_onchain.exchange_reserves_btc": {
         "comparison_key": "onchain|market_onchain|exchange_reserves_btc",
-        "observed_at": "2026-11-03",
+        "observed_at": "2026-11-04",
         "reason": null,
         "scope": "onchain collector-specific metric/UTXO cohort; must be source dated",
         "status": "usable",
@@ -1540,7 +1685,7 @@
       },
       "onchain.market_onchain.lth_realized_loss": {
         "comparison_key": "onchain|market_onchain|lth_realized_loss",
-        "observed_at": "2026-11-03",
+        "observed_at": "2026-11-04",
         "reason": null,
         "scope": "onchain collector-specific metric/UTXO cohort; must be source dated",
         "status": "usable",
@@ -1548,7 +1693,7 @@
       },
       "onchain.market_onchain.lth_realized_profit": {
         "comparison_key": "onchain|market_onchain|lth_realized_profit",
-        "observed_at": "2026-11-03",
+        "observed_at": "2026-11-04",
         "reason": null,
         "scope": "onchain collector-specific metric/UTXO cohort; must be source dated",
         "status": "usable",
@@ -1588,7 +1733,7 @@
       },
       "onchain.market_onchain.sth_realized_loss": {
         "comparison_key": "onchain|market_onchain|sth_realized_loss",
-        "observed_at": "2026-11-03",
+        "observed_at": "2026-11-04",
         "reason": null,
         "scope": "onchain collector-specific metric/UTXO cohort; must be source dated",
         "status": "usable",
@@ -1596,7 +1741,7 @@
       },
       "onchain.market_onchain.sth_realized_profit": {
         "comparison_key": "onchain|market_onchain|sth_realized_profit",
-        "observed_at": "2026-11-03",
+        "observed_at": "2026-11-04",
         "reason": null,
         "scope": "onchain collector-specific metric/UTXO cohort; must be source dated",
         "status": "usable",
@@ -1612,7 +1757,7 @@
       },
       "onchain.whale_deposits.swiss_whale_deposit_count_ge50": {
         "comparison_key": "onchain|whale_deposits|swiss_whale_deposit_count_ge50",
-        "observed_at": "2026-11-03",
+        "observed_at": "2026-11-04",
         "reason": null,
         "scope": "onchain collector-specific metric/UTXO cohort; must be source dated",
         "status": "usable",
@@ -1620,15 +1765,7 @@
       },
       "onchain.whale_deposits.whale_exchange_deposit_count": {
         "comparison_key": "onchain|whale_deposits|whale_exchange_deposit_count",
-        "observed_at": "2026-10-31",
-        "reason": null,
-        "scope": "onchain collector-specific metric/UTXO cohort; must be source dated",
-        "status": "stale",
-        "unit": "source-defined BTC/ratio/USD; never substitute independent methodology"
-      },
-      "onchain.whale_deposits.whale_exchange_deposit_volume_btc": {
-        "comparison_key": "onchain|whale_deposits|whale_exchange_deposit_volume_btc",
-        "observed_at": "2026-11-03",
+        "observed_at": "2026-11-02",
         "reason": null,
         "scope": "onchain collector-specific metric/UTXO cohort; must be source dated",
         "status": "usable",
@@ -1636,7 +1773,7 @@
       },
       "onchain.whale_deposits.whale_only_top10_deposit_ratio": {
         "comparison_key": "onchain|whale_deposits|whale_only_top10_deposit_ratio",
-        "observed_at": "2026-11-03",
+        "observed_at": "2026-11-04",
         "reason": null,
         "scope": "onchain collector-specific metric/UTXO cohort; must be source dated",
         "status": "usable",
@@ -1814,12 +1951,12 @@
     "critical_issues": [
       "macro.ice_dxy_exact:unverified:"
     ],
-    "metrics_checked": 193,
+    "metrics_checked": 192,
     "status_counts": {
       "incomplete": 12,
       "invalid": 0,
       "not_comparable": 0,
-      "stale": 6,
+      "stale": 5,
       "unavailable": 0,
       "unverified": 1,
       "usable": 174
@@ -1828,93 +1965,93 @@
   "onchain": {
     "historical_whale_alerts": {
       "count_ge_1000_btc": {
-        "date": "2026-11-03",
+        "date": "2026-11-04",
+        "status": "usable",
+        "value": 1
+      },
+      "count_ge_100_btc": {
+        "date": "2026-11-04",
         "status": "usable",
         "value": 4
       },
-      "count_ge_100_btc": {
-        "date": "2026-11-03",
-        "status": "usable",
-        "value": 6
-      },
       "observed_alert_count": {
-        "date": "2026-11-03",
+        "date": "2026-11-04",
         "status": "usable",
-        "value": 6
+        "value": 4
       },
       "observed_btc_volume": {
-        "date": "2026-11-03",
+        "date": "2026-11-04",
         "status": "usable",
-        "value": 15017.0
+        "value": 3455.0
       }
     },
     "lth_sth_bitview": {
       "lth_change_30d_150d": {
-        "date": "2026-11-03",
+        "date": "2026-11-04",
         "status": "usable",
-        "value": -264307.05041453
+        "value": -251069.35176102
       },
       "lth_change_7d_150d": {
-        "date": "2026-11-03",
+        "date": "2026-11-04",
         "status": "usable",
-        "value": -81821.76281722
+        "value": -72721.99608961
       },
       "lth_nupl_150d": {
-        "date": "2026-11-03",
+        "date": "2026-11-04",
         "status": "usable",
-        "value": 0.37024
+        "value": 0.39175
       },
       "lth_realized_price_150d": {
-        "date": "2026-11-03",
+        "date": "2026-11-04",
         "status": "usable",
-        "value": 48890.63
+        "value": 48887.16
       },
       "lth_supply_150d": {
-        "date": "2026-11-03",
+        "date": "2026-11-04",
         "status": "usable",
-        "value": 16319510.06339351
+        "value": 16319896.52856843
       },
       "realized_price_bitview": {
-        "date": "2026-11-03",
+        "date": "2026-11-04",
         "status": "usable",
-        "value": 53970.03
+        "value": 53987.42
       },
       "sth_nupl_150d": {
-        "date": "2026-11-03",
+        "date": "2026-11-04",
         "status": "usable",
-        "value": 0.02293
+        "value": 0.054901
       },
       "sth_realized_price_150d": {
-        "date": "2026-11-03",
+        "date": "2026-11-04",
         "status": "usable",
-        "value": 75853.52
+        "value": 75960.93
       },
       "sth_supply_150d": {
-        "date": "2026-11-03",
+        "date": "2026-11-04",
         "status": "usable",
-        "value": 3787941.05182248
+        "value": 3788001.46141724
       }
     },
     "market_onchain": {
       "exchange_in_btc": {
-        "date": "2026-11-03",
+        "date": "2026-11-04",
         "status": "usable",
-        "value": 36822.52614642
+        "value": 22712.21360601
       },
       "exchange_out_btc": {
-        "date": "2026-11-03",
+        "date": "2026-11-04",
         "status": "usable",
-        "value": 30823.08442392
+        "value": 25114.12373372
       },
       "exchange_reserves_btc": {
-        "date": "2026-11-03",
+        "date": "2026-11-04",
         "status": "usable",
-        "value": 2667085.95670123
+        "value": 2708410.49988464
       },
       "lth_realized_loss": {
-        "date": "2026-11-03",
+        "date": "2026-11-04",
         "status": "usable",
-        "value": -535579984.08
+        "value": -49962579.44
       },
       "lth_realized_price": {
         "date": "2026-10-28",
@@ -1922,9 +2059,9 @@
         "value": null
       },
       "lth_realized_profit": {
-        "date": "2026-11-03",
+        "date": "2026-11-04",
         "status": "usable",
-        "value": 165454068.62
+        "value": 72130874.76
       },
       "lth_sopr": {
         "date": "2026-11-01",
@@ -1952,9 +2089,9 @@
         "value": null
       },
       "sth_realized_loss": {
-        "date": "2026-11-03",
+        "date": "2026-11-04",
         "status": "usable",
-        "value": -442294280.33
+        "value": -173719420.94
       },
       "sth_realized_price": {
         "date": "2026-10-27",
@@ -1962,9 +2099,9 @@
         "value": null
       },
       "sth_realized_profit": {
-        "date": "2026-11-03",
+        "date": "2026-11-04",
         "status": "usable",
-        "value": 178191562.19
+        "value": 490450648.67
       },
       "sth_sopr": {
         "date": "2026-11-01",
@@ -1974,63 +2111,63 @@
     },
     "whale_deposits": {
       "swiss_whale_deposit_count_ge50": {
-        "date": "2026-11-03",
+        "date": "2026-11-04",
         "status": "usable",
-        "value": 70
+        "value": 61
       },
       "whale_exchange_deposit_count": {
-        "date": "2026-10-31",
-        "status": "missing_or_delayed",
-        "value": null
+        "date": "2026-11-02",
+        "status": "usable",
+        "value": 2865.0
       },
       "whale_exchange_deposit_volume_btc": {
-        "date": "2026-11-03",
-        "status": "usable",
-        "value": 25927.1738
+        "date": "2026-10-31",
+        "status": "reference_only_delayed",
+        "value": null
       },
       "whale_only_top10_deposit_ratio": {
-        "date": "2026-11-03",
+        "date": "2026-11-04",
         "status": "usable",
-        "value": 0.83
+        "value": 0.58
       }
     }
   },
   "onchain_cost_basis_independent": {
     "lth_cost_basis_150d": {
-      "date": "2026-11-03",
-      "lag_days": 2,
+      "date": "2026-11-04",
+      "lag_days": 1,
       "methodology": "utxo_age_at_least_150d",
       "not_interchangeable_with_bgeometrics_155d_cohorts": true,
       "source": "Bitview",
       "source_url": "https://bitview.space/api/",
       "status": "usable",
-      "value": 48890.63
+      "value": 48887.16
     },
     "network_realized_price": {
-      "date": "2026-11-03",
-      "lag_days": 2,
+      "date": "2026-11-04",
+      "lag_days": 1,
       "methodology": "bitcoin_utxo_network",
       "not_interchangeable_with_bgeometrics_155d_cohorts": false,
       "source": "Bitview",
       "source_url": "https://bitview.space/api/",
       "status": "usable",
-      "value": 53970.03
+      "value": 53987.42
     },
     "sth_cost_basis_150d": {
-      "date": "2026-11-03",
-      "lag_days": 2,
+      "date": "2026-11-04",
+      "lag_days": 1,
       "methodology": "utxo_age_less_than_150d",
       "not_interchangeable_with_bgeometrics_155d_cohorts": true,
       "source": "Bitview",
       "source_url": "https://bitview.space/api/",
       "status": "usable",
-      "value": 75853.52
+      "value": 75960.93
     }
   },
   "onchain_reference_only_delayed": [
     {
       "group": "market_onchain",
-      "lag_days": 8,
+      "lag_days": 9,
       "last_observed_date": "2026-10-27",
       "metric": "sth_realized_price",
       "reason": "BGeometrics source-original STH; delayed free publication",
@@ -2038,7 +2175,7 @@
     },
     {
       "group": "market_onchain",
-      "lag_days": 7,
+      "lag_days": 8,
       "last_observed_date": "2026-10-28",
       "metric": "lth_realized_price",
       "reason": "BGeometrics source-original LTH; delayed free publication",
@@ -2046,10 +2183,18 @@
     },
     {
       "group": "market_onchain",
-      "lag_days": 9,
+      "lag_days": 10,
       "last_observed_date": "2026-10-26",
       "metric": "realized_price",
       "reason": "BGeometrics source-original network price; delayed free publication",
+      "signal_eligible": false
+    },
+    {
+      "group": "whale_deposits",
+      "lag_days": 5,
+      "last_observed_date": "2026-10-31",
+      "metric": "whale_exchange_deposit_volume_btc",
+      "reason": "CoinGlass dated entity-classified whale BTC volume; delayed publication",
       "signal_eligible": false
     }
   ],
@@ -2888,9 +3033,9 @@
   "schema": 1,
   "sources": {
     "bybit_depth": {
-      "age_h": 3.65,
+      "age_h": 3.71,
       "collector_health": "ok",
-      "measurement_age_h": 38.93,
+      "measurement_age_h": 38.99,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-liquidity/data/bybit_independent_latest.json",
       "source_errors": 0,
       "spot_quote_age_h": null,
@@ -2898,7 +3043,7 @@
       "status": "fresh"
     },
     "derivatives": {
-      "age_h": 0.01,
+      "age_h": 0.07,
       "collector_health": "ok",
       "measurement_age_h": null,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-derivatives/data/latest.json",
@@ -2908,9 +3053,9 @@
       "status": "fresh"
     },
     "hft_depth": {
-      "age_h": 2.53,
+      "age_h": 2.59,
       "collector_health": "errors_present",
-      "measurement_age_h": 26.93,
+      "measurement_age_h": 26.99,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-liquidity/data/hft_latest.json",
       "source_errors": 6,
       "spot_quote_age_h": null,
@@ -2918,9 +3063,9 @@
       "status": "fresh"
     },
     "live_depth": {
-      "age_h": 0.0,
+      "age_h": 0.06,
       "collector_health": "ok",
-      "measurement_age_h": 0.0,
+      "measurement_age_h": 0.06,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-liquidity/data/latest.json",
       "source_errors": 0,
       "spot_quote_age_h": null,
@@ -2928,7 +3073,7 @@
       "status": "fresh"
     },
     "macro_etf": {
-      "age_h": 8.3,
+      "age_h": 8.36,
       "collector_health": "ok",
       "measurement_age_h": null,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-macro/data/latest.json",
@@ -2938,7 +3083,7 @@
       "status": "fresh"
     },
     "onchain": {
-      "age_h": 24.03,
+      "age_h": 0.01,
       "collector_health": "ok",
       "measurement_age_h": null,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-onchain/data/monitor_latest.json",
@@ -2948,7 +3093,7 @@
       "status": "fresh"
     },
     "options": {
-      "age_h": 0.01,
+      "age_h": 0.06,
       "collector_health": "ok",
       "measurement_age_h": null,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-options/data/latest.json",
@@ -2958,19 +3103,19 @@
       "status": "fresh"
     },
     "price_technical": {
-      "age_h": 0.01,
+      "age_h": 0.07,
       "collector_health": "ok",
-      "measurement_age_h": 14.93,
+      "measurement_age_h": 14.99,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-price/data/latest.json",
       "source_errors": 0,
-      "spot_quote_age_h": 0.01,
+      "spot_quote_age_h": 0.07,
       "spot_quote_status": "fresh",
       "status": "fresh"
     },
     "spot_cvd": {
-      "age_h": 0.02,
+      "age_h": 0.08,
       "collector_health": "ok",
-      "measurement_age_h": 1.93,
+      "measurement_age_h": 1.99,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-spot-cvd/data/latest.json",
       "source_errors": 0,
       "spot_quote_age_h": null,
