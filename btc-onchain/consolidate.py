@@ -22,6 +22,43 @@ FILES = {
     "whale_deposits":"whale_latest.json",
     "historical_whale_alerts":"whale_alert_latest.json",
 }
+def derive_bitview_network_valuation(bitview_history, price_history, today):
+    """Independent UTXO cost-basis valuation on MATCHED closed UTC days.
+
+    This is a *different provider/methodology* from BGeometrics MVRV/NUPL.
+    The Binance quote is USDT, approximately USD. It depends on spot price,
+    and must not be counted as a second independent market-risk group.
+    """
+    import math
+    if not isinstance(bitview_history,dict) or not isinstance(price_history,dict):
+        return {}
+    basis=bitview_history.get("realized_price_bitview")
+    bars=price_history.get("daily_closed")
+    if not isinstance(basis,dict) or not isinstance(bars,list):
+        return {}
+    prices={bar.get("day"):bar.get("close") for bar in bars if isinstance(bar,dict)}
+    dates=sorted(d for d in basis if d in prices and d < today.isoformat())
+    if len(dates)<180:
+        return {}
+    day=dates[-1]
+    try:
+        lag=(today-dt.date.fromisoformat(day)).days
+        realized=float(basis[day])
+        close=float(prices[day])
+    except (TypeError,ValueError,OverflowError):
+        return {}
+    if not (0 <= lag <= 3 and math.isfinite(realized) and math.isfinite(close)
+            and 0 < realized < close*10 and close>0):
+        return {}
+    rows={
+        "mvrv_utxo_cost_basis_estimate":round(close/realized,6),
+        "nupl_utxo_cost_basis_estimate":round(1-realized/close,6),
+    }
+    return {k:{"date":day,"value":v,"lag_days":lag,
+                "status":"usable","comparison_key":"bitview_network_utxo_and_binance_same_closed_utc_date",
+                "not_bgeometrics_vendor_series":True}
+            for k,v in rows.items()}
+
 def main():
     now=dt.datetime.now(dt.timezone.utc)
     components={}
@@ -57,6 +94,25 @@ def main():
                 stale.append(name+": feed "+str(round(hours,1))+" hours old")
         except Exception as error:
             missing.append(name+": "+str(error)[:150])
+    # Derive independent network valuation only when both sources publish
+    # the SAME closed UTC day. Never replace stale vendor values in-place.
+    try:
+        bitview_history=json.loads((ROOT/"bitview_history.json").read_text())
+        price_history=json.loads((ROOT.parent.parent/"btc-price/data/history.json").read_text())
+        derived=derive_bitview_network_valuation(bitview_history,price_history,now.date())
+        if derived and "lth_sth_bitview" in components:
+            bitview_age=components["lth_sth_bitview"]["feed_age_hours"]
+            price_born=dt.datetime.fromisoformat(price_history["generated_utc"])
+            price_age=(now-price_born).total_seconds()/3600
+            if -0.2 <= price_age <= 30 and -0.2 <= bitview_age <= 30:
+                components["network_valuation_bitview"]={
+                    "feed_age_hours":round(max(price_age,bitview_age),2),
+                    "latest":derived,"errors":[],
+                    "source":"Bitview UTXO network realized price + Binance spot closed UTC day",
+                    "scope":"UTXO network cost basis / Binance BTCUSDT USDT≈USD; not BGeometrics; price-correlated",
+                    "observed_days":None}
+    except (OSError,ValueError,TypeError,KeyError,ZeroDivisionError):
+        pass  # optional independently labelled estimate; never claim it exists
     for name,group in components.items():
         for metric,item in group["latest"].items():
             lag=item.get("lag_days")
@@ -117,6 +173,7 @@ def main():
         "reference_only_delayed":reference_only_delayed,
         "known_limits":[
             "Bitview long/short holders use UTXO 150d, not 155d entity-weighted",
+            "Optional Bitview-derived MVRV/NUPL estimates require same-day Binance spot close, use UTXO network basis, and do not replace BGeometrics vendor metrics",
             "CoinGlass entity-classified whale deposit count and volume do not have verified free multi-year raw daily histories; only accumulated dated observations. CoinGlass 1d/7d/30d changes and historical percentiles are vendor-calculated, not self-recomputed.",
             "Swiss >=50 BTC whale deposit count and concentration are DIFFERENT metrics, with a verified 7-day backfill; never combine with CoinGlass entity-clustered counts.",
             "Free Whale Alert official 2018+ history covers selectively published exchange-bound BTC transfer alerts; not all exchange deposits, and yearly alert selection may differ. Never equate it to CoinGlass entity-whale volume/count.",
