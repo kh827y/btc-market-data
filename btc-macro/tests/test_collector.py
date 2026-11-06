@@ -80,4 +80,19 @@ class CollectorTests(unittest.TestCase):
   self.assertEqual(j["status"],"delayed")
   self.assertIsNone(j["value"])
 
+ def test_dxy_preserves_previous_closed_session_when_today_quote_is_unfinished(self):
+  import json
+  from unittest.mock import patch
+  today=dt.datetime(2026,11,6,6,0,tzinfo=m.UTC)
+  d0=dt.datetime(2026,11,5,15,0,tzinfo=m.UTC)
+  d1=dt.datetime(2026,11,6,5,0,tzinfo=m.UTC)
+  payload={"chart":{"result":[{"timestamp":[int(d0.timestamp()),int(d1.timestamp())],
+      "indicators":{"quote":[{"close":[101.5,101.8]}]}}]}}
+  with patch.object(m,"fetch",return_value=json.dumps(payload).encode()):
+   got=m.dxy_optional(today)
+  self.assertEqual(got["observation_kind"],"unfinished_current_session")
+  self.assertEqual(got["date"],"2026-11-06")
+  self.assertEqual(got["completed_prior_session"]["date"],"2026-11-05")
+  self.assertEqual(got["completed_prior_session"]["value"],101.5)
+
 if __name__=="__main__":unittest.main()
