@@ -315,7 +315,7 @@ def main():
     from kraken_trade_repair import repair as repair_kraken
     kraken_repair=repair_kraken(
         state, now, errors, request=get,
-        max_pages=max(0,min(80,int(os.getenv("BTC_CVD_KRAKEN_REPAIR_PAGES","40")))))
+        max_pages=max(0,min(80,int(os.getenv("BTC_CVD_KRAKEN_REPAIR_PAGES","80")))))
     # Unlike restarting the head every run, jump to exactly the missing
     # recent UTC-hour intervals and certify contiguous REST trade IDs.
     if recent_pages:
