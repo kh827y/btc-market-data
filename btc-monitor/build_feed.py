@@ -134,6 +134,7 @@ def compact_onchain(j,now):
  for group,fields in {
   "market_onchain":("mvrv","mvrv_zscore","nupl","sth_sopr","lth_sopr","lth_realized_profit","lth_realized_loss","sth_realized_profit","sth_realized_loss","sth_realized_price","lth_realized_price","realized_price","exchange_in_btc","exchange_out_btc","exchange_reserves_btc"),
   "lth_sth_bitview":("lth_supply_150d","sth_supply_150d","lth_change_7d_150d","lth_change_30d_150d","lth_realized_price_150d","sth_realized_price_150d","realized_price_bitview","lth_nupl_150d","sth_nupl_150d"),
+   "network_valuation_bitview":("mvrv_utxo_cost_basis_estimate","nupl_utxo_cost_basis_estimate"),
   "whale_deposits":("whale_exchange_deposit_count","whale_exchange_deposit_volume_btc","whale_only_top10_deposit_ratio","swiss_whale_deposit_count_ge50"),
   "historical_whale_alerts":("observed_alert_count","observed_btc_volume","count_ge_100_btc","count_ge_1000_btc")
  }.items():
