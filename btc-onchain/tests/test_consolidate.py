@@ -77,6 +77,30 @@ class ConsolidationReferenceTests(unittest.TestCase):
         self.assertEqual(data["components"]["market_onchain"]["latest"]["realized_price"]["value"],54000)
         self.assertEqual(data["components"]["lth_sth_bitview"]["latest"]["realized_price_bitview"]["value"],54100)
 
+    def test_network_valuation_estimates_require_matched_closed_dates(self):
+        today=dt.date(2026,11,6)
+        days=[today-dt.timedelta(days=i) for i in range(1,201)]
+        basis={d.isoformat():50000.0 for d in days}
+        prices={"daily_closed":[{"day":d.isoformat(),"close":75000.0}
+                                 for d in days]}
+        data=c.derive_bitview_network_valuation(
+            {"realized_price_bitview":basis},prices,today)
+        self.assertEqual(data["mvrv_utxo_cost_basis_estimate"]["value"],1.5)
+        self.assertAlmostEqual(data["nupl_utxo_cost_basis_estimate"]["value"],1/3,places=5)
+        self.assertEqual(data["mvrv_utxo_cost_basis_estimate"]["date"],"2026-11-05")
+        self.assertTrue(data["mvrv_utxo_cost_basis_estimate"]["not_bgeometrics_vendor_series"])
+        self.assertEqual(c.derive_bitview_network_valuation(
+            {"realized_price_bitview":basis},{"daily_closed":[]},today),{})
+
+    def test_network_estimate_rejects_source_too_old(self):
+        today=dt.date(2026,11,6)
+        days=[today-dt.timedelta(days=i) for i in range(9,200)]
+        basis={d.isoformat():50000.0 for d in days}
+        prices={"daily_closed":[{"day":d.isoformat(),"close":75000.0}
+                                 for d in days]}
+        self.assertEqual(c.derive_bitview_network_valuation(
+            {"realized_price_bitview":basis},prices,today),{})
+
     def test_missing_required_onchain_metric_still_surfaces(self):
         data=self.build(core_available=False)
         self.assertIn("market_onchain:mvrv",data["missing"])
