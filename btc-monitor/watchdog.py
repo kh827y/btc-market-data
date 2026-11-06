@@ -312,9 +312,21 @@ def assess(name, record, now):
             result.update(status="invalid_schema", reason="missing_onchain_metric_rows",
                           needs_recovery=True)
         else:
+            important_delayed = []
             for metric, row in latest.items():
                 if not isinstance(row, dict) or row.get("status") in ("missing", "delayed", "error"):
                     result["coverage_gaps"].append(f"{metric}:missing_or_vendor_delay")
+                    if name == "onchain_market" and metric in (
+                        "mvrv", "mvrv_zscore", "nupl", "sth_sopr", "lth_sopr"):
+                        important_delayed.append(metric)
+            # A successful collector run can still contain stale observations.
+            # Distinguish vendor publication delay from a failed GitHub job:
+            # expose DEGRADED health, but do not dispatch repeated recovery.
+            result["delayed_important_metrics"] = important_delayed
+            if important_delayed and result["status"] == "healthy":
+                result.update(status="degraded_vendor_observations",
+                              reason="important_onchain_metrics_publication_lag",
+                              needs_recovery=False)
         if name == "onchain_bitview":
             date = parse_time(record.get("last_closed_utc_day"))
             lag = (now.date()-date.date()).days if date else None
