@@ -304,6 +304,12 @@ def main():
     recent_pages=max(0,min(1000,int(os.getenv("BTC_CVD_COINBASE_RECENT_PAGES","250"))))
     deep_pages=max(0,min(500,int(os.getenv("BTC_CVD_COINBASE_DEEP_PAGES","120"))))
     archives(state,now,errors,batch=batch)
+    # Recover actual Binance spot taker volume from official closed hourly
+    # exchange trade-time klines where the third-party archive is missing.
+    from binance_kline_repair import repair as repair_binance
+    binance_repair=repair_binance(
+        state, now, errors, request=get,
+        max_hours=max(0,min(36,int(os.getenv("BTC_CVD_BINANCE_KLINE_REPAIR_HOURS","24")))))
     # Unlike restarting the head every run, jump to exactly the missing
     # recent UTC-hour intervals and certify contiguous REST trade IDs.
     if recent_pages:
@@ -327,6 +333,11 @@ def main():
         for k in list(records):
             if dt.datetime.fromisoformat(k.replace("Z","+00:00"))<cutoff: del records[k]
     output=summarise(state,now,errors)
+    output["binance_kline_repair"]=binance_repair
+    output["time_basis_note"] += (
+        " Binance fallback uses official closed SPOT kline exchange-trade-time "
+        "hours; CryptoHFTData's other bars use receive time. Do not imply "
+        "exact exchange-time-aligned per-hour CVD across providers.")
     output["coinbase_recent_repair"]=recent_result
     output["coinbase_720h_gap_free"]=output["windows"]["720h"]["by_venue"]["coinbase"]["complete"]
     path.parent.mkdir(parents=True,exist_ok=True)
