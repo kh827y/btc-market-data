@@ -37,26 +37,21 @@ OPTIONAL_REALIZED_WEEKDAYS={
     2:"lth_realized_price", # Wednesday UTC
     4:"realized_price",     # Friday UTC
 }
-# BGeometrics v1.9 withholds the newest 7 days for these endpoints
-# on free plans. Query only weekly as historical reference.
-RESTRICTED_WEEKDAY={
-    0:"mvrv", 1:"mvrv_zscore", 2:"nupl", 3:"sth_sopr", 4:"lth_sopr",
-}
-CORE_NAMES=("lth_realized_profit","lth_realized_loss",
+# October 2026 BGeometrics v1.10 removed the free-tier seven-day lag for
+# MVRV/MVRV-Z/NUPL/STH/LTH SOPR. Poll all nine core endpoints daily;
+# actual observation dates still control signal eligibility.
+CORE_NAMES=("mvrv","mvrv_zscore","nupl","sth_sopr","lth_sopr",
+            "lth_realized_profit","lth_realized_loss",
             "sth_realized_profit","sth_realized_loss")
 
 def selected_metrics(data,today,previous_latest=None):
-    """Four active metrics plus at most two historical checks per weekday."""
+    """Nine core daily observations plus at most one optional dated price."""
     previous_latest=previous_latest or {}
     optional=OPTIONAL_REALIZED_WEEKDAYS.get(today.weekday())
-    restricted=RESTRICTED_WEEKDAY.get(today.weekday())
     if (optional and previous_latest.get("optional_checked_utc_day")==today.isoformat()
             and previous_latest.get("optional_requested")==optional):
         optional=None
-    if (restricted and previous_latest.get("restricted_checked_utc_day")==today.isoformat()
-            and previous_latest.get("restricted_requested")==restricted):
-        restricted=None
-    return list(CORE_NAMES)+([restricted] if restricted else [])+([optional] if optional else [])
+    return list(CORE_NAMES)+([optional] if optional else [])
 
 def main():
     ROOT.mkdir(parents=True,exist_ok=True)
@@ -69,10 +64,9 @@ def main():
         previous_latest=json.loads(prior_file.read_text()) if prior_file.exists() else {}
     except (OSError,ValueError):
         previous_latest={}
-    # Do not repeatedly query source-enforced paid-only recent observations.
+    # Respect the published 15/day free quota; ten requests maximum here.
     planned=selected_metrics(data,now.date(),previous_latest)
     optional=next((name for name in planned if name in OPTIONAL_REALIZED_WEEKDAYS.values()),None)
-    restricted=next((name for name in planned if name in RESTRICTED_WEEKDAY.values()),None)
     for name in planned:
         slug=METRICS[name]
         try:
@@ -108,8 +102,6 @@ def main():
          "optional_requested":optional if optional else previous_latest.get("optional_requested"),
          "optional_checked_utc_day":now.date().isoformat() if optional else previous_latest.get("optional_checked_utc_day"),
          "restricted_requested":restricted if restricted else previous_latest.get("restricted_requested"),
-          "restricted_checked_utc_day":now.date().isoformat() if restricted else previous_latest.get("restricted_checked_utc_day"),
-          "restricted_recent_policy":"BGeometrics v1.9 free plan withholds recent MVRV/NUPL/cohort SOPR; only archived values may be available",
           "optional_poll_policy":"reference-only BGeometrics cost basis, maximum one optional request on Monday/Wednesday/Friday; never treat delayed source as a current signal"}
     previous.write_text(json.dumps(data,separators=(",",":"),sort_keys=True)+"\n")
     (ROOT/"latest.json").write_text(json.dumps(out,ensure_ascii=False,indent=2)+"\n")
