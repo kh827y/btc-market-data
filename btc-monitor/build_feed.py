@@ -138,6 +138,10 @@ def compact_onchain(j,now):
   "whale_deposits":("whale_exchange_deposit_count","whale_exchange_deposit_volume_btc","whale_only_top10_deposit_ratio","swiss_whale_deposit_count_ge50"),
   "historical_whale_alerts":("observed_alert_count","observed_btc_volume","count_ge_100_btc","count_ge_1000_btc")
  }.items():
+  # This independently derived group is optional. Absence is not a
+  # missing core on-chain metric; never flag a mandatory coverage outage.
+  if group == "network_valuation_bitview" and not val(j,"components",group,"latest"):
+   continue
   values={}
   for key in fields:
    row=val(j,"components",group,"latest",key) or {}
