@@ -8,6 +8,12 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "41 5 * * *"
+  # Fallback if GitHub misses the early daily cron; no L2 dependency.
+  workflow_run:
+    workflows:
+      - "BTC Bitview holder history"
+    types: [completed]
+    branches: [main]
 permissions:
   contents: write
 concurrency:
@@ -15,6 +21,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   collect:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 18
     steps:
@@ -36,7 +43,25 @@ jobs:
           # unrelated collector happens to commit during this daily task.
           git fetch origin main
           git reset --hard origin/main
-          python -u btc-onchain/collector.py
+          # The free tier is 15 requests/day. A delayed schedule and the
+          # Bitview fallback must never both spend the daily budget.
+          if python - <<'PY'
+          import datetime as dt, json, pathlib, sys
+          path=pathlib.Path("btc-onchain/data/latest.json")
+          try:
+              prior=json.loads(path.read_text())
+              date=dt.datetime.fromisoformat(prior["generated_utc"].replace("Z","+00:00")).date()
+              # Exit 1 if already collected today (shell's ELSE branch exits 0).
+              sys.exit(1 if date==dt.datetime.now(dt.timezone.utc).date() else 0)
+          except (OSError,KeyError,ValueError,TypeError):
+              sys.exit(0)
+          PY
+          then
+            python -u btc-onchain/collector.py
+          else
+            echo "Verified onchain collection already completed today; preserve free quota"
+            exit 0
+          fi
           git add btc-onchain/data/history.json btc-onchain/data/latest.json
           if git diff --cached --quiet; then exit 0; fi
           git commit -m "data: update BTC onchain historical metrics"
