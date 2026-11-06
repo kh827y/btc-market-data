@@ -37,23 +37,26 @@ OPTIONAL_REALIZED_WEEKDAYS={
     2:"lth_realized_price", # Wednesday UTC
     4:"realized_price",     # Friday UTC
 }
-CORE_NAMES=("mvrv","mvrv_zscore","nupl","sth_sopr","lth_sopr",
-            "lth_realized_profit","lth_realized_loss",
+# BGeometrics v1.9 withholds the newest 7 days for these endpoints
+# on free plans. Query only weekly as historical reference.
+RESTRICTED_WEEKDAY={
+    0:"mvrv", 1:"mvrv_zscore", 2:"nupl", 3:"sth_sopr", 4:"lth_sopr",
+}
+CORE_NAMES=("lth_realized_profit","lth_realized_loss",
             "sth_realized_profit","sth_realized_loss")
 
 def selected_metrics(data,today,previous_latest=None):
-    """Nine important daily free requests; at most one optional per week-day.
-
-    The optional series are polled once a week each, with a same-day receipt
-    check to prevent redundant manual / scheduled repeats. Do not re-prioritize
-    a lagging vendor response forever; do not fill a missing row with a proxy.
-    """
+    """Four active metrics plus at most two historical checks per weekday."""
+    previous_latest=previous_latest or {}
     optional=OPTIONAL_REALIZED_WEEKDAYS.get(today.weekday())
-    if (optional and isinstance(previous_latest,dict) and
-            previous_latest.get("optional_checked_utc_day")==today.isoformat() and
-            previous_latest.get("optional_requested")==optional):
+    restricted=RESTRICTED_WEEKDAY.get(today.weekday())
+    if (optional and previous_latest.get("optional_checked_utc_day")==today.isoformat()
+            and previous_latest.get("optional_requested")==optional):
         optional=None
-    return list(CORE_NAMES)+([optional] if optional else [])
+    if (restricted and previous_latest.get("restricted_checked_utc_day")==today.isoformat()
+            and previous_latest.get("restricted_requested")==restricted):
+        restricted=None
+    return list(CORE_NAMES)+([restricted] if restricted else [])+([optional] if optional else [])
 
 def main():
     ROOT.mkdir(parents=True,exist_ok=True)
@@ -66,11 +69,10 @@ def main():
         previous_latest=json.loads(prior_file.read_text()) if prior_file.exists() else {}
     except (OSError,ValueError):
         previous_latest={}
-    # BGeometrics documents a free request budget. The primary feed uses
-    # nine core requests per daily collection, with one optional on only
-    # three weekdays. Never retry stale optional data in the same run.
+    # Do not repeatedly query source-enforced paid-only recent observations.
     planned=selected_metrics(data,now.date(),previous_latest)
     optional=next((name for name in planned if name in OPTIONAL_REALIZED_WEEKDAYS.values()),None)
+    restricted=next((name for name in planned if name in RESTRICTED_WEEKDAY.values()),None)
     for name in planned:
         slug=METRICS[name]
         try:
@@ -105,7 +107,10 @@ def main():
     out={"generated_utc":now.isoformat(),"data_source":{"bgeometrics":"free tier last four years; optional realized-price endpoints historically delayed","coinmetrics":"community API free exchange metrics; data revisions/status possible"},"latest":latest,"errors":errors,
          "optional_requested":optional if optional else previous_latest.get("optional_requested"),
          "optional_checked_utc_day":now.date().isoformat() if optional else previous_latest.get("optional_checked_utc_day"),
-         "optional_poll_policy":"reference-only BGeometrics cost basis, maximum one optional request on Monday/Wednesday/Friday; never treat delayed source as a current signal"}
+         "restricted_requested":restricted if restricted else previous_latest.get("restricted_requested"),
+          "restricted_checked_utc_day":now.date().isoformat() if restricted else previous_latest.get("restricted_checked_utc_day"),
+          "restricted_recent_policy":"BGeometrics v1.9 free plan withholds recent MVRV/NUPL/cohort SOPR; only archived values may be available",
+          "optional_poll_policy":"reference-only BGeometrics cost basis, maximum one optional request on Monday/Wednesday/Friday; never treat delayed source as a current signal"}
     previous.write_text(json.dumps(data,separators=(",",":"),sort_keys=True)+"\n")
     (ROOT/"latest.json").write_text(json.dumps(out,ensure_ascii=False,indent=2)+"\n")
     print(json.dumps({"generated_utc":out["generated_utc"],"metric_status":{k:(v["status"],v["date"],v["count"]) for k,v in latest.items()},"errors":errors},ensure_ascii=False))
