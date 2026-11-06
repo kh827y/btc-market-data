@@ -309,6 +309,17 @@ def compact_macro_etf(j,now):
             "date":curve.get("date") if curve_ok else None,
             "spread_pct_points":crv if curve_ok else None}
  raw=val(j,"macro","ice_dxy") or {}
+ # When the current unfinished session has an OLD snapshot, retain the
+ # previously completed session rather than mark the entire DXY unavailable.
+ if raw.get("observation_kind")=="unfinished_current_session":
+  stamp=timeparse(raw.get("fetched_utc")) or timeparse(j.get("generated_utc"))
+  quote_age=dt_age(now,stamp)
+  if quote_age is None or quote_age>2.5 or quote_age<-.2:
+   prior=raw.get("completed_prior_session")
+   if (isinstance(prior,dict) and prior.get("status")=="usable"
+       and num(prior.get("value")) is not None):
+    raw=dict(raw,date=prior.get("date"),value=prior.get("value"),
+             status=prior.get("status"),observation_kind="finished_prior_session")
  date=timeparse(raw.get("date"))
  age=(now.date()-date.date()).days if date else None
  exact=num(raw.get("value"))
