@@ -310,6 +310,12 @@ def main():
     binance_repair=repair_binance(
         state, now, errors, request=get,
         max_hours=max(0,min(36,int(os.getenv("BTC_CVD_BINANCE_KLINE_REPAIR_HOURS","24")))))
+    # Kraken official paginated BTC/USD executions, continuing verified
+    # partial hours across runs without assuming a 1000-trade page is complete.
+    from kraken_trade_repair import repair as repair_kraken
+    kraken_repair=repair_kraken(
+        state, now, errors, request=get,
+        max_pages=max(0,min(80,int(os.getenv("BTC_CVD_KRAKEN_REPAIR_PAGES","40")))))
     # Unlike restarting the head every run, jump to exactly the missing
     # recent UTC-hour intervals and certify contiguous REST trade IDs.
     if recent_pages:
@@ -334,6 +340,8 @@ def main():
             if dt.datetime.fromisoformat(k.replace("Z","+00:00"))<cutoff: del records[k]
     output=summarise(state,now,errors)
     output["binance_kline_repair"]=binance_repair
+    output["kraken_trade_repair"]=kraken_repair
+    output["time_basis_note"] += (" Kraken official recovered hours also use trade-time. ")
     output["time_basis_note"] += (
         " Binance fallback uses official closed SPOT kline exchange-trade-time "
         "hours; CryptoHFTData's other bars use receive time. Do not imply "
