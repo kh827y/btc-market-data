@@ -1,9 +1,12 @@
 {
-  "as_of_utc": "2026-11-06T06:29:00.815058+00:00",
+  "as_of_utc": "2026-11-06T06:46:02.734323+00:00",
   "audit": {
     "WARNING": "Bridge generation success DOES NOT imply source freshness or all-market coverage",
     "coverage_gaps": [
-      "macro_etf:ice_dxy_exact_unavailable",
+      "macro_etf:partial_source",
+      "macro_etf:fed_rates_unavailable",
+      "macro_etf:treasury_yields_unavailable",
+      "macro_etf:usd_broad_index_unavailable",
       "spot_cvd:24h_five_venue_incomplete",
       "spot_cvd:168h_five_venue_incomplete",
       "spot_cvd:720h_five_venue_incomplete",
@@ -13,7 +16,9 @@
       "metric_quality:spot_cvd.original_five.24h:incomplete:source_window_hour_sum_set_or_coinbase_proof_disagrees",
       "metric_quality:spot_cvd.original_five.168h:incomplete:source_window_hour_sum_set_or_coinbase_proof_disagrees",
       "metric_quality:spot_cvd.original_five.720h:incomplete:source_window_hour_sum_set_or_coinbase_proof_disagrees",
-      "metric_quality:macro.ice_dxy_exact:unverified:"
+      "metric_quality:macro.fed_rates:unverified:",
+      "metric_quality:macro.treasury_yields:unverified:",
+      "metric_quality:macro.usd_broad_index:unverified:"
     ],
     "family_readiness": {
       "current_all_11_orderbooks_complete_1pct": false,
@@ -28,11 +33,11 @@
       "current_spot_orderbook": true,
       "current_spot_orderbook_venues": 6,
       "holder_behavior": true,
-      "macro_exact_ice_dxy": false,
-      "macro_fed_rates": true,
+      "macro_exact_ice_dxy": true,
+      "macro_fed_rates": false,
       "macro_liquidity": true,
-      "macro_treasury_yields": true,
-      "macro_usd_broad_not_dxy": true,
+      "macro_treasury_yields": false,
+      "macro_usd_broad_not_dxy": false,
       "onchain_independent_cost_basis": true,
       "options": true,
       "orderbook": true,
@@ -58,7 +63,7 @@
     "sources_total": 9
   },
   "collector_watchdog": {
-    "age_h": 0.03,
+    "age_h": 0.28,
     "auto_recovery": {
       "dispatched": [],
       "max_dispatch_per_check": 2,
@@ -66,11 +71,11 @@
       "pending_or_blocked": []
     },
     "caveat": "This feed is not proof that the scheduled ChatGPT run actually read it",
-    "checked_utc": "2026-11-06T06:27:09.578846+00:00",
+    "checked_utc": "2026-11-06T06:29:12.727265+00:00",
     "sources": {
       "bybit_depth": {
         "coverage_gaps": [],
-        "file_age_h": 5.995,
+        "file_age_h": 6.029,
         "reason": null,
         "recovery": "none",
         "status": "healthy",
@@ -78,7 +83,7 @@
       },
       "derivatives": {
         "coverage_gaps": [],
-        "file_age_h": 0.191,
+        "file_age_h": 0.225,
         "reason": null,
         "recovery": "none",
         "status": "healthy",
@@ -88,7 +93,7 @@
         "coverage_gaps": [
           "6_historical_source_errors"
         ],
-        "file_age_h": 4.872,
+        "file_age_h": 4.906,
         "reason": null,
         "recovery": "none",
         "status": "healthy",
@@ -96,7 +101,7 @@
       },
       "live_depth": {
         "coverage_gaps": [],
-        "file_age_h": 0.191,
+        "file_age_h": 0.225,
         "reason": null,
         "recovery": "none",
         "status": "healthy",
@@ -104,7 +109,7 @@
       },
       "macro_etf": {
         "coverage_gaps": [],
-        "file_age_h": 4.057,
+        "file_age_h": 4.091,
         "reason": null,
         "recovery": "none",
         "status": "healthy",
@@ -128,7 +133,7 @@
           "critical_metric:spot_cvd.original_five.720h:incomplete:source_window_hour_sum_set_or_coinbase_proof_disagrees",
           "critical_metric:macro.ice_dxy_exact:unverified:"
         ],
-        "file_age_h": 0.004,
+        "file_age_h": 0.003,
         "reason": "underlying_source_or_metric_unusable",
         "recovery": "none",
         "status": "degraded_critical_inputs",
@@ -143,7 +148,7 @@
           "market_onchain:sth_sopr: 5 days",
           "whale_deposits:whale_exchange_deposit_count: 4 days"
         ],
-        "file_age_h": 0.106,
+        "file_age_h": 0.14,
         "reason": null,
         "recovery": "none",
         "status": "healthy",
@@ -151,7 +156,7 @@
       },
       "onchain_bitview": {
         "coverage_gaps": [],
-        "file_age_h": 15.831,
+        "file_age_h": 15.865,
         "reason": null,
         "recovery": "none",
         "status": "healthy",
@@ -168,7 +173,7 @@
           "lth_realized_price:missing_or_vendor_delay",
           "realized_price:missing_or_vendor_delay"
         ],
-        "file_age_h": 16.963,
+        "file_age_h": 16.997,
         "reason": "important_onchain_metrics_publication_lag",
         "recovery": "none",
         "status": "degraded_vendor_observations",
@@ -176,7 +181,7 @@
       },
       "onchain_whale": {
         "coverage_gaps": [],
-        "file_age_h": 15.553,
+        "file_age_h": 15.587,
         "reason": null,
         "recovery": "none",
         "status": "healthy",
@@ -184,7 +189,7 @@
       },
       "onchain_whale_alerts": {
         "coverage_gaps": [],
-        "file_age_h": 15.484,
+        "file_age_h": 15.518,
         "reason": null,
         "recovery": "none",
         "status": "healthy",
@@ -192,7 +197,7 @@
       },
       "options": {
         "coverage_gaps": [],
-        "file_age_h": 0.188,
+        "file_age_h": 0.223,
         "reason": null,
         "recovery": "none",
         "status": "healthy",
@@ -200,7 +205,7 @@
       },
       "price_technical": {
         "coverage_gaps": [],
-        "file_age_h": 0.192,
+        "file_age_h": 0.008,
         "reason": null,
         "recovery": "none",
         "status": "healthy",
@@ -212,7 +217,7 @@
           "five_venue_cvd_168h_incomplete",
           "five_venue_cvd_720h_incomplete"
         ],
-        "file_age_h": 0.089,
+        "file_age_h": 0.123,
         "reason": null,
         "recovery": "none",
         "status": "healthy",
@@ -226,12 +231,12 @@
   "feed_contract": "Source-level UTC quality bridge; not a standalone reversal signal",
   "feeds": {
     "bybit_depth": {
-      "age_h": 6.03,
+      "age_h": 6.31,
       "collector_health": "ok",
       "family": "orderbook",
       "generated_at": "2026-11-06T00:27:28.649217+00:00",
       "max_age_h": 36.0,
-      "measurement_age_h": 30.48,
+      "measurement_age_h": 30.77,
       "measurement_at": "2026-11-05T00:00:00+00:00",
       "source": "https://github.com/kh827y/btc-market-data/blob/main/btc-liquidity/data/bybit_independent_latest.json",
       "source_errors": 0,
@@ -241,7 +246,7 @@
       "status": "fresh"
     },
     "derivatives": {
-      "age_h": 0.22,
+      "age_h": 0.51,
       "collector_health": "ok",
       "family": "positioning",
       "generated_at": "2026-11-06T06:15:41.275421+00:00",
@@ -256,12 +261,12 @@
       "status": "fresh"
     },
     "hft_depth": {
-      "age_h": 4.9,
+      "age_h": 5.19,
       "collector_health": "errors_present",
       "family": "orderbook",
       "generated_at": "2026-11-06T01:34:51.360916+00:00",
       "max_age_h": 36.0,
-      "measurement_age_h": 18.48,
+      "measurement_age_h": 18.77,
       "measurement_at": "2026-11-05T12:00:00+00:00",
       "source": "https://github.com/kh827y/btc-market-data/blob/main/btc-liquidity/data/hft_latest.json",
       "source_errors": 6,
@@ -271,12 +276,12 @@
       "status": "fresh"
     },
     "live_depth": {
-      "age_h": 0.22,
+      "age_h": 0.51,
       "collector_health": "ok",
       "family": "orderbook",
       "generated_at": "2026-11-06T06:15:43.273965+00:00",
       "max_age_h": 2.5,
-      "measurement_age_h": 0.22,
+      "measurement_age_h": 0.51,
       "measurement_at": "2026-11-06T06:15:43.273965+00:00",
       "source": "https://github.com/kh827y/btc-market-data/blob/main/btc-liquidity/data/latest.json",
       "source_errors": 0,
@@ -286,22 +291,22 @@
       "status": "fresh"
     },
     "macro_etf": {
-      "age_h": 4.09,
-      "collector_health": "ok",
+      "age_h": 0.17,
+      "collector_health": "partial",
       "family": "macro_liquidity",
-      "generated_at": "2026-11-06T02:23:45.890588+00:00",
+      "generated_at": "2026-11-06T06:35:33.343425+00:00",
       "max_age_h": 26.0,
       "measurement_age_h": null,
       "measurement_at": null,
       "source": "https://github.com/kh827y/btc-market-data/blob/main/btc-macro/data/latest.json",
       "source_errors": 0,
-      "source_status": "ok",
+      "source_status": "partial",
       "spot_quote_age_h": null,
       "spot_quote_status": null,
       "status": "fresh"
     },
     "onchain": {
-      "age_h": 0.14,
+      "age_h": 0.42,
       "collector_health": "ok",
       "family": "holder_behavior",
       "generated_at": "2026-11-06T06:20:47.515210+00:00",
@@ -316,7 +321,7 @@
       "status": "fresh"
     },
     "options": {
-      "age_h": 0.22,
+      "age_h": 0.5,
       "collector_health": "ok",
       "family": "options",
       "generated_at": "2026-11-06T06:15:51.536134+00:00",
@@ -331,27 +336,27 @@
       "status": "fresh"
     },
     "price_technical": {
-      "age_h": 0.0,
+      "age_h": 0.29,
       "collector_health": "ok",
       "family": "price_trend",
       "generated_at": "2026-11-06T06:28:44.597703+00:00",
       "max_age_h": 26.0,
-      "measurement_age_h": 6.48,
+      "measurement_age_h": 6.77,
       "measurement_at": "2026-11-06T00:00:00+00:00",
       "source": "https://github.com/kh827y/btc-market-data/blob/main/btc-price/data/latest.json",
       "source_errors": 0,
       "source_status": "ok",
-      "spot_quote_age_h": 0.0,
+      "spot_quote_age_h": 0.29,
       "spot_quote_status": "fresh",
       "status": "fresh"
     },
     "spot_cvd": {
-      "age_h": 0.12,
+      "age_h": 0.4,
       "collector_health": "ok",
       "family": "spot_execution",
       "generated_at": "2026-11-06T06:21:48.580489+00:00",
       "max_age_h": 2.5,
-      "measurement_age_h": 1.48,
+      "measurement_age_h": 1.77,
       "measurement_at": "2026-11-06T05:00:00+00:00",
       "source": "https://github.com/kh827y/btc-market-data/blob/main/btc-spot-cvd/data/latest.json",
       "source_errors": 0,
@@ -362,7 +367,7 @@
     }
   },
   "metric_quality": {
-    "checked_utc": "2026-11-06T06:29:00.815058+00:00",
+    "checked_utc": "2026-11-06T06:46:02.734323+00:00",
     "checks": {
       "bybit_depth.bybit_independent_linear.1095d.0.01": {
         "comparison_key": "historical_book|bybit_depth|bybit_independent_linear|1095d|0.01",
@@ -1454,7 +1459,7 @@
         "required_for_family": true,
         "scope": "specific macro or ETF family, NOT an interchangeable global macro index",
         "source": "macro_etf",
-        "status": "usable",
+        "status": "unverified",
         "unit": "pct/index as individually labeled"
       },
       "macro.ice_dxy_exact": {
@@ -1463,7 +1468,7 @@
         "required_for_family": true,
         "scope": "specific macro or ETF family, NOT an interchangeable global macro index",
         "source": "macro_etf",
-        "status": "unverified",
+        "status": "usable",
         "unit": "pct/index as individually labeled"
       },
       "macro.spot_etf_flow": {
@@ -1481,7 +1486,7 @@
         "required_for_family": true,
         "scope": "specific macro or ETF family, NOT an interchangeable global macro index",
         "source": "macro_etf",
-        "status": "usable",
+        "status": "unverified",
         "unit": "pct/index as individually labeled"
       },
       "macro.usd_broad_index": {
@@ -1490,7 +1495,7 @@
         "required_for_family": true,
         "scope": "specific macro or ETF family, NOT an interchangeable global macro index",
         "source": "macro_etf",
-        "status": "usable",
+        "status": "unverified",
         "unit": "pct/index as individually labeled"
       },
       "onchain.historical_whale_alerts.count_ge_1000_btc": {
@@ -1920,7 +1925,9 @@
       "spot_cvd.original_five.24h:incomplete:source_window_hour_sum_set_or_coinbase_proof_disagrees",
       "spot_cvd.original_five.168h:incomplete:source_window_hour_sum_set_or_coinbase_proof_disagrees",
       "spot_cvd.original_five.720h:incomplete:source_window_hour_sum_set_or_coinbase_proof_disagrees",
-      "macro.ice_dxy_exact:unverified:"
+      "macro.fed_rates:unverified:",
+      "macro.treasury_yields:unverified:",
+      "macro.usd_broad_index:unverified:"
     ],
     "do_not_sum_independent_factors_from_same_family": true,
     "metrics_checked": 190,
@@ -1933,8 +1940,8 @@
       "not_comparable": 0,
       "stale": 6,
       "unavailable": 0,
-      "unverified": 1,
-      "usable": 169
+      "unverified": 3,
+      "usable": 167
     }
   },
   "metrics": {
@@ -3602,92 +3609,92 @@
         "Rising Treasury yields, DXY and risk assets are not mechanically causal"
       ],
       "dxy_exact": {
-        "date": null,
+        "date": "2026-11-06",
         "exact_ice_index": true,
-        "fetched_utc": "2026-11-06T02:23:45.890588+00:00",
-        "intraday_quote_age_h": 4.09,
-        "not_finalized_eod": null,
-        "observation_kind": null,
+        "fetched_utc": "2026-11-06T06:35:33.343425+00:00",
+        "intraday_quote_age_h": 0.17,
+        "not_finalized_eod": true,
+        "observation_kind": "unfinished_current_session",
         "source": "Yahoo Finance, DX-Y.NYB (ICE US Dollar Index indicative public bars)",
-        "status": "unavailable_or_delayed",
-        "value": null
+        "status": "usable",
+        "value": 101.802
       },
       "fred": {
         "fed_balance_sheet_millions": {
-          "date": "2026-11-04",
-          "lag_days": 2,
+          "date": null,
+          "lag_days": null,
           "series_id": "WALCL",
           "source_url": "https://fred.stlouisfed.org/series/WALCL",
-          "status": "usable",
+          "status": "missing_or_delayed",
           "unit": "USD millions",
-          "value": 6748145.0
+          "value": null
         },
         "fed_funds_effective_pct": {
-          "date": "2026-11-04",
-          "lag_days": 2,
+          "date": null,
+          "lag_days": null,
           "series_id": "DFF",
           "source_url": "https://fred.stlouisfed.org/series/DFF",
-          "status": "usable",
+          "status": "missing_or_delayed",
           "unit": "annual interest percentage points",
-          "value": 3.88
+          "value": null
         },
         "fed_target_lower_pct": {
-          "date": "2026-11-05",
-          "lag_days": 1,
+          "date": null,
+          "lag_days": null,
           "series_id": "DFEDTARL",
           "source_url": "https://fred.stlouisfed.org/series/DFEDTARL",
-          "status": "usable",
+          "status": "missing_or_delayed",
           "unit": "annual interest percentage points",
-          "value": 3.75
+          "value": null
         },
         "fed_target_upper_pct": {
-          "date": "2026-11-05",
-          "lag_days": 1,
+          "date": null,
+          "lag_days": null,
           "series_id": "DFEDTARU",
           "source_url": "https://fred.stlouisfed.org/series/DFEDTARU",
-          "status": "usable",
+          "status": "missing_or_delayed",
           "unit": "annual interest percentage points",
-          "value": 4.0
+          "value": null
         },
         "treasury_10y_pct": {
-          "date": "2026-11-04",
-          "lag_days": 2,
+          "date": null,
+          "lag_days": null,
           "series_id": "DGS10",
           "source_url": "https://fred.stlouisfed.org/series/DGS10",
-          "status": "usable",
+          "status": "missing_or_delayed",
           "unit": "annual interest percentage points",
-          "value": 4.9
+          "value": null
         },
         "treasury_2y_pct": {
-          "date": "2026-11-04",
-          "lag_days": 2,
+          "date": null,
+          "lag_days": null,
           "series_id": "DGS2",
           "source_url": "https://fred.stlouisfed.org/series/DGS2",
-          "status": "usable",
+          "status": "missing_or_delayed",
           "unit": "annual interest percentage points",
-          "value": 4.58
+          "value": null
         },
         "usd_broad_trade_weighted": {
-          "date": "2026-10-30",
-          "lag_days": 7,
+          "date": null,
+          "lag_days": null,
           "series_id": "DTWEXBGS",
           "source_url": "https://fred.stlouisfed.org/series/DTWEXBGS",
-          "status": "usable",
+          "status": "missing_or_delayed",
           "unit": "index Jan 2006=100",
-          "value": 121.6656
+          "value": null
         }
       },
       "quality": {
-        "fed_rates": true,
-        "ice_dxy_exact": false,
+        "fed_rates": false,
+        "ice_dxy_exact": true,
         "spot_etf_flow": true,
-        "treasury_yields": true,
-        "usd_broad_index": true
+        "treasury_yields": false,
+        "usd_broad_index": false
       },
       "treasury_curve": {
-        "date": "2026-11-04",
-        "spread_pct_points": 0.32,
-        "status": "usable"
+        "date": null,
+        "spread_pct_points": null,
+        "status": "missing_or_delayed"
       },
       "us_spot_bitcoin_etf": {
         "US_spot_only": true,
