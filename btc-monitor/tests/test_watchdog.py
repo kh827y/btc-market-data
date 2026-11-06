@@ -72,6 +72,17 @@ class WatchdogTests(unittest.TestCase):
         self.assertEqual(result["status"],"healthy")
         self.assertIn("sth_realized_price:missing_or_vendor_delay",result["coverage_gaps"])
 
+    def test_critical_onchain_vendor_delay_is_degraded_not_healthy_or_retry(self):
+        value={"generated_utc":"2026-11-02T15:00:00Z",
+               "latest":{"mvrv":{"status":"delayed","date":"2026-10-29","value":1.3},
+                         "sth_sopr":{"status":"delayed","date":"2026-10-29","value":1.1},
+                         "lth_realized_profit":{"status":"fresh","date":"2026-11-01","value":100}}}
+        result=m.assess("onchain_market",value,NOW)
+        self.assertEqual(result["status"],"degraded_vendor_observations")
+        self.assertFalse(result["needs_recovery"])
+        self.assertEqual(set(result["delayed_important_metrics"]),{"mvrv","sth_sopr"})
+        self.assertIn("mvrv:missing_or_vendor_delay",result["coverage_gaps"])
+
     def test_whale_alerts_no_latest_event_does_not_mean_collector_failed(self):
         value = {"generated_utc":"2026-11-02T15:00:00Z",
                  "labelled_to_exchange_alerts":7225,
