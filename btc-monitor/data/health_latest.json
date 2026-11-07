@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "checked_utc": "2026-11-07T10:14:42.228499+00:00",
+  "checked_utc": "2026-11-07T13:37:47.136292+00:00",
   "dry_run": false,
   "status": "degraded",
   "sources_checked": 14,
@@ -8,17 +8,22 @@
   "workflow_api_reachable": true,
   "workflow_api_errors": [],
   "unavailable_or_stale": [
+    "spot_cvd",
     "onchain_market"
   ],
-  "degraded_input_quality_no_duplicate_recovery": [],
+  "degraded_input_quality_no_duplicate_recovery": [
+    "monitor_bridge"
+  ],
   "separate_l2_backfill_managed": [
     "hft_depth",
     "bybit_depth"
   ],
   "auto_recovery": {
-    "dispatched": [],
-    "pending_or_blocked": [
+    "dispatched": [
       "onchain_market"
+    ],
+    "pending_or_blocked": [
+      "spot_cvd"
     ],
     "max_dispatch_per_check": 2,
     "max_dispatch_per_source_24h": 3
@@ -32,13 +37,13 @@
       "source_path": "btc-price/data/latest.json",
       "repair_enabled": true,
       "coverage_gaps": [],
-      "generated_utc": "2026-11-07T09:58:56.691555+00:00",
-      "file_age_h": 0.263,
+      "generated_utc": "2026-11-07T13:36:58.968467+00:00",
+      "file_age_h": 0.013,
       "closed_day_utc": "2026-11-06",
       "closed_week_utc": "2026-10-26",
       "closed_candles_valid": true,
       "utc_candle_date_status": "current",
-      "live_quote_age_h": 0.263,
+      "live_quote_age_h": 0.013,
       "workflow_latest": {
         "status": "completed",
         "conclusion": "success",
@@ -52,17 +57,17 @@
       }
     },
     "spot_cvd": {
-      "status": "healthy",
-      "reason": null,
-      "needs_recovery": false,
+      "status": "stale_observation",
+      "reason": "no_new_verified_taker_hour",
+      "needs_recovery": true,
       "workflow": "btc-spot-cvd.yml",
       "source_path": "btc-spot-cvd/data/latest.json",
       "repair_enabled": true,
       "coverage_gaps": [],
       "generated_utc": "2026-11-07T10:14:37.989639+00:00",
-      "file_age_h": 0.001,
+      "file_age_h": 3.386,
       "last_complete_hour": "2026-11-07T08:00:00Z",
-      "observation_age_h": 1.245,
+      "observation_age_h": 4.63,
       "workflow_latest": {
         "status": "completed",
         "conclusion": "success",
@@ -71,8 +76,8 @@
         "skipped_or_cancelled_ignored": 0
       },
       "recovery": {
-        "action": "none",
-        "reason": "verified_current_observation"
+        "action": "exhausted",
+        "reason": "max_three_dispatches_in_24h"
       }
     },
     "derivatives": {
@@ -83,9 +88,9 @@
       "source_path": "btc-derivatives/data/latest.json",
       "repair_enabled": true,
       "coverage_gaps": [],
-      "generated_utc": "2026-11-07T09:58:36.058187+00:00",
-      "file_age_h": 0.268,
-      "oi_observation_age_h": 1.245,
+      "generated_utc": "2026-11-07T13:37:01.579548+00:00",
+      "file_age_h": 0.013,
+      "oi_observation_age_h": 0.63,
       "workflow_latest": {
         "status": "completed",
         "conclusion": "success",
@@ -106,9 +111,9 @@
       "source_path": "btc-options/data/latest.json",
       "repair_enabled": true,
       "coverage_gaps": [],
-      "generated_utc": "2026-11-07T10:02:36.630674+00:00",
-      "file_age_h": 0.202,
-      "deribit_surface_age_h": 0.202,
+      "generated_utc": "2026-11-07T13:37:10.726148+00:00",
+      "file_age_h": 0.01,
+      "deribit_surface_age_h": 0.01,
       "workflow_latest": {
         "status": "completed",
         "conclusion": "success",
@@ -130,7 +135,7 @@
       "repair_enabled": true,
       "coverage_gaps": [],
       "generated_utc": "2026-11-07T09:59:10.951475+00:00",
-      "file_age_h": 0.259,
+      "file_age_h": 3.643,
       "workflow_latest": {
         "status": "completed",
         "conclusion": "success",
@@ -151,8 +156,8 @@
       "source_path": "btc-liquidity/data/latest.json",
       "repair_enabled": true,
       "coverage_gaps": [],
-      "generated_utc": "2026-11-07T10:13:30.128301+00:00",
-      "file_age_h": 0.02,
+      "generated_utc": "2026-11-07T13:37:23.731792+00:00",
+      "file_age_h": 0.007,
       "market_health": {
         "binance_spot": "verified",
         "bybit_spot": "verified",
@@ -200,7 +205,7 @@
         "realized_price:missing_or_vendor_delay"
       ],
       "generated_utc": "2026-11-05T13:29:23.620611+00:00",
-      "file_age_h": 44.755,
+      "file_age_h": 48.14,
       "delayed_important_metrics": [
         "mvrv",
         "mvrv_zscore",
@@ -211,14 +216,16 @@
       "workflow_latest": {
         "status": "completed",
         "conclusion": "failure",
-        "run_id": 42362017756,
-        "created_at": "2026-11-07T09:59:40Z",
+        "run_id": 42374783537,
+        "created_at": "2026-11-07T12:58:05Z",
         "skipped_or_cancelled_ignored": 0
       },
       "workflow_warning": "latest_meaningful_completed_run_failed",
       "recovery": {
-        "action": "cooldown",
-        "reason": "wait_two_hours_before_retry"
+        "action": "dispatched",
+        "workflow": "btc-onchain-history.yml",
+        "at_utc": "2026-11-07T13:37:47.136292+00:00",
+        "reason": "collector_not_publishing"
       }
     },
     "onchain_bitview": {
@@ -229,15 +236,15 @@
       "source_path": "btc-onchain/data/bitview_latest.json",
       "repair_enabled": true,
       "coverage_gaps": [],
-      "generated_utc": "2026-11-06T14:15:15.173689+00:00",
-      "file_age_h": 19.991,
+      "generated_utc": "2026-11-07T12:57:55.348634+00:00",
+      "file_age_h": 0.664,
       "delayed_important_metrics": [],
-      "last_closed_day_utc": "2026-11-05",
+      "last_closed_day_utc": "2026-11-06",
       "workflow_latest": {
         "status": "completed",
         "conclusion": "success",
-        "run_id": 42232253484,
-        "created_at": "2026-11-06T14:15:09Z",
+        "run_id": 42374765557,
+        "created_at": "2026-11-07T12:57:48Z",
         "skipped_or_cancelled_ignored": 0
       },
       "recovery": {
@@ -253,14 +260,14 @@
       "source_path": "btc-onchain/data/whale_latest.json",
       "repair_enabled": true,
       "coverage_gaps": [],
-      "generated_utc": "2026-11-06T14:32:38.068158+00:00",
-      "file_age_h": 19.701,
+      "generated_utc": "2026-11-07T13:27:59.936836+00:00",
+      "file_age_h": 0.163,
       "delayed_important_metrics": [],
       "workflow_latest": {
         "status": "completed",
         "conclusion": "success",
-        "run_id": 42234830718,
-        "created_at": "2026-11-06T14:32:31Z",
+        "run_id": 42377072605,
+        "created_at": "2026-11-07T13:27:53Z",
         "skipped_or_cancelled_ignored": 0
       },
       "recovery": {
@@ -276,13 +283,13 @@
       "source_path": "btc-onchain/data/whale_alert_latest.json",
       "repair_enabled": true,
       "coverage_gaps": [],
-      "generated_utc": "2026-11-06T14:37:33.087722+00:00",
-      "file_age_h": 19.619,
+      "generated_utc": "2026-11-07T13:35:05.641681+00:00",
+      "file_age_h": 0.045,
       "workflow_latest": {
         "status": "completed",
         "conclusion": "success",
-        "run_id": 42235580429,
-        "created_at": "2026-11-06T14:37:27Z",
+        "run_id": 42377627165,
+        "created_at": "2026-11-07T13:35:00Z",
         "skipped_or_cancelled_ignored": 0
       },
       "recovery": {
@@ -298,20 +305,20 @@
       "source_path": "btc-onchain/data/monitor_latest.json",
       "repair_enabled": true,
       "coverage_gaps": [
-        "market_onchain:lth_sopr: 5 days",
-        "market_onchain:mvrv: 5 days",
-        "market_onchain:mvrv_zscore: 5 days",
-        "market_onchain:nupl: 5 days",
-        "market_onchain:sth_sopr: 5 days",
-        "whale_deposits:whale_exchange_deposit_count: 4 days"
+        "market_onchain: feed 48.1 hours old",
+        "market_onchain:lth_sopr: 6 days",
+        "market_onchain:mvrv: 6 days",
+        "market_onchain:mvrv_zscore: 6 days",
+        "market_onchain:nupl: 6 days",
+        "market_onchain:sth_sopr: 6 days"
       ],
-      "generated_utc": "2026-11-06T14:39:16.859317+00:00",
-      "file_age_h": 19.59,
+      "generated_utc": "2026-11-07T13:36:43.754995+00:00",
+      "file_age_h": 0.018,
       "workflow_latest": {
         "status": "completed",
         "conclusion": "success",
-        "run_id": 42235823820,
-        "created_at": "2026-11-06T14:39:09Z",
+        "run_id": 42377751091,
+        "created_at": "2026-11-07T13:36:37Z",
         "skipped_or_cancelled_ignored": 0
       },
       "recovery": {
@@ -330,9 +337,9 @@
         "6_historical_source_errors"
       ],
       "generated_utc": "2026-11-07T10:13:57.056831+00:00",
-      "file_age_h": 0.013,
+      "file_age_h": 3.397,
       "snapshot_date": "2026-11-06",
-      "snapshot_age_h": 34.245,
+      "snapshot_age_h": 37.63,
       "workflow_latest": {
         "status": "completed",
         "conclusion": "success",
@@ -354,9 +361,9 @@
       "repair_enabled": false,
       "coverage_gaps": [],
       "generated_utc": "2026-11-07T08:59:28.740404+00:00",
-      "file_age_h": 1.254,
+      "file_age_h": 4.638,
       "snapshot_date": "2026-11-06",
-      "snapshot_age_h": 34.245,
+      "snapshot_age_h": 37.63,
       "workflow_latest": {
         "status": "completed",
         "conclusion": "success",
@@ -370,26 +377,45 @@
       }
     },
     "monitor_bridge": {
-      "status": "healthy",
-      "reason": null,
+      "status": "degraded_critical_inputs",
+      "reason": "underlying_source_or_metric_unusable",
       "needs_recovery": false,
       "workflow": "btc-monitor-bridge.yml",
       "source_path": "btc-monitor/data/brief.json",
       "repair_enabled": true,
       "coverage_gaps": [
-        "onchain:missing_or_delayed_metrics=6",
+        "spot_cvd:24h_five_venue_incomplete",
+        "spot_cvd:168h_five_venue_incomplete",
+        "spot_cvd:720h_five_venue_incomplete",
+        "onchain:missing_or_delayed_metrics=12",
         "live_depth:0.2pct_complete=10/11_selected_markets",
-        "live_depth:1.0pct_complete=4/11_selected_markets"
+        "live_depth:1.0pct_complete=4/11_selected_markets",
+        "metric_quality:spot_cvd.original_five.1h:stale:parent_source_not_fresh",
+        "metric_quality:spot_cvd.original_five.24h:stale:parent_source_not_fresh",
+        "metric_quality:spot_cvd.original_five.168h:stale:parent_source_not_fresh",
+        "metric_quality:spot_cvd.original_five.720h:stale:parent_source_not_fresh",
+        "critical_metric:spot_cvd.original_five.1h:stale:parent_source_not_fresh",
+        "critical_metric:spot_cvd.original_five.24h:stale:parent_source_not_fresh",
+        "critical_metric:spot_cvd.original_five.168h:stale:parent_source_not_fresh",
+        "critical_metric:spot_cvd.original_five.720h:stale:parent_source_not_fresh",
+        "critical_family_not_fresh:spot_cvd"
       ],
-      "generated_utc": "2026-11-07T10:14:29.403196+00:00",
+      "generated_utc": "2026-11-07T13:37:33.835104+00:00",
       "file_age_h": 0.004,
-      "critical_metric_issues": [],
-      "stale_or_missing_critical_families": [],
+      "critical_metric_issues": [
+        "spot_cvd.original_five.1h:stale:parent_source_not_fresh",
+        "spot_cvd.original_five.24h:stale:parent_source_not_fresh",
+        "spot_cvd.original_five.168h:stale:parent_source_not_fresh",
+        "spot_cvd.original_five.720h:stale:parent_source_not_fresh"
+      ],
+      "stale_or_missing_critical_families": [
+        "spot_cvd"
+      ],
       "workflow_latest": {
-        "status": "in_progress",
+        "status": "completed",
         "conclusion": "success",
-        "run_id": 42363125367,
-        "created_at": "2026-11-07T10:14:43Z",
+        "run_id": 42377767362,
+        "created_at": "2026-11-07T13:36:51Z",
         "skipped_or_cancelled_ignored": 1
       },
       "recovery": {
