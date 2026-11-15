@@ -3,6 +3,9 @@ import datetime as dt
 import importlib.util
 from pathlib import Path
 import unittest
+from tempfile import TemporaryDirectory
+from unittest import mock
+import json
 
 p=Path(__file__).resolve().parents[1]/"collector.py"
 spec=importlib.util.spec_from_file_location("primary_onchain",p)
@@ -34,5 +37,22 @@ class PrimarySelectionTests(unittest.TestCase):
         self.assertEqual(m.selected_metrics({},day,prev),list(m.CORE_NAMES))
         self.assertEqual(m.selected_metrics({},day+dt.timedelta(days=7),prev)[-1],
                          "lth_realized_price")
+    def test_main_publishes_valid_snapshot_when_sources_succeed(self):
+        # Regression: collector used to raise NameError on undefined
+        # 'restricted' only after spending the entire free API quota.
+        with TemporaryDirectory() as tmp:
+            def fake_fetch(url):
+                if "coinmetrics" in url:
+                    return {"data": [], "next_page_url": None}
+                return [{"d": "2026-11-14", "value": 1.25}]
+            with mock.patch.object(m, "ROOT", Path(tmp)), mock.patch.object(m, "fetch", fake_fetch):
+                m.main()
+                doc=json.loads((Path(tmp)/"latest.json").read_text())
+                history=json.loads((Path(tmp)/"history.json").read_text())
+            self.assertIn("generated_utc",doc)
+            self.assertFalse(doc["errors"])
+            self.assertIn("mvrv",history)
+            self.assertNotIn("restricted_requested",doc)
+
 if __name__=="__main__":
     unittest.main()
