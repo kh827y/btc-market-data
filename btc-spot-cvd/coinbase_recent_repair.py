@@ -73,7 +73,9 @@ def scan_group(session, hours, page_cap):
 def repair(state,now,errors,pages=250,horizon=30):
     if pages<0 or pages>1000:raise ValueError("Coinbase repair pages out of bounds")
     end=now.replace(minute=0,second=0,microsecond=0)-dt.timedelta(hours=2)
-    groups=missing_groups(state,end,horizon=horizon)
+    # High-volatility Coinbase BTC-USD can exceed 250k trades in two hours.
+    # Verify one closed hour per shard to make the 250-page ceiling useful.
+    groups=missing_groups(state,end,horizon=horizon,max_group_hours=1)
     row={"checked_utc":now.isoformat(),"status":"complete" if not groups else "running",
          "prior_incomplete_groups":len(groups),"prior_missing_hours":sum(map(len,groups)),
          "hours_recovered":0,"pages_scanned":0,"hours_remaining":0,
