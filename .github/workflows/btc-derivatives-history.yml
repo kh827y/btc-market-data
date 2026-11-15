@@ -3,6 +3,7 @@ on:
   push:
     paths:
       - "btc-derivatives/collector.py"
+      - "btc-derivatives/tests/**"
       - ".github/workflows/btc-derivatives-history.yml"
   workflow_dispatch:
   schedule:
@@ -21,8 +22,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Verify syntax
-        run: python -m py_compile btc-derivatives/collector.py
+      - name: Verify syntax and provider payload acceptance offline
+        run: |
+          python -m py_compile btc-derivatives/collector.py
+          python -m unittest discover -s btc-derivatives/tests -p "test_*.py" -v
       - name: Refresh canonical main, collect and commit with bounded race-safe retry
         run: |
           set -eu
