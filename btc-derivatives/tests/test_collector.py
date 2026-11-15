@@ -19,7 +19,7 @@ class DerivativesFeedTests(TestCase):
         now=dt.datetime(2026,11,15,2,0,tzinfo=UTC)
         t=int(dt.datetime(2026,11,15,1,0,tzinfo=UTC).timestamp()*1000)
         keys={"Binance":"binance","Bybit":"bybit","OKX":"okx","Gate.io":"gate","Hyperliquid":"hyperliquid"}
-        rows=[{"exchange":slug,"oi_usd":(i+1)*1e9,"updated_at":t,
+        rows=[{"exchange":slug,"oi_usd":(i+1)*1e9,"updated_at":int(now.timestamp()*1000),
                "is_stale":False,"oi_side":"single"}
               for i,slug in enumerate(keys.values())]
         entries=[{"ts":t,"byExchange":{slug:(i+1)*1e9
