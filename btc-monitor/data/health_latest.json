@@ -1,13 +1,15 @@
 {
   "schema": 1,
-  "checked_utc": "2026-11-15T17:54:08.427709+00:00",
+  "checked_utc": "2026-11-15T19:49:38.015684+00:00",
   "dry_run": false,
   "status": "degraded",
   "sources_checked": 14,
   "workflow_api_checked": true,
   "workflow_api_reachable": true,
   "workflow_api_errors": [],
-  "unavailable_or_stale": [],
+  "unavailable_or_stale": [
+    "price_technical"
+  ],
   "degraded_input_quality_no_duplicate_recovery": [
     "onchain_market",
     "monitor_bridge"
@@ -17,27 +19,31 @@
     "bybit_depth"
   ],
   "auto_recovery": {
-    "dispatched": [],
+    "dispatched": [
+      "price_technical"
+    ],
     "pending_or_blocked": [],
     "max_dispatch_per_check": 2,
     "max_dispatch_per_source_24h": 3
   },
   "sources": {
     "price_technical": {
-      "status": "healthy",
-      "reason": null,
-      "needs_recovery": false,
+      "status": "stale_observation",
+      "reason": "live_quote_stale",
+      "needs_recovery": true,
       "workflow": "btc-price-technicals.yml",
       "source_path": "btc-price/data/latest.json",
       "repair_enabled": true,
-      "coverage_gaps": [],
+      "coverage_gaps": [
+        "live_quote_stale_or_missing"
+      ],
       "generated_utc": "2026-11-15T17:02:43.332731+00:00",
-      "file_age_h": 0.857,
+      "file_age_h": 2.782,
       "closed_day_utc": "2026-11-14",
       "closed_week_utc": "2026-11-02",
       "closed_candles_valid": true,
       "utc_candle_date_status": "current",
-      "live_quote_age_h": 0.857,
+      "live_quote_age_h": 2.782,
       "workflow_latest": {
         "status": "completed",
         "conclusion": "success",
@@ -46,8 +52,10 @@
         "skipped_or_cancelled_ignored": 1
       },
       "recovery": {
-        "action": "none",
-        "reason": "verified_current_observation"
+        "action": "dispatched",
+        "workflow": "btc-price-technicals.yml",
+        "at_utc": "2026-11-15T19:49:38.015684+00:00",
+        "reason": "live_quote_stale"
       }
     },
     "spot_cvd": {
@@ -63,9 +71,9 @@
         "five_venue_cvd_720h_incomplete"
       ],
       "generated_utc": "2026-11-15T17:02:48.616816+00:00",
-      "file_age_h": 0.856,
+      "file_age_h": 2.78,
       "last_complete_hour": "2026-11-15T15:00:00Z",
-      "observation_age_h": 1.902,
+      "observation_age_h": 3.827,
       "workflow_latest": {
         "status": "completed",
         "conclusion": "success",
@@ -87,8 +95,8 @@
       "repair_enabled": true,
       "coverage_gaps": [],
       "generated_utc": "2026-11-15T17:02:16.163481+00:00",
-      "file_age_h": 0.865,
-      "oi_observation_age_h": 1.902,
+      "file_age_h": 2.789,
+      "oi_observation_age_h": 3.827,
       "workflow_latest": {
         "status": "completed",
         "conclusion": "success",
@@ -110,8 +118,8 @@
       "repair_enabled": true,
       "coverage_gaps": [],
       "generated_utc": "2026-11-15T17:07:18.422245+00:00",
-      "file_age_h": 0.781,
-      "deribit_surface_age_h": 0.781,
+      "file_age_h": 2.705,
+      "deribit_surface_age_h": 2.705,
       "workflow_latest": {
         "status": "completed",
         "conclusion": "success",
@@ -133,7 +141,7 @@
       "repair_enabled": true,
       "coverage_gaps": [],
       "generated_utc": "2026-11-15T17:48:50.480750+00:00",
-      "file_age_h": 0.088,
+      "file_age_h": 2.013,
       "workflow_latest": {
         "status": "completed",
         "conclusion": "success",
@@ -155,7 +163,7 @@
       "repair_enabled": true,
       "coverage_gaps": [],
       "generated_utc": "2026-11-15T17:12:45.116116+00:00",
-      "file_age_h": 0.69,
+      "file_age_h": 2.615,
       "market_health": {
         "binance_spot": "verified",
         "bybit_spot": "verified",
@@ -203,7 +211,7 @@
         "realized_price:missing_or_vendor_delay"
       ],
       "generated_utc": "2026-11-15T02:04:39.581536+00:00",
-      "file_age_h": 15.825,
+      "file_age_h": 17.75,
       "delayed_important_metrics": [
         "mvrv",
         "mvrv_zscore",
@@ -232,7 +240,7 @@
       "repair_enabled": true,
       "coverage_gaps": [],
       "generated_utc": "2026-11-15T13:54:24.532333+00:00",
-      "file_age_h": 3.996,
+      "file_age_h": 5.92,
       "delayed_important_metrics": [],
       "last_closed_day_utc": "2026-11-14",
       "workflow_latest": {
@@ -256,7 +264,7 @@
       "repair_enabled": true,
       "coverage_gaps": [],
       "generated_utc": "2026-11-15T14:15:04.028639+00:00",
-      "file_age_h": 3.651,
+      "file_age_h": 5.576,
       "delayed_important_metrics": [],
       "workflow_latest": {
         "status": "completed",
@@ -279,7 +287,7 @@
       "repair_enabled": true,
       "coverage_gaps": [],
       "generated_utc": "2026-11-15T14:19:20.820985+00:00",
-      "file_age_h": 3.58,
+      "file_age_h": 5.505,
       "workflow_latest": {
         "status": "completed",
         "conclusion": "success",
@@ -307,7 +315,7 @@
         "market_onchain:sth_sopr: 7 days"
       ],
       "generated_utc": "2026-11-15T14:22:10.944726+00:00",
-      "file_age_h": 3.533,
+      "file_age_h": 5.458,
       "workflow_latest": {
         "status": "completed",
         "conclusion": "success",
@@ -331,9 +339,9 @@
         "6_historical_source_errors"
       ],
       "generated_utc": "2026-11-15T17:13:13.004575+00:00",
-      "file_age_h": 0.682,
+      "file_age_h": 2.607,
       "snapshot_date": "2026-11-14",
-      "snapshot_age_h": 41.902,
+      "snapshot_age_h": 43.827,
       "workflow_latest": {
         "status": "completed",
         "conclusion": "success",
@@ -355,9 +363,9 @@
       "repair_enabled": false,
       "coverage_gaps": [],
       "generated_utc": "2026-11-15T17:53:33.488384+00:00",
-      "file_age_h": 0.01,
+      "file_age_h": 1.935,
       "snapshot_date": "2026-11-14",
-      "snapshot_age_h": 41.902,
+      "snapshot_age_h": 43.827,
       "workflow_latest": {
         "status": "completed",
         "conclusion": "success",
@@ -393,7 +401,7 @@
         "critical_metric:spot_cvd.original_five.720h:incomplete:source_window_hour_sum_set_or_coinbase_proof_disagrees"
       ],
       "generated_utc": "2026-11-15T17:53:47.514798+00:00",
-      "file_age_h": 0.006,
+      "file_age_h": 1.931,
       "critical_metric_issues": [
         "spot_cvd.original_five.1h:incomplete:source_window_hour_sum_set_or_coinbase_proof_disagrees",
         "spot_cvd.original_five.24h:incomplete:source_window_hour_sum_set_or_coinbase_proof_disagrees",
