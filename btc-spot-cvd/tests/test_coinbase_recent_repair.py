@@ -24,6 +24,28 @@ class CoinbaseRecentRepairTests(unittest.TestCase):
                           "2026-11-02T14:00:00Z",
                           "2026-11-02T05:00:00Z"])
 
+    def test_thirty_missing_hours_are_sharded_bounded_newest_first(self):
+        state={"hourly":{"coinbase":{}}}
+        groups=missing_groups(state,END,horizon=30)
+        self.assertEqual([len(g) for g in groups],[2]*15)
+        self.assertEqual(groups[0],[END,END-dt.timedelta(hours=1)])
+        self.assertEqual(groups[-1][-1],END-dt.timedelta(hours=29))
+
+    def test_completed_recent_shard_persists_before_later_budget_failure(self):
+        state={"hourly":{"coinbase":{}}}
+        record={"complete":True,"integrity":"id_continuous_verified",
+                "buy":7,"sell":3,"net":4,"trades":3}
+        def fake_scan(session,group,cap):
+            if group[0]==END:
+                return ({hour_key(h):dict(record) for h in group},3,None)
+            return (None,cap,{"reason":"page_cap_reached_without_lower_boundary"})
+        with mock.patch("coinbase_recent_repair.scan_group",side_effect=fake_scan):
+            report=repair(state,NOW,[],pages=7,horizon=4)
+        self.assertEqual(report["status"],"partial")
+        self.assertEqual(report["hours_recovered"],2)
+        self.assertEqual(report["hours_remaining"],2)
+        self.assertTrue(state["hourly"]["coinbase"][hour_key(END)]["complete"])
+
     def test_verified_repair_fills_gap_and_advances_window_without_reset(self):
         current={hour_key(END-dt.timedelta(hours=i)):
                  {"complete":True,"net":10} for i in range(30) if i!=0}
