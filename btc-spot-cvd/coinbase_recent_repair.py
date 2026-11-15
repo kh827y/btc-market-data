@@ -9,13 +9,24 @@ import json
 import requests
 from coinbase_parallel_backfill import seek,fetch,accumulate,hour_key,UTC
 
-def missing_groups(state,end,horizon=30):
+def missing_groups(state,end,horizon=30,max_group_hours=2):
+    """Split recent missing hours into independently provable small chunks.
+
+    A 30-hour Coinbase interval can exceed 250,000 trades, exhausting the
+    free-page budget before the lower boundary and committing *zero* hours.
+    Two-hour shards preserve ID-continuity proof and can commit newest hours
+    first even when a later shard hits the page cap. Never mark partial shards
+    complete.
+    """
+    if max_group_hours < 1:
+        raise ValueError("max_group_hours must be positive")
     existing=state.setdefault("hourly",{}).setdefault("coinbase",{})
     hours=[end-dt.timedelta(hours=i) for i in range(horizon)
            if not existing.get(hour_key(end-dt.timedelta(hours=i)),{}).get("complete")]
     groups=[]
     for hour in hours:
-        if groups and groups[-1][-1]-hour==dt.timedelta(hours=1):
+        if (groups and len(groups[-1]) < max_group_hours
+                and groups[-1][-1]-hour==dt.timedelta(hours=1)):
             groups[-1].append(hour)
         else:
             groups.append([hour])
