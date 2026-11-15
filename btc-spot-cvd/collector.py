@@ -301,7 +301,10 @@ def main():
     # Production defaults grow the archive; env caps allow short real
     # integration runs that still commit verified market observations.
     batch=max(0,min(120,int(os.getenv("BTC_CVD_ARCHIVE_BATCH","36"))))
-    recent_pages=max(0,min(1000,int(os.getenv("BTC_CVD_COINBASE_RECENT_PAGES","250"))))
+    # Coinbase can have >200k executed BTC-USD trades in a single volatile
+    # UTC hour. Scan up to 700k verified IDs per run while keeping shards
+    # atomic; never call a partial hour complete or reset verified state.
+    recent_pages=max(0,min(1000,int(os.getenv("BTC_CVD_COINBASE_RECENT_PAGES","700"))))
     deep_pages=max(0,min(500,int(os.getenv("BTC_CVD_COINBASE_DEEP_PAGES","120"))))
     archives(state,now,errors,batch=batch)
     # Recover actual Binance spot taker volume from official closed hourly
