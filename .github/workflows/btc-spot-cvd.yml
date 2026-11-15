@@ -11,11 +11,12 @@ on:
   # Additional triggers when scheduled executions are late.
   # NEVER trigger on monitor bridge; bridge already triggers on BTC spot CVD.
   workflow_run:
+    # Backup trigger if the scheduled hourly derivatives job finishes late.
+    # Four CVD scheduled runs per hour already provide coverage. Re-running
+    # after options and historical L2 jobs wastes thousands of Coinbase pages
+    # and backs up the workflow queue during high BTC volatility.
     workflows:
       - "BTC derivatives history"
-      - "BTC options volatility and 25delta skew"
-      - "BTC validated historical L2 books"
-      - "BTC independent Bybit L2 historical depth"
     types: [completed]
     branches: [main]
 permissions:
