@@ -5,6 +5,11 @@ on:
       - "btc-onchain/consolidate.py"
       - "btc-onchain/tests/test_consolidate.py"
       - ".github/workflows/btc-onchain-consolidate.yml"
+  workflow_run:
+    workflows:
+      - "BTC onchain history"
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
   schedule:
     - cron: "55 6 * * *"
@@ -15,6 +20,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   build:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
