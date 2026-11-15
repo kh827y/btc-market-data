@@ -101,7 +101,6 @@ def main():
     out={"generated_utc":now.isoformat(),"data_source":{"bgeometrics":"free tier last four years; optional realized-price endpoints historically delayed","coinmetrics":"community API free exchange metrics; data revisions/status possible"},"latest":latest,"errors":errors,
          "optional_requested":optional if optional else previous_latest.get("optional_requested"),
          "optional_checked_utc_day":now.date().isoformat() if optional else previous_latest.get("optional_checked_utc_day"),
-         "restricted_requested":restricted if restricted else previous_latest.get("restricted_requested"),
           "optional_poll_policy":"reference-only BGeometrics cost basis, maximum one optional request on Monday/Wednesday/Friday; never treat delayed source as a current signal"}
     previous.write_text(json.dumps(data,separators=(",",":"),sort_keys=True)+"\n")
     (ROOT/"latest.json").write_text(json.dumps(out,ensure_ascii=False,indent=2)+"\n")
