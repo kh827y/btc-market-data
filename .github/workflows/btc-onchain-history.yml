@@ -35,7 +35,10 @@ jobs:
       - name: Update and persist verified onchain history from newest checkpoint
         # Code-push CI validates logic only; it must not repeatedly consume
         # the free API quota. Genuine data collection is daily/dispatch.
-        if: ${{ github.event_name != 'push' }}
+        # Normally code pushes run offline tests only. A designated repair
+        # commit may collect once, guarded by the same-day checkpoint below,
+        # so a fixed runtime error can be verified without manual dispatch.
+        if: ${{ github.event_name != 'push' || contains(github.event.head_commit.message, '[collect-onchain]') }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
