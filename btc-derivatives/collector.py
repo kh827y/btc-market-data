@@ -377,6 +377,10 @@ def main():
     ROOT.mkdir(parents=True,exist_ok=True)
     last_report.write_text(json.dumps(report,ensure_ascii=False,separators=(",",":"))+"\n")
     print("COVERAGE",report["coverage"],"ERRORS",len(errors))
+    # Exit nonzero for missing critical observations. A GitHub Actions green
+    # check must never mean a snapshot was complete when APIs returned 401.
+    if not report["coverage"]["core_feeds_available"]:
+        raise SystemExit("Critical derivatives not refreshed: OI/funding/liquidations missing")
 if __name__=="__main__":
     main()
 
