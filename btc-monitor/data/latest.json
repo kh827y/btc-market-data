@@ -1,17 +1,14 @@
 {
-  "as_of_utc": "2026-11-18T12:56:45.270397+00:00",
+  "as_of_utc": "2026-11-18T13:54:08.415296+00:00",
   "audit": {
     "WARNING": "Bridge generation success DOES NOT imply source freshness or all-market coverage",
     "coverage_gaps": [
-      "spot_cvd:24h_five_venue_incomplete",
       "spot_cvd:168h_five_venue_incomplete",
       "spot_cvd:720h_five_venue_incomplete",
       "onchain:missing_or_delayed_metrics=5",
       "live_depth:1.0pct_complete=5/11_selected_markets",
-      "metric_quality:spot_cvd.original_five.1h:stale:parent_source_not_fresh",
-      "metric_quality:spot_cvd.original_five.24h:stale:parent_source_not_fresh",
-      "metric_quality:spot_cvd.original_five.168h:stale:parent_source_not_fresh",
-      "metric_quality:spot_cvd.original_five.720h:stale:parent_source_not_fresh"
+      "metric_quality:spot_cvd.original_five.168h:incomplete:source_window_hour_sum_set_or_coinbase_proof_disagrees",
+      "metric_quality:spot_cvd.original_five.720h:incomplete:source_window_hour_sum_set_or_coinbase_proof_disagrees"
     ],
     "family_readiness": {
       "current_all_11_orderbooks_complete_1pct": false,
@@ -40,39 +37,197 @@
       "price_technical_verified": true,
       "price_trend": true,
       "spot_cvd_168h_complete": false,
-      "spot_cvd_168h_fixed_five_ex_coinbase": false,
-      "spot_cvd_1h_complete": false,
-      "spot_cvd_24h_complete": false,
-      "spot_cvd_24h_covered_subset": false,
-      "spot_cvd_24h_fixed_five_ex_coinbase": false,
+      "spot_cvd_168h_fixed_five_ex_coinbase": true,
+      "spot_cvd_1h_complete": true,
+      "spot_cvd_24h_complete": true,
+      "spot_cvd_24h_covered_subset": true,
+      "spot_cvd_24h_fixed_five_ex_coinbase": true,
       "spot_cvd_720h_complete": false,
-      "spot_cvd_720h_fixed_five_ex_coinbase": false,
-      "spot_execution": false,
+      "spot_cvd_720h_fixed_five_ex_coinbase": true,
+      "spot_execution": true,
       "us_spot_btc_etf_flows": true
     },
-    "fresh": 8,
-    "issues": [
-      "spot_cvd:stale"
-    ],
+    "fresh": 9,
+    "issues": [],
     "sources_parsed": 9,
     "sources_total": 9
   },
   "collector_watchdog": {
-    "age_h": 3.97,
-    "checked_utc": "2026-11-18T08:58:15.618576+00:00",
-    "reason": "independent_watchdog_stopped",
-    "status": "stale",
-    "workflow_api_reachable": false
+    "age_h": 0.95,
+    "auto_recovery": {
+      "dispatched": [],
+      "max_dispatch_per_check": 2,
+      "max_dispatch_per_source_24h": 3,
+      "pending_or_blocked": [
+        "spot_cvd"
+      ]
+    },
+    "caveat": "This feed is not proof that the scheduled ChatGPT run actually read it",
+    "checked_utc": "2026-11-18T12:57:12.661915+00:00",
+    "sources": {
+      "bybit_depth": {
+        "coverage_gaps": [],
+        "file_age_h": 8.336,
+        "reason": null,
+        "recovery": "none",
+        "status": "healthy",
+        "workflow_api_error": null
+      },
+      "derivatives": {
+        "coverage_gaps": [],
+        "file_age_h": 0.02,
+        "reason": null,
+        "recovery": "none",
+        "status": "healthy",
+        "workflow_api_error": null
+      },
+      "hft_depth": {
+        "coverage_gaps": [
+          "20_historical_source_errors"
+        ],
+        "file_age_h": 4.19,
+        "reason": null,
+        "recovery": "none",
+        "status": "healthy",
+        "workflow_api_error": null
+      },
+      "live_depth": {
+        "coverage_gaps": [],
+        "file_age_h": 0.015,
+        "reason": null,
+        "recovery": "none",
+        "status": "healthy",
+        "workflow_api_error": null
+      },
+      "macro_etf": {
+        "coverage_gaps": [],
+        "file_age_h": 0.02,
+        "reason": null,
+        "recovery": "none",
+        "status": "healthy",
+        "workflow_api_error": null
+      },
+      "monitor_bridge": {
+        "coverage_gaps": [
+          "spot_cvd:24h_five_venue_incomplete",
+          "spot_cvd:168h_five_venue_incomplete",
+          "spot_cvd:720h_five_venue_incomplete",
+          "onchain:missing_or_delayed_metrics=5",
+          "live_depth:1.0pct_complete=5/11_selected_markets",
+          "metric_quality:spot_cvd.original_five.1h:stale:parent_source_not_fresh",
+          "metric_quality:spot_cvd.original_five.24h:stale:parent_source_not_fresh",
+          "metric_quality:spot_cvd.original_five.168h:stale:parent_source_not_fresh",
+          "metric_quality:spot_cvd.original_five.720h:stale:parent_source_not_fresh",
+          "critical_metric:spot_cvd.original_five.1h:stale:parent_source_not_fresh",
+          "critical_metric:spot_cvd.original_five.24h:stale:parent_source_not_fresh",
+          "critical_metric:spot_cvd.original_five.168h:stale:parent_source_not_fresh",
+          "critical_metric:spot_cvd.original_five.720h:stale:parent_source_not_fresh",
+          "critical_family_not_fresh:spot_cvd"
+        ],
+        "file_age_h": 0.008,
+        "reason": "underlying_source_or_metric_unusable",
+        "recovery": "none",
+        "status": "degraded_critical_inputs",
+        "workflow_api_error": null
+      },
+      "onchain": {
+        "coverage_gaps": [
+          "market_onchain:lth_sopr: 7 days",
+          "market_onchain:mvrv: 7 days",
+          "market_onchain:mvrv_zscore: 7 days",
+          "market_onchain:nupl: 7 days",
+          "market_onchain:sth_sopr: 7 days"
+        ],
+        "file_age_h": 20.444,
+        "reason": null,
+        "recovery": "none",
+        "status": "healthy",
+        "workflow_api_error": null
+      },
+      "onchain_bitview": {
+        "coverage_gaps": [],
+        "file_age_h": 20.989,
+        "reason": null,
+        "recovery": "none",
+        "status": "healthy",
+        "workflow_api_error": null
+      },
+      "onchain_market": {
+        "coverage_gaps": [
+          "mvrv:missing_or_vendor_delay",
+          "mvrv_zscore:missing_or_vendor_delay",
+          "nupl:missing_or_vendor_delay",
+          "sth_sopr:missing_or_vendor_delay",
+          "lth_sopr:missing_or_vendor_delay",
+          "sth_realized_price:missing_or_vendor_delay",
+          "lth_realized_price:missing_or_vendor_delay",
+          "realized_price:missing_or_vendor_delay"
+        ],
+        "file_age_h": 22.057,
+        "reason": "important_onchain_metrics_publication_lag",
+        "recovery": "none",
+        "status": "degraded_vendor_observations",
+        "workflow_api_error": null
+      },
+      "onchain_whale": {
+        "coverage_gaps": [],
+        "file_age_h": 20.54,
+        "reason": null,
+        "recovery": "none",
+        "status": "healthy",
+        "workflow_api_error": null
+      },
+      "onchain_whale_alerts": {
+        "coverage_gaps": [],
+        "file_age_h": 20.46,
+        "reason": null,
+        "recovery": "none",
+        "status": "healthy",
+        "workflow_api_error": null
+      },
+      "options": {
+        "coverage_gaps": [],
+        "file_age_h": 0.018,
+        "reason": null,
+        "recovery": "none",
+        "status": "healthy",
+        "workflow_api_error": null
+      },
+      "price_technical": {
+        "coverage_gaps": [],
+        "file_age_h": 0.025,
+        "reason": null,
+        "recovery": "none",
+        "status": "healthy",
+        "workflow_api_error": null
+      },
+      "spot_cvd": {
+        "coverage_gaps": [
+          "five_venue_cvd_168h_incomplete",
+          "five_venue_cvd_720h_incomplete"
+        ],
+        "file_age_h": 5.839,
+        "reason": "no_new_verified_taker_hour",
+        "recovery": "waiting_existing_run",
+        "status": "stale_observation",
+        "workflow_api_error": null
+      }
+    },
+    "status": "degraded",
+    "unavailable_or_stale": [
+      "spot_cvd"
+    ],
+    "workflow_api_reachable": true
   },
   "feed_contract": "Source-level UTC quality bridge; not a standalone reversal signal",
   "feeds": {
     "bybit_depth": {
-      "age_h": 8.33,
+      "age_h": 9.29,
       "collector_health": "ok",
       "family": "orderbook",
       "generated_at": "2026-11-18T04:37:02.017877+00:00",
       "max_age_h": 36.0,
-      "measurement_age_h": 36.95,
+      "measurement_age_h": 37.9,
       "measurement_at": "2026-11-17T00:00:00+00:00",
       "source": "https://github.com/kh827y/btc-market-data/blob/main/btc-liquidity/data/bybit_independent_latest.json",
       "source_errors": 0,
@@ -85,7 +240,7 @@
       "age_h": 0.01,
       "collector_health": "ok",
       "family": "positioning",
-      "generated_at": "2026-11-18T12:55:59.768410+00:00",
+      "generated_at": "2026-11-18T13:53:42.333401+00:00",
       "max_age_h": 3.0,
       "measurement_age_h": null,
       "measurement_at": null,
@@ -97,12 +252,12 @@
       "status": "fresh"
     },
     "hft_depth": {
-      "age_h": 4.18,
+      "age_h": 5.14,
       "collector_health": "errors_present",
       "family": "orderbook",
       "generated_at": "2026-11-18T08:45:50.408185+00:00",
       "max_age_h": 36.0,
-      "measurement_age_h": 24.95,
+      "measurement_age_h": 25.9,
       "measurement_at": "2026-11-17T12:00:00+00:00",
       "source": "https://github.com/kh827y/btc-market-data/blob/main/btc-liquidity/data/hft_latest.json",
       "source_errors": 20,
@@ -112,12 +267,12 @@
       "status": "fresh"
     },
     "live_depth": {
-      "age_h": 0.01,
+      "age_h": 0.96,
       "collector_health": "ok",
       "family": "orderbook",
       "generated_at": "2026-11-18T12:56:19.791422+00:00",
       "max_age_h": 2.5,
-      "measurement_age_h": 0.01,
+      "measurement_age_h": 0.96,
       "measurement_at": "2026-11-18T12:56:19.791422+00:00",
       "source": "https://github.com/kh827y/btc-market-data/blob/main/btc-liquidity/data/latest.json",
       "source_errors": 0,
@@ -127,7 +282,7 @@
       "status": "fresh"
     },
     "macro_etf": {
-      "age_h": 0.01,
+      "age_h": 0.97,
       "collector_health": "ok",
       "family": "macro_liquidity",
       "generated_at": "2026-11-18T12:55:59.392473+00:00",
@@ -142,7 +297,7 @@
       "status": "fresh"
     },
     "onchain": {
-      "age_h": 20.44,
+      "age_h": 21.39,
       "collector_health": "ok",
       "family": "holder_behavior",
       "generated_at": "2026-11-17T16:30:35.483235+00:00",
@@ -157,7 +312,7 @@
       "status": "fresh"
     },
     "options": {
-      "age_h": 0.01,
+      "age_h": 0.97,
       "collector_health": "errors_present",
       "family": "options",
       "generated_at": "2026-11-18T12:56:06.114697+00:00",
@@ -172,38 +327,38 @@
       "status": "fresh"
     },
     "price_technical": {
-      "age_h": 0.02,
+      "age_h": 0.97,
       "collector_health": "ok",
       "family": "price_trend",
       "generated_at": "2026-11-18T12:55:41.640778+00:00",
       "max_age_h": 26.0,
-      "measurement_age_h": 12.95,
+      "measurement_age_h": 13.9,
       "measurement_at": "2026-11-18T00:00:00+00:00",
       "source": "https://github.com/kh827y/btc-market-data/blob/main/btc-price/data/latest.json",
       "source_errors": 0,
       "source_status": "ok",
-      "spot_quote_age_h": 0.02,
+      "spot_quote_age_h": 0.97,
       "spot_quote_status": "fresh",
       "status": "fresh"
     },
     "spot_cvd": {
-      "age_h": 5.83,
+      "age_h": 0.95,
       "collector_health": "ok",
       "family": "spot_execution",
-      "generated_at": "2026-11-18T07:06:51.010019+00:00",
+      "generated_at": "2026-11-18T12:57:21.876731+00:00",
       "max_age_h": 2.5,
-      "measurement_age_h": 6.95,
-      "measurement_at": "2026-11-18T06:00:00+00:00",
+      "measurement_age_h": 2.9,
+      "measurement_at": "2026-11-18T11:00:00+00:00",
       "source": "https://github.com/kh827y/btc-market-data/blob/main/btc-spot-cvd/data/latest.json",
       "source_errors": 0,
       "source_status": null,
       "spot_quote_age_h": null,
       "spot_quote_status": null,
-      "status": "stale"
+      "status": "fresh"
     }
   },
   "metric_quality": {
-    "checked_utc": "2026-11-18T12:56:45.270397+00:00",
+    "checked_utc": "2026-11-18T13:54:08.415296+00:00",
     "checks": {
       "bybit_depth.bybit_independent_linear.1095d.0.01": {
         "comparison_key": "historical_book|bybit_depth|bybit_independent_linear|1095d|0.01",
@@ -415,7 +570,7 @@
       },
       "derivatives.liquidations_24h": {
         "comparison_key": "liquidation_forced|Binance,Bybit|24h",
-        "observed_at": "2026-11-18T12:56:02.972000+00:00",
+        "observed_at": "2026-11-18T13:53:22.623000+00:00",
         "scope": "reported Binance+Bybit 24h only; not worldwide",
         "source": "derivatives",
         "status": "usable",
@@ -423,7 +578,7 @@
       },
       "derivatives.oi_five": {
         "comparison_key": "same_five_venue_OI_USD",
-        "observed_at": "2026-11-18T12:00:00Z",
+        "observed_at": "2026-11-18T13:00:00Z",
         "required_for_family": true,
         "scope": "Binance,Bybit,OKX,Gate.io,Hyperliquid OI, not worldwide",
         "source": "derivatives",
@@ -1660,122 +1815,110 @@
       },
       "spot_cvd.fixed_ex_coinbase.168h": {
         "comparison_key": "BTC spot taker executed|binance,okx,bybit,kraken,bitget|168h|USD~USDT|exchange-trade-or-received-UTC-hours",
-        "observed_at": "2026-11-18T06:00:00+00:00",
-        "reason": "parent_source_not_fresh",
+        "observed_at": "2026-11-18T11:00:00+00:00",
         "scope": "executed BTC spot on the fixed named venue set only",
         "source": "spot_cvd",
-        "status": "stale",
+        "status": "usable",
         "unit": "approx USD net taker notional"
       },
       "spot_cvd.fixed_ex_coinbase.1h": {
         "comparison_key": "BTC spot taker executed|binance,okx,bybit,kraken,bitget|1h|USD~USDT|exchange-trade-or-received-UTC-hours",
-        "observed_at": "2026-11-18T06:00:00+00:00",
-        "reason": "parent_source_not_fresh",
+        "observed_at": "2026-11-18T11:00:00+00:00",
         "scope": "executed BTC spot on the fixed named venue set only",
         "source": "spot_cvd",
-        "status": "stale",
+        "status": "usable",
         "unit": "approx USD net taker notional"
       },
       "spot_cvd.fixed_ex_coinbase.24h": {
         "comparison_key": "BTC spot taker executed|binance,okx,bybit,kraken,bitget|24h|USD~USDT|exchange-trade-or-received-UTC-hours",
-        "observed_at": "2026-11-18T06:00:00+00:00",
-        "reason": "parent_source_not_fresh",
+        "observed_at": "2026-11-18T11:00:00+00:00",
         "scope": "executed BTC spot on the fixed named venue set only",
         "source": "spot_cvd",
-        "status": "stale",
+        "status": "usable",
         "unit": "approx USD net taker notional"
       },
       "spot_cvd.fixed_ex_coinbase.720h": {
         "comparison_key": "BTC spot taker executed|binance,okx,bybit,kraken,bitget|720h|USD~USDT|exchange-trade-or-received-UTC-hours",
-        "observed_at": "2026-11-18T06:00:00+00:00",
-        "reason": "parent_source_not_fresh",
+        "observed_at": "2026-11-18T11:00:00+00:00",
         "scope": "executed BTC spot on the fixed named venue set only",
         "source": "spot_cvd",
-        "status": "stale",
+        "status": "usable",
         "unit": "approx USD net taker notional"
       },
       "spot_cvd.original_five.168h": {
         "comparison_key": "BTC spot taker executed|binance,coinbase,okx,bybit,kraken|168h|USD~USDT|exchange-trade-or-received-UTC-hours",
-        "observed_at": "2026-11-18T06:00:00+00:00",
-        "reason": "parent_source_not_fresh",
+        "observed_at": "2026-11-18T11:00:00+00:00",
+        "reason": "source_window_hour_sum_set_or_coinbase_proof_disagrees",
         "required_for_family": true,
         "scope": "executed BTC spot on the fixed named venue set only",
         "source": "spot_cvd",
-        "status": "stale",
+        "status": "incomplete",
         "unit": "approx USD net taker notional"
       },
       "spot_cvd.original_five.1h": {
         "comparison_key": "BTC spot taker executed|binance,coinbase,okx,bybit,kraken|1h|USD~USDT|exchange-trade-or-received-UTC-hours",
-        "observed_at": "2026-11-18T06:00:00+00:00",
-        "reason": "parent_source_not_fresh",
+        "observed_at": "2026-11-18T11:00:00+00:00",
         "required_for_family": true,
         "scope": "executed BTC spot on the fixed named venue set only",
         "source": "spot_cvd",
-        "status": "stale",
+        "status": "usable",
         "unit": "approx USD net taker notional"
       },
       "spot_cvd.original_five.24h": {
         "comparison_key": "BTC spot taker executed|binance,coinbase,okx,bybit,kraken|24h|USD~USDT|exchange-trade-or-received-UTC-hours",
-        "observed_at": "2026-11-18T06:00:00+00:00",
-        "reason": "parent_source_not_fresh",
+        "observed_at": "2026-11-18T11:00:00+00:00",
         "required_for_family": true,
         "scope": "executed BTC spot on the fixed named venue set only",
         "source": "spot_cvd",
-        "status": "stale",
+        "status": "usable",
         "unit": "approx USD net taker notional"
       },
       "spot_cvd.original_five.720h": {
         "comparison_key": "BTC spot taker executed|binance,coinbase,okx,bybit,kraken|720h|USD~USDT|exchange-trade-or-received-UTC-hours",
-        "observed_at": "2026-11-18T06:00:00+00:00",
-        "reason": "parent_source_not_fresh",
+        "observed_at": "2026-11-18T11:00:00+00:00",
+        "reason": "source_window_hour_sum_set_or_coinbase_proof_disagrees",
         "required_for_family": true,
         "scope": "executed BTC spot on the fixed named venue set only",
         "source": "spot_cvd",
-        "status": "stale",
+        "status": "incomplete",
         "unit": "approx USD net taker notional"
       },
       "spot_cvd.subset.168h": {
         "comparison_key": "spot_executed|binance,okx,bybit,kraken,bitget|168h|USD~USDT|same_UTC_window",
-        "observed_at": "2026-11-18T06:00:00+00:00",
-        "reason": "parent_source_not_fresh",
+        "observed_at": "2026-11-18T11:00:00+00:00",
         "scope": "changing explicitly named venue subset",
         "source": "spot_cvd",
-        "status": "stale",
+        "status": "usable",
         "unit": "approx USD executed taker net"
       },
       "spot_cvd.subset.1h": {
         "comparison_key": "spot_executed|binance,coinbase,okx,bybit,kraken,bitget|1h|USD~USDT|same_UTC_window",
-        "observed_at": "2026-11-18T06:00:00+00:00",
-        "reason": "parent_source_not_fresh",
+        "observed_at": "2026-11-18T11:00:00+00:00",
         "scope": "changing explicitly named venue subset",
         "source": "spot_cvd",
-        "status": "stale",
+        "status": "usable",
         "unit": "approx USD executed taker net"
       },
       "spot_cvd.subset.24h": {
         "comparison_key": "spot_executed|binance,coinbase,okx,bybit,kraken,bitget|24h|USD~USDT|same_UTC_window",
-        "observed_at": "2026-11-18T06:00:00+00:00",
-        "reason": "parent_source_not_fresh",
+        "observed_at": "2026-11-18T11:00:00+00:00",
         "scope": "changing explicitly named venue subset",
         "source": "spot_cvd",
-        "status": "stale",
+        "status": "usable",
         "unit": "approx USD executed taker net"
       },
       "spot_cvd.subset.720h": {
         "comparison_key": "spot_executed|binance,okx,bybit,kraken,bitget|720h|USD~USDT|same_UTC_window",
-        "observed_at": "2026-11-18T06:00:00+00:00",
-        "reason": "parent_source_not_fresh",
+        "observed_at": "2026-11-18T11:00:00+00:00",
         "scope": "changing explicitly named venue subset",
         "source": "spot_cvd",
-        "status": "stale",
+        "status": "usable",
         "unit": "approx USD executed taker net"
       }
     },
     "critical_issues": [
-      "spot_cvd.original_five.1h:stale:parent_source_not_fresh",
-      "spot_cvd.original_five.24h:stale:parent_source_not_fresh",
-      "spot_cvd.original_five.168h:stale:parent_source_not_fresh",
-      "spot_cvd.original_five.720h:stale:parent_source_not_fresh"
+      "spot_cvd.original_five.168h:incomplete:source_window_hour_sum_set_or_coinbase_proof_disagrees",
+      "spot_cvd.original_five.720h:incomplete:source_window_hour_sum_set_or_coinbase_proof_disagrees"
     ],
     "do_not_sum_independent_factors_from_same_family": true,
     "metrics_checked": 191,
@@ -1783,13 +1926,13 @@
     "schema": 1,
     "status": "complete_audit",
     "status_counts": {
-      "incomplete": 6,
+      "incomplete": 8,
       "invalid": 1,
       "not_comparable": 0,
-      "stale": 17,
+      "stale": 5,
       "unavailable": 1,
       "unverified": 1,
-      "usable": 165
+      "usable": 175
     }
   },
   "metrics": {
@@ -2054,13 +2197,13 @@
       "dated_futures_matched_expiry": null,
       "forced_liquidations_24h": {
         "data_freshness": {
-          "age_h": -0.0,
+          "age_h": 0.01,
           "source": "CoinBoss liquidation feeds",
           "status": "fresh"
         },
-        "long_usd": 28672111.18,
-        "short_usd": 16540940.68,
-        "updated": "2026-11-18T12:56:02.972000+00:00"
+        "long_usd": 28911914.6,
+        "short_usd": 16292345.36,
+        "updated": "2026-11-18T13:53:22.623000+00:00"
       },
       "funding_settled": {
         "Binance": {
@@ -2080,12 +2223,12 @@
         }
       },
       "oi_1d_7d_30d_pct": {
-        "1d": 0.004,
-        "30d": -10.178,
-        "7d": -17.256
+        "1d": 0.131,
+        "30d": -10.065,
+        "7d": -17.152
       },
-      "oi_five_venue_usd": 23036867009.75,
-      "oi_latest_hour": "2026-11-18T12:00:00Z",
+      "oi_five_venue_usd": 23276840476.17,
+      "oi_latest_hour": "2026-11-18T13:00:00Z",
       "source_coverage": {
         "cme_basis_available": true,
         "complete": true,
@@ -3423,7 +3566,7 @@
         "date": "2026-11-18",
         "exact_ice_index": true,
         "fetched_utc": "2026-11-18T12:55:59.392473+00:00",
-        "intraday_quote_age_h": 0.01,
+        "intraday_quote_age_h": 0.97,
         "not_finalized_eod": true,
         "observation_kind": "unfinished_current_session",
         "source": "Yahoo Finance, DX-Y.NYB (ICE US Dollar Index indicative public bars)",
@@ -3992,21 +4135,20 @@
     },
     "spot_cvd": {
       "coinbase_recent_repair": {
-        "checked_utc": "2026-11-18T07:06:51.010019+00:00",
+        "checked_utc": "2026-11-18T12:57:21.876731+00:00",
         "coverage_note": "ID-continuous official Coinbase BTC-USD trade-time hours, not the other venues receive-time hours",
-        "hours_recovered": 3,
+        "hours_recovered": 5,
         "hours_remaining": 0,
-        "pages_scanned": 125,
-        "prior_incomplete_groups": 3,
-        "prior_missing_hours": 3,
+        "pages_scanned": 188,
+        "prior_incomplete_groups": 5,
+        "prior_missing_hours": 5,
         "status": "complete"
       },
       "coinbase_window_integrity": {
         "168h": {
           "all_hours_id_continuous_verified": false,
-          "coinbase_missing_hours_count": 50,
+          "coinbase_missing_hours_count": 49,
           "coinbase_missing_utc_hours": [
-            "2026-11-14T13:00:00Z",
             "2026-11-14T12:00:00Z",
             "2026-11-14T11:00:00Z",
             "2026-11-14T10:00:00Z",
@@ -4025,11 +4167,12 @@
             "2026-11-13T21:00:00Z",
             "2026-11-13T20:00:00Z",
             "2026-11-13T19:00:00Z",
-            "2026-11-13T18:00:00Z"
+            "2026-11-13T18:00:00Z",
+            "2026-11-13T17:00:00Z"
           ],
-          "complete_hours": 118,
+          "complete_hours": 119,
           "id_continuous_proof_hours": 108,
-          "legacy_without_id_proof_count": 10,
+          "legacy_without_id_proof_count": 11,
           "required_hours": 168
         },
         "24h": {
@@ -4043,9 +4186,8 @@
         },
         "720h": {
           "all_hours_id_continuous_verified": false,
-          "coinbase_missing_hours_count": 50,
+          "coinbase_missing_hours_count": 49,
           "coinbase_missing_utc_hours": [
-            "2026-11-14T13:00:00Z",
             "2026-11-14T12:00:00Z",
             "2026-11-14T11:00:00Z",
             "2026-11-14T10:00:00Z",
@@ -4064,23 +4206,24 @@
             "2026-11-13T21:00:00Z",
             "2026-11-13T20:00:00Z",
             "2026-11-13T19:00:00Z",
-            "2026-11-13T18:00:00Z"
+            "2026-11-13T18:00:00Z",
+            "2026-11-13T17:00:00Z"
           ],
-          "complete_hours": 670,
+          "complete_hours": 671,
           "id_continuous_proof_hours": 660,
-          "legacy_without_id_proof_count": 10,
+          "legacy_without_id_proof_count": 11,
           "required_hours": 720
         }
       },
-      "last_complete_hour": "2026-11-18T05:00:00Z",
+      "last_complete_hour": "2026-11-18T10:00:00Z",
       "scope": "executed spot-taker flow on observed venues only; NOT global BTC volume",
       "time_basis_note": "Coinbase official REST is grouped by exchange trade timestamp; CryptoHFTData's other spot venues are grouped by received UTC hour. Do not assume exact per-hour execution-timestamp equivalence. Kraken official recovered hours also use trade-time.  Binance fallback uses official closed SPOT kline exchange-trade-time hours; CryptoHFTData's other bars use receive time. Do not imply exact exchange-time-aligned per-hour CVD across providers.",
       "windows": {
         "168h": {
           "complete": false,
           "complete_venue_subset": {
-            "available": false,
-            "net_usd_approx": null,
+            "available": true,
+            "net_usd_approx": -117088031.5,
             "not_all_venues": true,
             "venue_count": 5,
             "venues": [
@@ -4092,11 +4235,11 @@
             ]
           },
           "fixed_five_ex_coinbase": {
-            "complete": false,
+            "complete": true,
             "kraken_hour_basis_mixed": false,
             "kraken_hour_basis_note": "CryptoHFTData received-time UTC hours",
             "kraken_official_rest_hours": 0,
-            "net_usd_approx": null,
+            "net_usd_approx": -117088031.5,
             "scope": "fixed selected five spot venues; does not include Coinbase",
             "venues": [
               "binance",
@@ -4111,46 +4254,46 @@
             "binance": {
               "complete": true,
               "hours": 168,
-              "net_usd_approx": -168549627.12,
+              "net_usd_approx": -190634668.54,
               "required": 168
             },
             "bitget": {
               "complete": true,
               "hours": 168,
-              "net_usd_approx": 71959817.5,
+              "net_usd_approx": 85671089.73,
               "required": 168
             },
             "bybit": {
               "complete": true,
               "hours": 168,
-              "net_usd_approx": -9907918.27,
+              "net_usd_approx": 8934341.84,
               "required": 168
             },
             "coinbase": {
               "complete": false,
-              "hours": 118,
+              "hours": 119,
               "net_usd_approx": null,
               "required": 168
             },
             "kraken": {
               "complete": true,
               "hours": 168,
-              "net_usd_approx": -124859465.9,
+              "net_usd_approx": -129712518.53,
               "required": 168
             },
             "okx": {
               "complete": true,
               "hours": 168,
-              "net_usd_approx": 127120813.86,
+              "net_usd_approx": 108653724.0,
               "required": 168
             }
           }
         },
         "1h": {
-          "complete": false,
+          "complete": true,
           "complete_venue_subset": {
-            "available": false,
-            "net_usd_approx": null,
+            "available": true,
+            "net_usd_approx": -4376397.2,
             "not_all_venues": false,
             "venue_count": 6,
             "venues": [
@@ -4163,11 +4306,11 @@
             ]
           },
           "fixed_five_ex_coinbase": {
-            "complete": false,
+            "complete": true,
             "kraken_hour_basis_mixed": false,
             "kraken_hour_basis_note": "CryptoHFTData received-time UTC hours",
             "kraken_official_rest_hours": 0,
-            "net_usd_approx": null,
+            "net_usd_approx": 917538.75,
             "scope": "fixed selected five spot venues; does not include Coinbase",
             "venues": [
               "binance",
@@ -4177,51 +4320,51 @@
               "bitget"
             ]
           },
-          "net_usd_approx": null,
+          "net_usd_approx": -4744778.74,
           "venues": {
             "binance": {
               "complete": true,
               "hours": 1,
-              "net_usd_approx": 10292697.3,
+              "net_usd_approx": 2970586.98,
               "required": 1
             },
             "bitget": {
               "complete": true,
               "hours": 1,
-              "net_usd_approx": 598884.22,
+              "net_usd_approx": 368381.54,
               "required": 1
             },
             "bybit": {
               "complete": true,
               "hours": 1,
-              "net_usd_approx": -227185.2,
+              "net_usd_approx": 1183448.21,
               "required": 1
             },
             "coinbase": {
               "complete": true,
               "hours": 1,
-              "net_usd_approx": -1214325.66,
+              "net_usd_approx": -5293935.95,
               "required": 1
             },
             "kraken": {
               "complete": true,
               "hours": 1,
-              "net_usd_approx": -360822.47,
+              "net_usd_approx": 1096879.49,
               "required": 1
             },
             "okx": {
               "complete": true,
               "hours": 1,
-              "net_usd_approx": -1681310.88,
+              "net_usd_approx": -4701757.47,
               "required": 1
             }
           }
         },
         "24h": {
-          "complete": false,
+          "complete": true,
           "complete_venue_subset": {
-            "available": false,
-            "net_usd_approx": null,
+            "available": true,
+            "net_usd_approx": 32119842.17,
             "not_all_venues": false,
             "venue_count": 6,
             "venues": [
@@ -4234,11 +4377,11 @@
             ]
           },
           "fixed_five_ex_coinbase": {
-            "complete": false,
+            "complete": true,
             "kraken_hour_basis_mixed": false,
             "kraken_hour_basis_note": "CryptoHFTData received-time UTC hours",
             "kraken_official_rest_hours": 0,
-            "net_usd_approx": null,
+            "net_usd_approx": 130008816.09,
             "scope": "fixed selected five spot venues; does not include Coinbase",
             "venues": [
               "binance",
@@ -4248,42 +4391,42 @@
               "bitget"
             ]
           },
-          "net_usd_approx": null,
+          "net_usd_approx": 15579597.86,
           "venues": {
             "binance": {
               "complete": true,
               "hours": 24,
-              "net_usd_approx": 176299487.2,
+              "net_usd_approx": 83934131.99,
               "required": 24
             },
             "bitget": {
               "complete": true,
               "hours": 24,
-              "net_usd_approx": 3061964.4,
+              "net_usd_approx": 16540244.31,
               "required": 24
             },
             "bybit": {
               "complete": true,
               "hours": 24,
-              "net_usd_approx": 25164569.91,
+              "net_usd_approx": 28583770.58,
               "required": 24
             },
             "coinbase": {
               "complete": true,
               "hours": 24,
-              "net_usd_approx": -87126416.83,
+              "net_usd_approx": -97888973.92,
               "required": 24
             },
             "kraken": {
               "complete": true,
               "hours": 24,
-              "net_usd_approx": -17774735.5,
+              "net_usd_approx": -13160145.66,
               "required": 24
             },
             "okx": {
               "complete": true,
               "hours": 24,
-              "net_usd_approx": 21024665.62,
+              "net_usd_approx": 14110814.87,
               "required": 24
             }
           }
@@ -4291,8 +4434,8 @@
         "720h": {
           "complete": false,
           "complete_venue_subset": {
-            "available": false,
-            "net_usd_approx": null,
+            "available": true,
+            "net_usd_approx": 301129605.65,
             "not_all_venues": true,
             "venue_count": 5,
             "venues": [
@@ -4304,11 +4447,11 @@
             ]
           },
           "fixed_five_ex_coinbase": {
-            "complete": false,
+            "complete": true,
             "kraken_hour_basis_mixed": true,
             "kraken_hour_basis_note": "Kraken REST recovered UTC hours use exchange trade time; CryptoHFTData files use collector receive time",
             "kraken_official_rest_hours": 97,
-            "net_usd_approx": null,
+            "net_usd_approx": 301129605.65,
             "scope": "fixed selected five spot venues; does not include Coinbase",
             "venues": [
               "binance",
@@ -4323,37 +4466,37 @@
             "binance": {
               "complete": true,
               "hours": 720,
-              "net_usd_approx": 495752887.76,
+              "net_usd_approx": 503073424.96,
               "required": 720
             },
             "bitget": {
               "complete": true,
               "hours": 720,
-              "net_usd_approx": -206363168.46,
+              "net_usd_approx": -189810461.44,
               "required": 720
             },
             "bybit": {
               "complete": true,
               "hours": 720,
-              "net_usd_approx": -71435999.31,
+              "net_usd_approx": -43222421.41,
               "required": 720
             },
             "coinbase": {
               "complete": false,
-              "hours": 670,
+              "hours": 671,
               "net_usd_approx": null,
               "required": 720
             },
             "kraken": {
               "complete": true,
               "hours": 720,
-              "net_usd_approx": -220929467.44,
+              "net_usd_approx": -223402293.35,
               "required": 720
             },
             "okx": {
               "complete": true,
               "hours": 720,
-              "net_usd_approx": 232965664.14,
+              "net_usd_approx": 254491356.89,
               "required": 720
             }
           }
