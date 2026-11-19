@@ -95,6 +95,35 @@ class QualityTests(unittest.TestCase):
         self.assertEqual(result["checks"]["spot_cvd.original_five.24h"]["status"],"stale")
         self.assertIsNone(transformed["spot_cvd"]["windows"]["24h"]["net_usd_approx"])
 
+    def test_long_cvd_alternate_five_prevents_false_critical_but_keeps_original_incomplete(self):
+        raw=cvd()
+        venues=list(q.FIXED_EX_COINBASE)
+        by={n:{"hours":168,"required":168,"complete":True,"net":10}
+            for n in venues}
+        by["coinbase"]={"hours":0,"required":168,"complete":False,"net":None}
+        raw["windows"]["168h"]={"complete":False,"net":None,"by_venue":by,
+            "fixed_five_ex_coinbase":{"complete":True,"net":50,"venues":venues}}
+        raw["coinbase_window_integrity"]["168h"]={
+            "all_hours_id_continuous_verified":False,
+            "id_continuous_proof_hours":0,"coinbase_missing_hours_count":168}
+        transformed={"spot_cvd":{"windows":{"168h":{"complete":False,
+            "net_usd_approx":None,"fixed_five_ex_coinbase":{"complete":True,
+            "net_usd_approx":50}}}}}
+        report=q.assess({"spot_cvd":raw},fresh("spot_cvd"),transformed,NOW)
+        self.assertEqual(report["checks"]["spot_cvd.original_five.168h"]["status"],"incomplete")
+        self.assertEqual(report["checks"]["spot_cvd.fixed_ex_coinbase.168h"]["status"],"usable")
+        self.assertFalse(any(v.startswith("spot_cvd.original_five.168h:")
+                             for v in report["critical_issues"]))
+        self.assertIsNone(transformed["spot_cvd"]["windows"]["168h"]["net_usd_approx"])
+        self.assertEqual(transformed["spot_cvd"]["windows"]["168h"]
+                         ["fixed_five_ex_coinbase"]["net_usd_approx"],50)
+        # A fake/inconsistent alternate CVD must NOT mask the source outage.
+        raw["windows"]["168h"]["fixed_five_ex_coinbase"]["net"]=500
+        bad=q.assess({"spot_cvd":raw},fresh("spot_cvd"),deepcopy(transformed),NOW)
+        self.assertEqual(bad["checks"]["spot_cvd.fixed_ex_coinbase.168h"]["status"],"invalid")
+        self.assertTrue(any(v.startswith("spot_cvd.original_five.168h:")
+                            for v in bad["critical_issues"]))
+
     def test_live_all_11_with_valid_band_useable(self):
         src={"live_depth":{"current":{"venues":live()}}}
         transformed={"live_depth":{"venues":{n:{"market":v["market"],
