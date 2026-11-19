@@ -370,7 +370,10 @@ def gate_macro(g,raw,metrics):
         g.add("macro."+name,"macro_etf",status,
               "USD ETF flows" if name=="spot_etf_flow" else "pct/index as individually labeled",
               "specific macro or ETF family, NOT an interchangeable global macro index",
-              source_observed,comparison_key="macro|"+name,required=True)
+              source_observed,comparison_key="macro|"+name,
+              # Unlicensed exact ICE DXY can be unavailable on free feeds.
+              # Do not equate a missing optional index with loss of macro coverage.
+              required=(name in ("fed_rates","treasury_yields","spot_etf_flow")))
     etf=raw.get("etf") or {}
     sessions=etf.get("last_five_sessions") or []
     if isinstance(sessions,list) and len(sessions)==5:
