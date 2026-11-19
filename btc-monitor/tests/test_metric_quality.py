@@ -124,6 +124,23 @@ class QualityTests(unittest.TestCase):
         self.assertTrue(any(v.startswith("spot_cvd.original_five.168h:")
                             for v in bad["critical_issues"]))
 
+    def test_optional_dxy_outage_does_not_disable_macro_family(self):
+        metrics={"macro_etf":{"quality":{"fed_rates":True,
+            "treasury_yields":True,"usd_broad_index":True,
+            "ice_dxy_exact":False,"spot_etf_flow":True}}}
+        result=q.assess({"macro_etf":{"etf":{}}},
+                        fresh("macro_etf"),metrics,NOW)
+        self.assertEqual(result["checks"]["macro.ice_dxy_exact"]["status"],"unverified")
+        self.assertFalse(any(v.startswith("macro.ice_dxy_exact:")
+                             for v in result["critical_issues"]))
+        self.assertEqual(result["checks"]["macro.spot_etf_flow"]["status"],"usable")
+        # A genuinely missing required ETF series remains critical.
+        metrics["macro_etf"]["quality"]["spot_etf_flow"]=False
+        missing=q.assess({"macro_etf":{"etf":{}}},
+                         fresh("macro_etf"),metrics,NOW)
+        self.assertTrue(any(v.startswith("macro.spot_etf_flow:")
+                            for v in missing["critical_issues"]))
+
     def test_live_all_11_with_valid_band_useable(self):
         src={"live_depth":{"current":{"venues":live()}}}
         transformed={"live_depth":{"venues":{n:{"market":v["market"],
