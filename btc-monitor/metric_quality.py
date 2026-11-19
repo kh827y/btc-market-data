@@ -130,9 +130,12 @@ def gate_spot(g,raw,metrics):
         item=windows.get(span) or {}
         by=item.get("by_venue") or {}
         proof=nested(raw,"coinbase_window_integrity",span) or {}
+        # Validate the stable alternate five-venue set first. Incomplete
+        # original-five long history remains visibly incomplete, but is not
+        # a critical signal loss when an independent fixed set is verified.
         for group,venues,field in (
-            ("original_five",ORIGINAL_SPOT,item),
-            ("fixed_ex_coinbase",FIXED_EX_COINBASE,item.get("fixed_five_ex_coinbase") or {})):
+            ("fixed_ex_coinbase",FIXED_EX_COINBASE,item.get("fixed_five_ex_coinbase") or {}),
+            ("original_five",ORIGINAL_SPOT,item)):
             net=amount(field.get("net"))
             complete=field.get("complete") is True
             per=[by.get(n) or {} for n in venues]
@@ -161,7 +164,10 @@ def gate_spot(g,raw,metrics):
                        "executed BTC spot on the fixed named venue set only",
                        end_at.isoformat() if end_at else None,
                        reason="source_window_hour_sum_set_or_coinbase_proof_disagrees",
-                       comparison_key=key,required=(group=="original_five"))
+                       comparison_key=key,
+                       required=(group=="original_five" and
+                                 (span in ("1h","24h") or
+                                  g.rows.get(f"spot_cvd.fixed_ex_coinbase.{span}",{}).get("status")!="usable")))
             if not good:
                 if group=="original_five":
                     m=nested(metrics,"spot_cvd","windows",span)
