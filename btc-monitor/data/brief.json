@@ -1,5 +1,5 @@
 {
-  "as_of_utc": "2026-11-23T00:55:21.913825+00:00",
+  "as_of_utc": "2026-11-23T00:56:14.926297+00:00",
   "btc_technicals": {
     "breakout20": "within_prev20_range",
     "closed_candles_only": true,
@@ -61,19 +61,21 @@
     "weekly_ma200_rising": true
   },
   "collector_watchdog": {
-    "age_h": 0.73,
+    "age_h": 0.01,
     "auto_recovery": {
       "dispatched": [],
       "max_dispatch_per_check": 2,
       "max_dispatch_per_source_24h": 3,
-      "pending_or_blocked": []
+      "pending_or_blocked": [
+        "spot_cvd"
+      ]
     },
     "caveat": "This feed is not proof that the scheduled ChatGPT run actually read it",
-    "checked_utc": "2026-11-23T00:11:41.649822+00:00",
+    "checked_utc": "2026-11-23T00:55:40.799839+00:00",
     "sources": {
       "bybit_depth": {
         "coverage_gaps": [],
-        "file_age_h": 1.56,
+        "file_age_h": 2.293,
         "reason": null,
         "recovery": "none",
         "status": "healthy",
@@ -81,7 +83,7 @@
       },
       "derivatives": {
         "coverage_gaps": [],
-        "file_age_h": 1.554,
+        "file_age_h": 0.007,
         "reason": null,
         "recovery": "none",
         "status": "healthy",
@@ -91,7 +93,7 @@
         "coverage_gaps": [
           "20_historical_source_errors"
         ],
-        "file_age_h": 0.521,
+        "file_age_h": 1.254,
         "reason": null,
         "recovery": "none",
         "status": "healthy",
@@ -99,7 +101,7 @@
       },
       "live_depth": {
         "coverage_gaps": [],
-        "file_age_h": 0.442,
+        "file_age_h": 0.014,
         "reason": null,
         "recovery": "none",
         "status": "healthy",
@@ -107,7 +109,7 @@
       },
       "macro_etf": {
         "coverage_gaps": [],
-        "file_age_h": 0.011,
+        "file_age_h": 0.744,
         "reason": null,
         "recovery": "none",
         "status": "healthy",
@@ -115,14 +117,25 @@
       },
       "monitor_bridge": {
         "coverage_gaps": [
+          "spot_cvd:24h_five_venue_incomplete",
+          "spot_cvd:168h_five_venue_incomplete",
           "spot_cvd:720h_five_venue_incomplete",
           "onchain:missing_or_delayed_metrics=9",
-          "live_depth:1.0pct_complete=6/11_selected_markets"
+          "live_depth:1.0pct_complete=7/11_selected_markets",
+          "metric_quality:spot_cvd.original_five.1h:stale:parent_source_not_fresh",
+          "metric_quality:spot_cvd.original_five.24h:stale:parent_source_not_fresh",
+          "metric_quality:spot_cvd.original_five.168h:stale:parent_source_not_fresh",
+          "metric_quality:spot_cvd.original_five.720h:stale:parent_source_not_fresh",
+          "critical_metric:spot_cvd.original_five.1h:stale:parent_source_not_fresh",
+          "critical_metric:spot_cvd.original_five.24h:stale:parent_source_not_fresh",
+          "critical_metric:spot_cvd.original_five.168h:stale:parent_source_not_fresh",
+          "critical_metric:spot_cvd.original_five.720h:stale:parent_source_not_fresh",
+          "critical_family_not_fresh:spot_cvd"
         ],
-        "file_age_h": 0.004,
-        "reason": null,
+        "file_age_h": 0.005,
+        "reason": "underlying_source_or_metric_unusable",
         "recovery": "none",
-        "status": "healthy",
+        "status": "degraded_critical_inputs",
         "workflow_api_error": null
       },
       "onchain": {
@@ -139,7 +152,7 @@
           "market_onchain:nupl: 7 days",
           "market_onchain:sth_sopr: 7 days"
         ],
-        "file_age_h": 9.265,
+        "file_age_h": 9.998,
         "reason": null,
         "recovery": "none",
         "status": "healthy",
@@ -147,7 +160,7 @@
       },
       "onchain_bitview": {
         "coverage_gaps": [],
-        "file_age_h": 9.655,
+        "file_age_h": 10.388,
         "reason": null,
         "recovery": "none",
         "status": "healthy",
@@ -164,7 +177,7 @@
           "lth_realized_price:missing_or_vendor_delay",
           "realized_price:missing_or_vendor_delay"
         ],
-        "file_age_h": 10.585,
+        "file_age_h": 11.319,
         "reason": "important_onchain_metrics_publication_lag",
         "recovery": "none",
         "status": "degraded_vendor_observations",
@@ -172,7 +185,7 @@
       },
       "onchain_whale": {
         "coverage_gaps": [],
-        "file_age_h": 9.366,
+        "file_age_h": 10.099,
         "reason": null,
         "recovery": "none",
         "status": "healthy",
@@ -180,7 +193,7 @@
       },
       "onchain_whale_alerts": {
         "coverage_gaps": [],
-        "file_age_h": 9.273,
+        "file_age_h": 10.006,
         "reason": null,
         "recovery": "none",
         "status": "healthy",
@@ -188,7 +201,7 @@
       },
       "options": {
         "coverage_gaps": [],
-        "file_age_h": 0.446,
+        "file_age_h": 1.179,
         "reason": null,
         "recovery": "none",
         "status": "healthy",
@@ -196,7 +209,7 @@
       },
       "price_technical": {
         "coverage_gaps": [],
-        "file_age_h": 0.018,
+        "file_age_h": 0.751,
         "reason": null,
         "recovery": "none",
         "status": "healthy",
@@ -204,15 +217,17 @@
       },
       "spot_cvd": {
         "coverage_gaps": [],
-        "file_age_h": 2.339,
-        "reason": null,
-        "recovery": "none",
-        "status": "healthy",
+        "file_age_h": 3.072,
+        "reason": "no_new_verified_taker_hour",
+        "recovery": "exhausted",
+        "status": "stale_observation",
         "workflow_api_error": null
       }
     },
     "status": "degraded",
-    "unavailable_or_stale": [],
+    "unavailable_or_stale": [
+      "spot_cvd"
+    ],
     "workflow_api_reachable": true
   },
   "coverage_gaps": [
@@ -331,7 +346,7 @@
       "date": "2026-11-23",
       "exact_ice_index": true,
       "fetched_utc": "2026-11-23T00:11:03.210923+00:00",
-      "intraday_quote_age_h": 0.74,
+      "intraday_quote_age_h": 0.75,
       "not_finalized_eod": true,
       "observation_kind": "unfinished_current_session",
       "source": "Yahoo Finance, DX-Y.NYB (ICE US Dollar Index indicative public bars)",
@@ -418,7 +433,7 @@
     "usd_broad_index_is_NOT_dxy": true
   },
   "metric_quality": {
-    "checked_utc": "2026-11-23T00:55:21.913825+00:00",
+    "checked_utc": "2026-11-23T00:56:14.926297+00:00",
     "checks": {
       "bybit_depth.bybit_independent_linear.1095d.0.01": {
         "comparison_key": "historical_book|bybit_depth|bybit_independent_linear|1095d|0.01",
@@ -654,7 +669,7 @@
       },
       "hft_depth.binance_futures.1d.0.01": {
         "comparison_key": "historical_book|hft_depth|binance_futures|1d|0.01",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -662,7 +677,7 @@
       },
       "hft_depth.binance_futures.1d.0.05": {
         "comparison_key": "historical_book|hft_depth|binance_futures|1d|0.05",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -670,7 +685,7 @@
       },
       "hft_depth.binance_futures.1d.0.2": {
         "comparison_key": "historical_book|hft_depth|binance_futures|1d|0.2",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -678,7 +693,7 @@
       },
       "hft_depth.binance_futures.1d.1.0": {
         "comparison_key": "historical_book|hft_depth|binance_futures|1d|1.0",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -686,7 +701,7 @@
       },
       "hft_depth.binance_futures.30d.0.01": {
         "comparison_key": "historical_book|hft_depth|binance_futures|30d|0.01",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -694,7 +709,7 @@
       },
       "hft_depth.binance_futures.30d.0.05": {
         "comparison_key": "historical_book|hft_depth|binance_futures|30d|0.05",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -702,7 +717,7 @@
       },
       "hft_depth.binance_futures.30d.0.2": {
         "comparison_key": "historical_book|hft_depth|binance_futures|30d|0.2",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -710,7 +725,7 @@
       },
       "hft_depth.binance_futures.30d.1.0": {
         "comparison_key": "historical_book|hft_depth|binance_futures|30d|1.0",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -718,7 +733,7 @@
       },
       "hft_depth.binance_futures.7d.0.01": {
         "comparison_key": "historical_book|hft_depth|binance_futures|7d|0.01",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -726,7 +741,7 @@
       },
       "hft_depth.binance_futures.7d.0.05": {
         "comparison_key": "historical_book|hft_depth|binance_futures|7d|0.05",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -734,7 +749,7 @@
       },
       "hft_depth.binance_futures.7d.0.2": {
         "comparison_key": "historical_book|hft_depth|binance_futures|7d|0.2",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -742,7 +757,7 @@
       },
       "hft_depth.binance_futures.7d.1.0": {
         "comparison_key": "historical_book|hft_depth|binance_futures|7d|1.0",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -750,7 +765,7 @@
       },
       "hft_depth.binance_spot.1d.0.01": {
         "comparison_key": "historical_book|hft_depth|binance_spot|1d|0.01",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -758,7 +773,7 @@
       },
       "hft_depth.binance_spot.1d.0.05": {
         "comparison_key": "historical_book|hft_depth|binance_spot|1d|0.05",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -766,7 +781,7 @@
       },
       "hft_depth.binance_spot.1d.0.2": {
         "comparison_key": "historical_book|hft_depth|binance_spot|1d|0.2",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -774,7 +789,7 @@
       },
       "hft_depth.binance_spot.1d.1.0": {
         "comparison_key": "historical_book|hft_depth|binance_spot|1d|1.0",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -782,7 +797,7 @@
       },
       "hft_depth.binance_spot.30d.0.01": {
         "comparison_key": "historical_book|hft_depth|binance_spot|30d|0.01",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -790,7 +805,7 @@
       },
       "hft_depth.binance_spot.30d.0.05": {
         "comparison_key": "historical_book|hft_depth|binance_spot|30d|0.05",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -798,7 +813,7 @@
       },
       "hft_depth.binance_spot.30d.0.2": {
         "comparison_key": "historical_book|hft_depth|binance_spot|30d|0.2",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -806,7 +821,7 @@
       },
       "hft_depth.binance_spot.30d.1.0": {
         "comparison_key": "historical_book|hft_depth|binance_spot|30d|1.0",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -814,7 +829,7 @@
       },
       "hft_depth.binance_spot.7d.0.01": {
         "comparison_key": "historical_book|hft_depth|binance_spot|7d|0.01",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -822,7 +837,7 @@
       },
       "hft_depth.binance_spot.7d.0.05": {
         "comparison_key": "historical_book|hft_depth|binance_spot|7d|0.05",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -830,7 +845,7 @@
       },
       "hft_depth.binance_spot.7d.0.2": {
         "comparison_key": "historical_book|hft_depth|binance_spot|7d|0.2",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -838,7 +853,7 @@
       },
       "hft_depth.binance_spot.7d.1.0": {
         "comparison_key": "historical_book|hft_depth|binance_spot|7d|1.0",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -846,7 +861,7 @@
       },
       "hft_depth.binance_spot.90d.0.01": {
         "comparison_key": "historical_book|hft_depth|binance_spot|90d|0.01",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -854,7 +869,7 @@
       },
       "hft_depth.binance_spot.90d.0.05": {
         "comparison_key": "historical_book|hft_depth|binance_spot|90d|0.05",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -862,7 +877,7 @@
       },
       "hft_depth.binance_spot.90d.0.2": {
         "comparison_key": "historical_book|hft_depth|binance_spot|90d|0.2",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -870,7 +885,7 @@
       },
       "hft_depth.binance_spot.90d.1.0": {
         "comparison_key": "historical_book|hft_depth|binance_spot|90d|1.0",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -878,7 +893,7 @@
       },
       "hft_depth.bitget_spot.1d.0.01": {
         "comparison_key": "historical_book|hft_depth|bitget_spot|1d|0.01",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -886,7 +901,7 @@
       },
       "hft_depth.bitget_spot.1d.0.05": {
         "comparison_key": "historical_book|hft_depth|bitget_spot|1d|0.05",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -894,7 +909,7 @@
       },
       "hft_depth.bitget_spot.1d.0.2": {
         "comparison_key": "historical_book|hft_depth|bitget_spot|1d|0.2",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -902,7 +917,7 @@
       },
       "hft_depth.bitget_spot.30d.0.01": {
         "comparison_key": "historical_book|hft_depth|bitget_spot|30d|0.01",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -910,7 +925,7 @@
       },
       "hft_depth.bitget_spot.30d.0.05": {
         "comparison_key": "historical_book|hft_depth|bitget_spot|30d|0.05",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -918,31 +933,7 @@
       },
       "hft_depth.bitget_spot.30d.0.2": {
         "comparison_key": "historical_book|hft_depth|bitget_spot|30d|0.2",
-        "observed_at": "2026-11-21T12:00:00+00:00",
-        "reason": null,
-        "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
-        "status": "usable",
-        "unit": "pct / pp changes in same nominal width"
-      },
-      "hft_depth.bitget_spot.365d.0.01": {
-        "comparison_key": "historical_book|hft_depth|bitget_spot|365d|0.01",
-        "observed_at": "2026-11-21T12:00:00+00:00",
-        "reason": null,
-        "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
-        "status": "usable",
-        "unit": "pct / pp changes in same nominal width"
-      },
-      "hft_depth.bitget_spot.365d.0.05": {
-        "comparison_key": "historical_book|hft_depth|bitget_spot|365d|0.05",
-        "observed_at": "2026-11-21T12:00:00+00:00",
-        "reason": null,
-        "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
-        "status": "usable",
-        "unit": "pct / pp changes in same nominal width"
-      },
-      "hft_depth.bitget_spot.365d.0.2": {
-        "comparison_key": "historical_book|hft_depth|bitget_spot|365d|0.2",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -950,7 +941,7 @@
       },
       "hft_depth.bitget_spot.7d.0.01": {
         "comparison_key": "historical_book|hft_depth|bitget_spot|7d|0.01",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -958,7 +949,7 @@
       },
       "hft_depth.bitget_spot.7d.0.05": {
         "comparison_key": "historical_book|hft_depth|bitget_spot|7d|0.05",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -966,7 +957,7 @@
       },
       "hft_depth.bitget_spot.7d.0.2": {
         "comparison_key": "historical_book|hft_depth|bitget_spot|7d|0.2",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -974,7 +965,7 @@
       },
       "hft_depth.bybit.1d.0.01": {
         "comparison_key": "historical_book|hft_depth|bybit|1d|0.01",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -982,7 +973,7 @@
       },
       "hft_depth.bybit.30d.0.01": {
         "comparison_key": "historical_book|hft_depth|bybit|30d|0.01",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -990,7 +981,7 @@
       },
       "hft_depth.bybit.7d.0.01": {
         "comparison_key": "historical_book|hft_depth|bybit|7d|0.01",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -998,7 +989,7 @@
       },
       "hft_depth.bybit_spot.1d.0.01": {
         "comparison_key": "historical_book|hft_depth|bybit_spot|1d|0.01",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -1006,7 +997,7 @@
       },
       "hft_depth.bybit_spot.30d.0.01": {
         "comparison_key": "historical_book|hft_depth|bybit_spot|30d|0.01",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -1014,7 +1005,7 @@
       },
       "hft_depth.bybit_spot.7d.0.01": {
         "comparison_key": "historical_book|hft_depth|bybit_spot|7d|0.01",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -1022,7 +1013,7 @@
       },
       "hft_depth.okx_futures.1d.0.01": {
         "comparison_key": "historical_book|hft_depth|okx_futures|1d|0.01",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -1030,7 +1021,7 @@
       },
       "hft_depth.okx_futures.1d.0.05": {
         "comparison_key": "historical_book|hft_depth|okx_futures|1d|0.05",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -1038,7 +1029,7 @@
       },
       "hft_depth.okx_futures.30d.0.01": {
         "comparison_key": "historical_book|hft_depth|okx_futures|30d|0.01",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -1046,7 +1037,7 @@
       },
       "hft_depth.okx_futures.30d.0.05": {
         "comparison_key": "historical_book|hft_depth|okx_futures|30d|0.05",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -1054,7 +1045,7 @@
       },
       "hft_depth.okx_futures.7d.0.01": {
         "comparison_key": "historical_book|hft_depth|okx_futures|7d|0.01",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -1062,7 +1053,23 @@
       },
       "hft_depth.okx_futures.7d.0.05": {
         "comparison_key": "historical_book|hft_depth|okx_futures|7d|0.05",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
+        "reason": null,
+        "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
+        "status": "usable",
+        "unit": "pct / pp changes in same nominal width"
+      },
+      "hft_depth.okx_futures.90d.0.01": {
+        "comparison_key": "historical_book|hft_depth|okx_futures|90d|0.01",
+        "observed_at": "2026-11-22T12:00:00+00:00",
+        "reason": null,
+        "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
+        "status": "usable",
+        "unit": "pct / pp changes in same nominal width"
+      },
+      "hft_depth.okx_futures.90d.0.05": {
+        "comparison_key": "historical_book|hft_depth|okx_futures|90d|0.05",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -1070,7 +1077,7 @@
       },
       "hft_depth.okx_spot.1d.0.01": {
         "comparison_key": "historical_book|hft_depth|okx_spot|1d|0.01",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -1078,7 +1085,7 @@
       },
       "hft_depth.okx_spot.1d.0.05": {
         "comparison_key": "historical_book|hft_depth|okx_spot|1d|0.05",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -1086,7 +1093,7 @@
       },
       "hft_depth.okx_spot.1d.0.2": {
         "comparison_key": "historical_book|hft_depth|okx_spot|1d|0.2",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -1094,7 +1101,7 @@
       },
       "hft_depth.okx_spot.30d.0.01": {
         "comparison_key": "historical_book|hft_depth|okx_spot|30d|0.01",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -1102,7 +1109,7 @@
       },
       "hft_depth.okx_spot.30d.0.05": {
         "comparison_key": "historical_book|hft_depth|okx_spot|30d|0.05",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -1110,7 +1117,7 @@
       },
       "hft_depth.okx_spot.7d.0.01": {
         "comparison_key": "historical_book|hft_depth|okx_spot|7d|0.01",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -1118,15 +1125,23 @@
       },
       "hft_depth.okx_spot.7d.0.05": {
         "comparison_key": "historical_book|hft_depth|okx_spot|7d|0.05",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
         "unit": "pct / pp changes in same nominal width"
       },
-      "hft_depth.okx_spot.7d.0.2": {
-        "comparison_key": "historical_book|hft_depth|okx_spot|7d|0.2",
-        "observed_at": "2026-11-21T12:00:00+00:00",
+      "hft_depth.okx_spot.90d.0.01": {
+        "comparison_key": "historical_book|hft_depth|okx_spot|90d|0.01",
+        "observed_at": "2026-11-22T12:00:00+00:00",
+        "reason": null,
+        "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
+        "status": "usable",
+        "unit": "pct / pp changes in same nominal width"
+      },
+      "hft_depth.okx_spot.90d.0.05": {
+        "comparison_key": "historical_book|hft_depth|okx_spot|90d|0.05",
+        "observed_at": "2026-11-22T12:00:00+00:00",
         "reason": null,
         "scope": "same venue, instrument, UTC clock, validated snapshot and observed depth",
         "status": "usable",
@@ -2478,47 +2493,47 @@
           "1d": {
             "bands": {
               "0.01": {
-                "ask_change_pct": 77.43,
-                "bid_change_pct": -88.59,
-                "bid_share_change_pp": -59.462
+                "ask_change_pct": -17.31,
+                "bid_change_pct": 57.21,
+                "bid_share_change_pp": 12.828
               },
               "0.05": {
-                "ask_change_pct": -25.34,
-                "bid_change_pct": -42.97,
-                "bid_share_change_pp": -6.62
+                "ask_change_pct": -48.21,
+                "bid_change_pct": 20.47,
+                "bid_share_change_pp": 20.791
               }
             },
-            "baseline_day": "2026-11-20"
+            "baseline_day": "2026-11-21"
           },
           "30d": {
             "bands": {
               "0.01": {
-                "ask_change_pct": -90.04,
-                "bid_change_pct": -87.66,
-                "bid_share_change_pp": 3.434
+                "ask_change_pct": -80.47,
+                "bid_change_pct": -56.94,
+                "bid_share_change_pp": 15.244
               },
               "0.05": {
-                "ask_change_pct": -55.16,
-                "bid_change_pct": -68.69,
-                "bid_share_change_pp": -8.857
+                "ask_change_pct": -80.83,
+                "bid_change_pct": -54.44,
+                "bid_share_change_pp": 21.309
               }
             },
-            "baseline_day": "2026-10-22"
+            "baseline_day": "2026-10-23"
           },
           "7d": {
             "bands": {
               "0.01": {
-                "ask_change_pct": -25.19,
-                "bid_change_pct": -86.28,
-                "bid_share_change_pp": -38.496
+                "ask_change_pct": -37.3,
+                "bid_change_pct": 234.66,
+                "bid_share_change_pp": 25.574
               },
               "0.05": {
-                "ask_change_pct": 23.48,
-                "bid_change_pct": -31.93,
-                "bid_share_change_pp": -14.753
+                "ask_change_pct": -45.33,
+                "bid_change_pct": 44.46,
+                "bid_share_change_pp": 23.821
               }
             },
-            "baseline_day": "2026-11-14"
+            "baseline_day": "2026-11-15"
           }
         },
         "coverage_30d": {
@@ -2534,69 +2549,69 @@
           "same_clock_12utc_verified_days": 30,
           "verified_days": 30
         },
-        "latest_day": "2026-11-21"
+        "latest_day": "2026-11-22"
       },
       "binance_spot": {
         "comparisons": {
           "1d": {
             "bands": {
               "0.01": {
-                "ask_change_pct": 454.24,
-                "bid_change_pct": -77.22,
-                "bid_share_change_pp": -53.898
+                "ask_change_pct": -12.26,
+                "bid_change_pct": -42.32,
+                "bid_share_change_pp": -9.572
               },
               "0.05": {
-                "ask_change_pct": -2.81,
-                "bid_change_pct": -44.71,
-                "bid_share_change_pp": -13.917
+                "ask_change_pct": -25.8,
+                "bid_change_pct": -4.91,
+                "bid_share_change_pp": 6.191
               }
             },
-            "baseline_day": "2026-11-20"
+            "baseline_day": "2026-11-21"
           },
           "30d": {
             "bands": {
               "0.01": {
-                "ask_change_pct": -57.02,
-                "bid_change_pct": -62.35,
-                "bid_share_change_pp": -3.224
+                "ask_change_pct": -31.0,
+                "bid_change_pct": -71.3,
+                "bid_share_change_pp": -20.899
               },
               "0.05": {
-                "ask_change_pct": -37.5,
-                "bid_change_pct": -41.49,
-                "bid_share_change_pp": -1.645
+                "ask_change_pct": -55.95,
+                "bid_change_pct": -49.58,
+                "bid_share_change_pp": 3.37
               }
             },
-            "baseline_day": "2026-10-22"
+            "baseline_day": "2026-10-23"
           },
           "7d": {
             "bands": {
               "0.01": {
-                "ask_change_pct": 27.38,
-                "bid_change_pct": -67.74,
-                "bid_share_change_pp": -32.405
+                "ask_change_pct": 342.38,
+                "bid_change_pct": -61.9,
+                "bid_share_change_pp": -52.985
               },
               "0.05": {
-                "ask_change_pct": -7.12,
-                "bid_change_pct": -22.03,
-                "bid_share_change_pp": -4.372
+                "ask_change_pct": -7.14,
+                "bid_change_pct": -15.92,
+                "bid_share_change_pp": -2.462
               }
             },
-            "baseline_day": "2026-11-14"
+            "baseline_day": "2026-11-15"
           },
           "90d": {
             "bands": {
               "0.01": {
-                "ask_change_pct": 53.46,
-                "bid_change_pct": 146.95,
-                "bid_share_change_pp": 10.759
+                "ask_change_pct": 65.35,
+                "bid_change_pct": 24.79,
+                "bid_share_change_pp": -6.298
               },
               "0.05": {
-                "ask_change_pct": -22.46,
-                "bid_change_pct": -16.32,
-                "bid_share_change_pp": 1.896
+                "ask_change_pct": -34.82,
+                "bid_change_pct": -24.85,
+                "bid_share_change_pp": 3.554
               }
             },
-            "baseline_day": "2026-08-23"
+            "baseline_day": "2026-08-24"
           }
         },
         "coverage_30d": {
@@ -2612,39 +2627,39 @@
           "same_clock_12utc_verified_days": 30,
           "verified_days": 30
         },
-        "latest_day": "2026-11-21"
+        "latest_day": "2026-11-22"
       },
       "bybit": {
         "comparisons": {
           "1d": {
             "bands": {
               "0.01": {
-                "ask_change_pct": -50.53,
-                "bid_change_pct": -95.82,
-                "bid_share_change_pp": -30.955
+                "ask_change_pct": -62.78,
+                "bid_change_pct": 3713.47,
+                "bid_share_change_pp": 78.15
               }
             },
-            "baseline_day": "2026-11-20"
+            "baseline_day": "2026-11-21"
           },
           "30d": {
             "bands": {
               "0.01": {
-                "ask_change_pct": -43.87,
-                "bid_change_pct": -96.79,
-                "bid_share_change_pp": -40.315
+                "ask_change_pct": -88.84,
+                "bid_change_pct": 436.09,
+                "bid_share_change_pp": 73.596
               }
             },
-            "baseline_day": "2026-10-22"
+            "baseline_day": "2026-10-23"
           },
           "7d": {
             "bands": {
               "0.01": {
-                "ask_change_pct": -39.59,
-                "bid_change_pct": -94.58,
-                "bid_share_change_pp": -29.588
+                "ask_change_pct": 168.44,
+                "bid_change_pct": -18.18,
+                "bid_share_change_pp": -11.385
               }
             },
-            "baseline_day": "2026-11-14"
+            "baseline_day": "2026-11-15"
           }
         },
         "coverage_30d": {
@@ -2660,39 +2675,39 @@
           "same_clock_12utc_verified_days": 30,
           "verified_days": 30
         },
-        "latest_day": "2026-11-21"
+        "latest_day": "2026-11-22"
       },
       "bybit_spot": {
         "comparisons": {
           "1d": {
             "bands": {
               "0.01": {
-                "ask_change_pct": 92.75,
-                "bid_change_pct": -62.41,
-                "bid_share_change_pp": -24.111
+                "ask_change_pct": 24.85,
+                "bid_change_pct": -58.04,
+                "bid_share_change_pp": -26.426
               }
             },
-            "baseline_day": "2026-11-20"
+            "baseline_day": "2026-11-21"
           },
           "30d": {
             "bands": {
               "0.01": {
-                "ask_change_pct": -71.03,
-                "bid_change_pct": 31.96,
-                "bid_share_change_pp": 36.179
+                "ask_change_pct": -78.66,
+                "bid_change_pct": -48.5,
+                "bid_share_change_pp": 18.579
               }
             },
-            "baseline_day": "2026-10-22"
+            "baseline_day": "2026-10-23"
           },
           "7d": {
             "bands": {
               "0.01": {
-                "ask_change_pct": 4.56,
-                "bid_change_pct": -17.25,
-                "bid_share_change_pp": -4.933
+                "ask_change_pct": 201.92,
+                "bid_change_pct": -10.6,
+                "bid_share_change_pp": -29.151
               }
             },
-            "baseline_day": "2026-11-14"
+            "baseline_day": "2026-11-15"
           }
         },
         "coverage_30d": {
@@ -2708,54 +2723,69 @@
           "same_clock_12utc_verified_days": 30,
           "verified_days": 30
         },
-        "latest_day": "2026-11-21"
+        "latest_day": "2026-11-22"
       },
       "okx_spot": {
         "comparisons": {
           "1d": {
             "bands": {
               "0.01": {
-                "ask_change_pct": -68.48,
-                "bid_change_pct": -67.89,
-                "bid_share_change_pp": 0.414
+                "ask_change_pct": -36.09,
+                "bid_change_pct": 54.02,
+                "bid_share_change_pp": 21.362
               },
               "0.05": {
-                "ask_change_pct": -53.88,
-                "bid_change_pct": -36.98,
-                "bid_share_change_pp": 7.544
+                "ask_change_pct": -43.04,
+                "bid_change_pct": 80.35,
+                "bid_share_change_pp": 27.162
               }
             },
-            "baseline_day": "2026-11-20"
+            "baseline_day": "2026-11-21"
           },
           "30d": {
             "bands": {
               "0.01": {
-                "ask_change_pct": -38.31,
-                "bid_change_pct": -82.22,
-                "bid_share_change_pp": -30.113
+                "ask_change_pct": -77.69,
+                "bid_change_pct": -5.61,
+                "bid_share_change_pp": 32.625
               },
               "0.05": {
-                "ask_change_pct": -60.75,
-                "bid_change_pct": -66.47,
-                "bid_share_change_pp": -3.925
+                "ask_change_pct": -80.43,
+                "bid_change_pct": -39.64,
+                "bid_share_change_pp": 26.514
               }
             },
-            "baseline_day": "2026-10-22"
+            "baseline_day": "2026-10-23"
           },
           "7d": {
             "bands": {
               "0.01": {
-                "ask_change_pct": 5.43,
-                "bid_change_pct": -31.58,
-                "bid_share_change_pp": -10.227
+                "ask_change_pct": -25.91,
+                "bid_change_pct": 92.48,
+                "bid_share_change_pp": 23.021
               },
               "0.05": {
-                "ask_change_pct": -13.25,
-                "bid_change_pct": -48.04,
-                "bid_share_change_pp": -12.736
+                "ask_change_pct": -66.78,
+                "bid_change_pct": 0.97,
+                "bid_share_change_pp": 26.15
               }
             },
-            "baseline_day": "2026-11-14"
+            "baseline_day": "2026-11-15"
+          },
+          "90d": {
+            "bands": {
+              "0.01": {
+                "ask_change_pct": 10.23,
+                "bid_change_pct": -43.69,
+                "bid_share_change_pp": -15.505
+              },
+              "0.05": {
+                "ask_change_pct": -65.25,
+                "bid_change_pct": -28.68,
+                "bid_share_change_pp": 16.368
+              }
+            },
+            "baseline_day": "2026-08-24"
           }
         },
         "coverage_30d": {
@@ -2765,13 +2795,13 @@
           "same_clock_12utc_complete_band_days": {
             "0.01": 30,
             "0.05": 30,
-            "0.2": 5,
+            "0.2": 6,
             "1.0": 0
           },
           "same_clock_12utc_verified_days": 30,
           "verified_days": 30
         },
-        "latest_day": "2026-11-21"
+        "latest_day": "2026-11-22"
       }
     }
   },
@@ -3141,9 +3171,9 @@
   "schema": 1,
   "sources": {
     "bybit_depth": {
-      "age_h": 2.29,
+      "age_h": 2.3,
       "collector_health": "ok",
-      "measurement_age_h": 48.92,
+      "measurement_age_h": 48.94,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-liquidity/data/bybit_independent_latest.json",
       "source_errors": 0,
       "spot_quote_age_h": null,
@@ -3151,7 +3181,7 @@
       "status": "fresh"
     },
     "derivatives": {
-      "age_h": 0.0,
+      "age_h": 0.02,
       "collector_health": "ok",
       "measurement_age_h": null,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-derivatives/data/latest.json",
@@ -3161,19 +3191,19 @@
       "status": "fresh"
     },
     "hft_depth": {
-      "age_h": 1.25,
+      "age_h": 0.01,
       "collector_health": "errors_present",
-      "measurement_age_h": 36.92,
+      "measurement_age_h": 12.94,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-liquidity/data/hft_latest.json",
-      "source_errors": 20,
+      "source_errors": 6,
       "spot_quote_age_h": null,
       "spot_quote_status": null,
       "status": "fresh"
     },
     "live_depth": {
-      "age_h": 0.01,
+      "age_h": 0.02,
       "collector_health": "ok",
-      "measurement_age_h": 0.01,
+      "measurement_age_h": 0.02,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-liquidity/data/latest.json",
       "source_errors": 0,
       "spot_quote_age_h": null,
@@ -3181,7 +3211,7 @@
       "status": "fresh"
     },
     "macro_etf": {
-      "age_h": 0.74,
+      "age_h": 0.75,
       "collector_health": "ok",
       "measurement_age_h": null,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-macro/data/latest.json",
@@ -3191,7 +3221,7 @@
       "status": "fresh"
     },
     "onchain": {
-      "age_h": 9.99,
+      "age_h": 10.01,
       "collector_health": "ok",
       "measurement_age_h": null,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-onchain/data/monitor_latest.json",
@@ -3201,7 +3231,7 @@
       "status": "fresh"
     },
     "options": {
-      "age_h": 1.17,
+      "age_h": 1.19,
       "collector_health": "errors_present",
       "measurement_age_h": null,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-options/data/latest.json",
@@ -3211,19 +3241,19 @@
       "status": "fresh"
     },
     "price_technical": {
-      "age_h": 0.75,
+      "age_h": 0.76,
       "collector_health": "ok",
-      "measurement_age_h": 0.92,
+      "measurement_age_h": 0.94,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-price/data/latest.json",
       "source_errors": 0,
-      "spot_quote_age_h": 0.75,
+      "spot_quote_age_h": 0.76,
       "spot_quote_status": "fresh",
       "status": "fresh"
     },
     "spot_cvd": {
-      "age_h": 3.07,
+      "age_h": 3.08,
       "collector_health": "ok",
-      "measurement_age_h": 4.92,
+      "measurement_age_h": 4.94,
       "original": "https://github.com/kh827y/btc-market-data/blob/main/btc-spot-cvd/data/latest.json",
       "source_errors": 0,
       "spot_quote_age_h": null,
