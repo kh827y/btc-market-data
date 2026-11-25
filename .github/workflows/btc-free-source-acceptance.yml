@@ -1,0 +1,139 @@
+name: BTC free source API acceptance
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/btc-free-source-acceptance.yml"
+permissions:
+  contents: read
+concurrency:
+  group: btc-free-source-acceptance
+  cancel-in-progress: false
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install --disable-pip-version-check requests
+      - name: Check free APIs without publishing provider payloads
+        env:
+          KOTE_API_KEY: ${{ secrets.KOTE_API_KEY }}
+          COINALYZE_API_KEY: ${{ secrets.COINALYZE_API_KEY }}
+          CRYPTOHFTDATA_API_KEY: ${{ secrets.CRYPTOHFTDATA_API_KEY }}
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os, datetime as dt, time, requests
+          from urllib.parse import urlparse
+          UTC=dt.timezone.utc
+          now=dt.datetime.now(UTC)
+          results=[]
+          def report(label, ok, detail=""):
+              print(f"{label}: {'PASS' if ok else 'FAIL'} {detail}", flush=True)
+              results.append(ok)
+          def call(label, method, url, **kw):
+              # Never print request URLs, response bodies or exception messages:
+              # they can contain credentials or licensed data.
+              try:
+                  r=requests.request(method,url,timeout=(10,30),allow_redirects=False,**kw)
+                  if r.status_code != 200:
+                      report(label,False,f"HTTP {r.status_code}")
+                      r.close()
+                      return None
+                  return r
+              except requests.RequestException as e:
+                  report(label,False,type(e).__name__)
+                  return None
+          def json_call(label,method,url,**kw):
+              r=call(label,method,url,**kw)
+              if r is None: return None
+              try: return r.json()
+              except ValueError:
+                  report(label,False,"invalid JSON")
+                  return None
+              finally: r.close()
+          def points(obj):
+              if isinstance(obj,list):
+                  if obj and all(isinstance(x,dict) and "t" in x for x in obj):
+                      yield obj
+                  else:
+                      for x in obj: yield from points(x)
+              elif isinstance(obj,dict):
+                  for x in obj.values(): yield from points(x)
+          def point_date(v):
+              try:
+                  if isinstance(v,(int,float)):
+                      return dt.datetime.fromtimestamp(v/1000 if v>1e11 else v,UTC).date()
+                  return dt.date.fromisoformat(str(v)[:10])
+              except (ValueError,OverflowError,OSError,TypeError): return None
+          key=os.getenv("KOTE_API_KEY")
+          if not key: report("Kote Charts",False,"missing secret")
+          else:
+              for chart in ("mvrv","mvrv-z-score","nupl","sth-lth-sopr"):
+                  label="Kote Charts "+chart
+                  j=json_call(label,"GET","https://kotecharts.com/api/v1/public/charts/"+chart,
+                      headers={"X-API-Key":key},params={"from":str(now.date()-dt.timedelta(days=14)),"granularity":"day"})
+                  if j is not None:
+                      series=list(points(j.get("data"))) if isinstance(j,dict) and j.get("success") is True else []
+                      rows=max(series,key=len,default=[])
+                      dates=[point_date(x["t"]) for x in rows if any(isinstance(v,(int,float)) and not isinstance(v,bool) for k,v in x.items() if k!="t")]
+                      dates={d for d in dates if d is not None and d<now.date()}
+                      age=(now.date()-max(dates)).days if dates else None
+                      report(label,age is not None and age<=3 and len(dates)>=7,
+                          f"closed nonempty days={len(dates)}, latest lag days={age}")
+                  time.sleep(0.5)
+          key=os.getenv("COINALYZE_API_KEY")
+          if not key: report("Coinalyze",False,"missing secret")
+          else:
+              headers={"api_key":key}
+              base="https://api.coinalyze.net/v1/"
+              markets=json_call("Coinalyze futures catalog","GET",base+"future-markets",headers=headers)
+              if markets is not None:
+                  btc=[x for x in markets if isinstance(x,dict) and x.get("base_asset")=="BTC" and x.get("is_perpetual") is True and isinstance(x.get("symbol"),str)] if isinstance(markets,list) else []
+                  report("Coinalyze futures catalog",bool(btc),f"BTC perpetual markets={len(btc)}")
+                  if btc:
+                      # One market is enough to verify the response format; no substitution into the canonical OI basket.
+                      market=next((x for x in btc if x.get("symbol_on_exchange")=="BTCUSDT"),btc[0])
+                      end=int(now.timestamp())//3600*3600
+                      j=json_call("Coinalyze hourly OI","GET",base+"open-interest-history",headers=headers,
+                          params={"symbols":market["symbol"],"interval":"1hour","from":end-30*86400,"to":end-1,"convert_to_usd":"true"})
+                      if j is not None:
+                          rows=[p for s in j if isinstance(s,dict) and s.get("symbol")==market["symbol"] for p in s.get("history",[]) if isinstance(p,dict)] if isinstance(j,list) else []
+                          hours={p["t"] for p in rows if isinstance(p.get("t"),int) and end-30*86400<=p["t"]<end and p["t"]%3600==0 and isinstance(p.get("c"),(int,float)) and p["c"]>=0}
+                          report("Coinalyze hourly OI",len(hours)>=700,f"closed hours={len(hours)}/720 (single market)")
+              spots=json_call("Coinalyze spot catalog","GET",base+"spot-markets",headers=headers)
+              if spots is not None:
+                  btc=[x for x in spots if isinstance(x,dict) and x.get("base_asset")=="BTC" and x.get("has_buy_sell_data") is True] if isinstance(spots,list) else []
+                  report("Coinalyze spot catalog",bool(btc),f"BTC spot markets with buy/sell data={len(btc)}")
+          key=os.getenv("CRYPTOHFTDATA_API_KEY")
+          if not key: report("CryptoHFTData",False,"missing secret")
+          else:
+              base="https://api.cryptohftdata.com/v1/"
+              j=json_call("CryptoHFTData authentication","POST",base+"jwt-token",headers={"X-API-Key":key,"Content-Type":"application/json"})
+              if j is not None:
+                  token=j.get("jwt_token") if isinstance(j,dict) else None
+                  report("CryptoHFTData authentication",bool(isinstance(token,str) and token))
+                  if isinstance(token,str) and token:
+                      # Verify a documented sample via a streamed read, not a public data upload.
+                      try:
+                          with requests.get(base+"download",params={"file":"binance_spot/2025-08-01/20/BTCUSDT_trades.parquet"},headers={"Authorization":"Bearer "+token},timeout=(10,30),stream=True,allow_redirects=False) as r:
+                              if r.status_code in (301,302,303,307,308):
+                                  url=r.headers.get("Location","")
+                                  # Never forward credentials to a storage URL.
+                                  if urlparse(url).scheme=="https":
+                                      with requests.get(url,timeout=(10,30),stream=True,allow_redirects=False) as f:
+                                          magic=f.raw.read(4) if f.status_code==200 else b""
+                                          report("CryptoHFTData archive",magic in (b"PAR1",bytes.fromhex("28b52ffd")),f"HTTP {f.status_code}")
+                                  else: report("CryptoHFTData archive",False,"unexpected redirect")
+                              else:
+                                  magic=r.raw.read(4) if r.status_code==200 else b""
+                                  report("CryptoHFTData archive",magic in (b"PAR1",bytes.fromhex("28b52ffd")),f"HTTP {r.status_code}")
+                      except Exception as e:
+                          report("CryptoHFTData archive",False,type(e).__name__)
+          print("No credentials, raw provider observations or datasets were published.")
+          if not results or not all(results): raise SystemExit(1)
+          PY
