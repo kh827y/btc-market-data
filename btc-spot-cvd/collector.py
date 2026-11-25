@@ -333,7 +333,27 @@ def main():
     # hour is incomplete; recent ID-verified repair handles that hour.
     deep_missing=historical_coinbase_gaps(state,end)
     if deep_pages and deep_missing:
-        coinbase(state,now,errors,pages=deep_pages)
+        # Legacy scans never attach ID continuity proof. Seek directly to
+        # each unverified hour and replace it only after both boundaries pass.
+        from coinbase_recent_repair import scan_group
+        remaining=deep_pages
+        with requests.Session() as session:
+            session.headers.update({"User-Agent":"btc-spot-cvd-historical-id-repair/1.0"})
+            for missing in deep_missing:
+                if remaining<=0:break
+                hour=dt.datetime.fromisoformat(missing.replace("Z","+00:00"))
+                try:
+                    verified,count,problem=scan_group(session,[hour],remaining)
+                    remaining-=count
+                    if verified is None:
+                        errors.append("coinbase historical proof pending: "+missing)
+                        break
+                    if set(verified)!={missing} or verified[missing].get("integrity")!="id_continuous_verified" or verified[missing].get("complete") is not True:
+                        raise ValueError("Historical Coinbase hour lacks exact ID proof")
+                    state.setdefault("hourly",{}).setdefault("coinbase",{}).update(verified)
+                except Exception as exc:
+                    errors.append("coinbase_historical_id_repair: "+str(exc)[:140])
+                    break
     cutoff=now-dt.timedelta(days=31)
     for failures in state.get("archive_retry_after",{}).values():
         for k in list(failures):
